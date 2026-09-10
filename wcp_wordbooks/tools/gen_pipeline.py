@@ -25,6 +25,11 @@ EXTRA_OK = set('0123456789%+-.·:/ '
 KANA_RE = re.compile(r'[\u3040-\u30ff]')
 CJK_RE = re.compile(r'[\u4e00-\u9fff]')
 
+# 2026-09-10 新标准: 每个词一律 3 条例句 (原 need 字段 2/3 混用已废弃)。
+# 词形匹配、白名单等其余规则不变。设 GEN_MIN=need 可临时回到旧行为。
+import os  # noqa: E402
+MIN_EXAMPLES = int(os.environ.get('GEN_MIN', '3'))
+
 
 def chunk_file(n):
     return WORK / f'gen_words_{n:02d}.json'
@@ -63,7 +68,7 @@ def check_slice(n, y, sl):
         if not isinstance(items, list) or not items:
             issues.append(f'{w}: 缺失')
             continue
-        need = meta['need']
+        need = MIN_EXAMPLES
         if len(items) < need:
             issues.append(f'{w}: {len(items)}/{need}条')
         seen_ja = set()

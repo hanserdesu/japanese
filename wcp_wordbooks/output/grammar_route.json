@@ -1,0 +1,7053 @@
+[
+ {
+  "kind": "stage",
+  "stage": 1,
+  "gid": "",
+  "word": "阶段一・入门(N5)",
+  "reading": "",
+  "meaning": "〔阶段〕从零开始: 判断句・助词・动词变形・基础句型",
+  "rows": [
+   [
+    "ここから日本語の第一歩、入門コースが始まります。",
+    "阶段一(入门N5)：从判断句与基础助词学起，每15个单词后有一课语法。"
+   ],
+   [
+    "まず単語を覚えて、そのあと文法をひとつずつ見ていきましょう。",
+    "用法：先过词块，再读占位词的3条例句讲解，例句栏=语法课。"
+   ],
+   [
+    "がんばって、毎日少しずつ続けるのが一番です。",
+    "注意：占位词也有发音和例句朗读，可以当听力材料用。"
+   ]
+  ]
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "私",
+  "reading": "わたくし",
+  "meaning": "【わたくし】我（わたくし更郑重）〈代〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "あなた",
+  "reading": "あなた",
+  "meaning": "你（多用于妻子称丈夫或对陌生人）〈代〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "好き",
+  "reading": "すき",
+  "meaning": "【すき】喜欢；爱好〈ナ形〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "人",
+  "reading": "ひと",
+  "meaning": "【ひと】人；人类〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "いい",
+  "reading": "",
+  "meaning": "好（=いい）〈イ形〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "勉強",
+  "reading": "べんきょうする",
+  "meaning": "【べんきょうする】学习；用功；便宜〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "本",
+  "reading": "ほん",
+  "meaning": "【ほん】书；书本；（量词）根；本〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "これ",
+  "reading": "これ",
+  "meaning": "这个〈代〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "何",
+  "reading": "なん・なに",
+  "meaning": "【なん・なに】什么〈代〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "それ",
+  "reading": "それ",
+  "meaning": "那个〈代〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "あれ",
+  "reading": "あれ",
+  "meaning": "那个（远指）〈代〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "どれ",
+  "reading": "どれ",
+  "meaning": "哪个（三者以上）〈代〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "毎日",
+  "reading": "まいにち",
+  "meaning": "【まいにち】每天〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "兄",
+  "reading": "あに",
+  "meaning": "【あに】哥哥；兄长〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "居る",
+  "reading": "いる",
+  "meaning": "【いる】在；有（「いる」的自谦说法，用于人或动物）〈动1〉",
+  "rows": []
+ },
+ {
+  "kind": "grammar",
+  "stage": 1,
+  "gid": "G001",
+  "word": "G001 AはBです",
+  "reading": "えーはびーです",
+  "meaning": "〔文法〕判断句基础: 「~是~」",
+  "rows": [
+   [
+    "私は学生です。",
+    "接续：「名词＋は＋名词＋です」。本句：我是学生。"
+   ],
+   [
+    "田中さんは先生ですか。",
+    "用法：礼貌判断句，句尾加か表疑问。本句：田中是老师吗？"
+   ],
+   [
+    "これは私の本ではありません。",
+    "注意：否定用「ではありません」，口语说「じゃない」。本句：这不是我的书。"
+   ]
+  ],
+  "name": "AはBです",
+  "brief": "判断句基础: 「~是~」"
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "ある",
+  "reading": "ある",
+  "meaning": "有；在（非生命物）〈动1〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "あまり",
+  "reading": "あまり",
+  "meaning": "太……（接否定）；（不）怎么〈副〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "今",
+  "reading": "いま",
+  "meaning": "【いま】现在；目前；刚才〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "時間",
+  "reading": "じかん",
+  "meaning": "【じかん】时间；（量词）小时〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "この",
+  "reading": "この",
+  "meaning": "这（的）〈连体〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "その",
+  "reading": "その",
+  "meaning": "那个；那（中指）〈连体〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "あの",
+  "reading": "あの",
+  "meaning": "那个（=あの）〈连体〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "どの",
+  "reading": "どの",
+  "meaning": "哪个（后接名词）〈连体〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "見る",
+  "reading": "みる",
+  "meaning": "【みる】看；观看；观察〈动2〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "おもしろい",
+  "reading": "おもしろい",
+  "meaning": "有趣的；有意思的〈イ形〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "する",
+  "reading": "する",
+  "meaning": "做；干；使成为〈动3〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "なる",
+  "reading": "なる",
+  "meaning": "变成；成为；到了（季节、时刻）〈动1〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "先生",
+  "reading": "せんせい",
+  "meaning": "【せんせい】老师；先生；医生〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "ください",
+  "reading": "ください",
+  "meaning": "请给我……；请（做）……〈惯〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "名前",
+  "reading": "なまえ",
+  "meaning": "【なまえ】名字；姓名〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "grammar",
+  "stage": 1,
+  "gid": "G002",
+  "word": "G002 は(主题)",
+  "reading": "わ",
+  "meaning": "〔文法〕提示主题: 至于~",
+  "rows": [
+   [
+    "象は鼻が長いです。",
+    "接续：名词加「は」提示话题，后面是关于它的话。本句：大象鼻子长。"
+   ],
+   [
+    "兄は医者で、弟は学生です。",
+    "用法：旧信息用「は」对比，新信息多用「が」。本句：哥哥是医生，弟弟是学生。"
+   ],
+   [
+    "今日は暑くないですね。",
+    "注意：作助词时读「わ」不读「は」，全句仅此一处特殊。本句：今天不热呢。"
+   ]
+  ],
+  "name": "は(主题)",
+  "brief": "提示主题: 至于~"
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "教える",
+  "reading": "おしえる",
+  "meaning": "【おしえる】教；教导；告诉〈动2〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "ここ",
+  "reading": "ここ",
+  "meaning": "这里；此处〈代〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "そこ",
+  "reading": "そこ",
+  "meaning": "那里〈代〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "あそこ",
+  "reading": "あそこ",
+  "meaning": "那里（=あそこ）〈代〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "どこ",
+  "reading": "どこ",
+  "meaning": "哪里〈代〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "置く",
+  "reading": "おく",
+  "meaning": "【おく】放置；搁下〈动1〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "家",
+  "reading": "いえ",
+  "meaning": "【いえ】家；房子〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "帰る",
+  "reading": "かえる",
+  "meaning": "【かえる】回去；回家；归还〈动1〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "話",
+  "reading": "はなし",
+  "meaning": "【はなし】话；谈话；故事〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "知る",
+  "reading": "しる",
+  "meaning": "【しる】知道；了解；认识〈动1〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "はい",
+  "reading": "はい",
+  "meaning": "是；是的；好〈感〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "いいえ",
+  "reading": "いいえ",
+  "meaning": "不；不是〈感〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "学校",
+  "reading": "がっこう",
+  "meaning": "【がっこう】学校〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "行く",
+  "reading": "いく",
+  "meaning": "【いく】去；前往；进行〈动1〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "明日",
+  "reading": "あした",
+  "meaning": "【あした】明天〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "grammar",
+  "stage": 1,
+  "gid": "G003",
+  "word": "G003 こそあど",
+  "reading": "こそあど",
+  "meaning": "〔文法〕指示词: 这/那/哪 + の连体",
+  "rows": [
+   [
+    "これは何ですか。",
+    "接续：「こそあど」各分近、中、远、疑问四系，后接连体词或助词。本句：这是什么？"
+   ],
+   [
+    "あそこに学校があります。",
+    "用法：近称「これ・ここ」，中称「それ・そこ」，远称「あれ・あそこ」。本句：那边有学校。"
+   ],
+   [
+    "どの方が山田さんですか。",
+    "注意：指人可用「この方」更礼貌，疑问用どなた。本句：哪位是山田？"
+   ]
+  ],
+  "name": "こそあど",
+  "brief": "指示词: 这/那/哪 + の连体"
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "来る",
+  "reading": "くる",
+  "meaning": "【くる】来；来到；发生〈动3〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "また",
+  "reading": "また",
+  "meaning": "再；又；还〈副〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "いつ",
+  "reading": "いつ",
+  "meaning": "什么时候〈代〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "どう",
+  "reading": "どう",
+  "meaning": "怎样；如何〈副〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "会う",
+  "reading": "あう",
+  "meaning": "【あう】见面；遇见；碰上〈动1〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "次",
+  "reading": "つぎ",
+  "meaning": "【つぎ】下一个；其次〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "方",
+  "reading": "かた",
+  "meaning": "【かた】方向；方面；（人的敬称）位；方法（やり方）〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "聞く",
+  "reading": "きく",
+  "meaning": "【きく】听；听（音乐）；问〈动1〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "分かる",
+  "reading": "わかる",
+  "meaning": "【わかる】明白；理解（=分かる）〈动1〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "よく",
+  "reading": "よく",
+  "meaning": "好好地；经常；很会〈副〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "話す",
+  "reading": "はなす",
+  "meaning": "【はなす】说；讲；谈〈动1〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "もっと",
+  "reading": "もっと",
+  "meaning": "更；更加；进一步〈副〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "言う",
+  "reading": "いう",
+  "meaning": "【いう】说；讲；称〈动1〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "友達",
+  "reading": "ともだち",
+  "meaning": "【ともだち】朋友；伙伴〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "待つ",
+  "reading": "まつ",
+  "meaning": "【まつ】等；等待；期待〈动1〉",
+  "rows": []
+ },
+ {
+  "kind": "grammar",
+  "stage": 1,
+  "gid": "G004",
+  "word": "G004 も(也)",
+  "reading": "も",
+  "meaning": "〔文法〕「也/都」, 替换は表同类",
+  "rows": [
+   [
+    "私も行きます。",
+    "接续：名词后用「も」，替换「は」或「が」。本句：我也去。"
+   ],
+   [
+    "犬も猫も好きです。",
+    "用法：「～も～も」并列两个同类事物，相当于「都」。本句：狗和猫都喜欢。"
+   ],
+   [
+    "一円もありません。",
+    "注意：与否定呼应时表完全否定「一～也不」。本句：一元钱也没有。"
+   ]
+  ],
+  "name": "も(也)",
+  "brief": "「也/都」, 替换は表同类"
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "昨日",
+  "reading": "きのう",
+  "meaning": "【きのう】昨天〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "町",
+  "reading": "まち",
+  "meaning": "【まち】城镇；街道〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "高い",
+  "reading": "たかい",
+  "meaning": "【たかい】高的；（价格）贵〈イ形〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "いちばん",
+  "reading": "いちばん",
+  "meaning": "第一；最〈副〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "晩",
+  "reading": "ばん",
+  "meaning": "【ばん】晚上；傍晚〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "ちょっと",
+  "reading": "ちょっと",
+  "meaning": "稍微；一会儿；一下〈副〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "もう",
+  "reading": "もう",
+  "meaning": "已经；就要；再（もう一度）〈副〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "大好き",
+  "reading": "だいすき",
+  "meaning": "【だいすき】非常喜欢；最爱〈ナ形〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "物",
+  "reading": "もの",
+  "meaning": "【もの】东西；物品；事物〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "中",
+  "reading": "なか",
+  "meaning": "【なか】里面；中间；其中〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "できる",
+  "reading": "できる",
+  "meaning": "能；会（=出来る）〈动1〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "ほんとう",
+  "reading": "ほんとう",
+  "meaning": "真的；实在；真理〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "立つ",
+  "reading": "たつ",
+  "meaning": "【たつ】站立；（烟）冒；（计划）成立〈动1〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "前",
+  "reading": "まえ",
+  "meaning": "【まえ】前；前面；之前〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "入る",
+  "reading": "はいる",
+  "meaning": "【はいる】进入；加入；容纳〈动1〉",
+  "rows": []
+ },
+ {
+  "kind": "grammar",
+  "stage": 1,
+  "gid": "G005",
+  "word": "G005 の(领属)",
+  "reading": "の",
+  "meaning": "〔文法〕「的」: 领属・属性・同位",
+  "rows": [
+   [
+    "これは私の傘です。",
+    "接续：名词加「の」再接名词，前者限定后者。本句：这是我的伞。"
+   ],
+   [
+    "日本語の先生を探しています。",
+    "用法：「の」前可表出身、内容、用途等多种关系。本句：我在找日语老师。"
+   ],
+   [
+    "この辞書は先生のです。",
+    "注意：「の」后的名词在语境明确时可省略。本句：这本词典是老师的。"
+   ]
+  ],
+  "name": "の(领属)",
+  "brief": "「的」: 领属・属性・同位"
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "家族",
+  "reading": "かぞく",
+  "meaning": "【かぞく】家人；家族〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "住む",
+  "reading": "すむ",
+  "meaning": "【すむ】居住；住〈动1〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "大きな",
+  "reading": "おおきな",
+  "meaning": "【おおきな】大的（后接名词）〈连体〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "大きい",
+  "reading": "おおきい",
+  "meaning": "【おおきい】大的；（年龄）大〈イ形〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "声",
+  "reading": "こえ",
+  "meaning": "【こえ】声音；嗓音〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "目",
+  "reading": "め",
+  "meaning": "【め】眼睛；眼光；（表格）栏〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "手",
+  "reading": "て",
+  "meaning": "【て】手；手臂；人手〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "上げる",
+  "reading": "あげる",
+  "meaning": "【あげる】举起；抬高；提高；给（上级）〈动2〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "嫌い",
+  "reading": "きらい",
+  "meaning": "【きらい】讨厌；不喜欢〈ナ形〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "おばあさん",
+  "reading": "おばあさん",
+  "meaning": "祖母；外婆；老奶奶〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "元気",
+  "reading": "げんき",
+  "meaning": "【げんき】精神；活力；（身体）健康〈ナ形〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "いつも",
+  "reading": "いつも",
+  "meaning": "总是；平时〈副〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "持つ",
+  "reading": "もつ",
+  "meaning": "【もつ】持有；拿着；带〈动1〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "みんな",
+  "reading": "みんな",
+  "meaning": "大家；全部〈代〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "使う",
+  "reading": "つかう",
+  "meaning": "【つかう】使用；用；雇用〈动1〉",
+  "rows": []
+ },
+ {
+  "kind": "grammar",
+  "stage": 1,
+  "gid": "G006",
+  "word": "G006 が(存在主语)",
+  "reading": "が",
+  "meaning": "〔文法〕新信息/存在句主语",
+  "rows": [
+   [
+    "机の上に本があります。",
+    "接续：场所加「に」，存在物加「が」，再接存在动词。本句：桌上有书。"
+   ],
+   [
+    "部屋に誰かいますか。",
+    "用法：人和动物用「います」，物品用「あります」。本句：房间里有人吗？"
+   ],
+   [
+    "冷たい水があります。",
+    "注意：「が」引出新信息，第二次提及的话题改用「は」。本句：有凉水。"
+   ]
+  ],
+  "name": "が(存在主语)",
+  "brief": "新信息/存在句主语"
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "大丈夫",
+  "reading": "だいじょうぶ",
+  "meaning": "【だいじょうぶ】没关系；没问题；安全〈ナ形〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "今日",
+  "reading": "きょう",
+  "meaning": "【きょう】今天〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "部屋",
+  "reading": "へや",
+  "meaning": "【へや】房间；屋子〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "悪い",
+  "reading": "わるい",
+  "meaning": "【わるい】坏的；不好的；（情况）糟〈イ形〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "食べる",
+  "reading": "たべる",
+  "meaning": "【たべる】吃〈动2〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "たくさん",
+  "reading": "たくさん",
+  "meaning": "很多；足够〈副〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "呼ぶ",
+  "reading": "よぶ",
+  "meaning": "【よぶ】叫；呼唤；称呼；邀请〈动1〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "誰",
+  "reading": "だれ",
+  "meaning": "【だれ】谁〈代〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "意味",
+  "reading": "いみ",
+  "meaning": "【いみ】意思；意义；含义〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "言葉",
+  "reading": "ことば",
+  "meaning": "【ことば】语言；词语；说法〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "自分",
+  "reading": "じぶん",
+  "meaning": "【じぶん】自己〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "同じ",
+  "reading": "おなじ",
+  "meaning": "【おなじ】相同的；一样的〈ナ形〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "とても",
+  "reading": "とても",
+  "meaning": "非常；很（接否定：怎么也不）〈副〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "楽しい",
+  "reading": "たのしい",
+  "meaning": "【たのしい】愉快的；快乐的；高兴的〈イ形〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "忙しい",
+  "reading": "いそがしい",
+  "meaning": "【いそがしい】忙的；忙碌的〈イ形〉",
+  "rows": []
+ },
+ {
+  "kind": "grammar",
+  "stage": 1,
+  "gid": "G007",
+  "word": "G007 を(宾语)",
+  "reading": "を",
+  "meaning": "〔文法〕标记动作对象",
+  "rows": [
+   [
+    "パンを食べます。",
+    "接续：宾语加「を」再接他动词。本句：吃面包。"
+   ],
+   [
+    "毎朝公園を散歩します。",
+    "用法：移动动词前「を」表示经过或离开的场所。本句：每天在公园散步。"
+   ],
+   [
+    "友達に手紙を書きます。",
+    "注意：「を」作助词读「お」，勿与对象语「が」混淆。本句：给朋友写信。"
+   ]
+  ],
+  "name": "を(宾语)",
+  "brief": "标记动作对象"
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "仕事",
+  "reading": "しごと",
+  "meaning": "【しごと】工作；职业；活儿〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "見せる",
+  "reading": "みせる",
+  "meaning": "【みせる】给……看；展示〈动2〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "忘れる",
+  "reading": "わすれる",
+  "meaning": "【わすれる】忘记；忘掉；遗忘〈动2〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "頼む",
+  "reading": "たのむ",
+  "meaning": "【たのむ】请求；拜托；点（菜）〈动1〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "国",
+  "reading": "くに",
+  "meaning": "【くに】国家；故乡〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "易しい",
+  "reading": "やさしい",
+  "meaning": "【やさしい】容易的；简单的〈イ形〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "嫌",
+  "reading": "いや",
+  "meaning": "【いや】讨厌；不愿意；不舒服〈ナ形〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "夜",
+  "reading": "よる",
+  "meaning": "【よる】夜；晚上〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "買う",
+  "reading": "かう",
+  "meaning": "【かう】买；购买；招致〈动1〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "難しい",
+  "reading": "むずかしい",
+  "meaning": "【むずかしい】难的；困难的；（人）难对付〈イ形〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "男の子",
+  "reading": "おとこのこ",
+  "meaning": "【おとこのこ】男孩；男孩子〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "女の子",
+  "reading": "おんなのこ",
+  "meaning": "【おんなのこ】女孩；女孩子〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "寝る",
+  "reading": "ねる",
+  "meaning": "【ねる】睡觉；躺下〈动2〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "小さい",
+  "reading": "ちいさい",
+  "meaning": "【ちいさい】小的；（数量、程度）小〈イ形〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "座る",
+  "reading": "すわる",
+  "meaning": "【すわる】坐；落座〈动1〉",
+  "rows": []
+ },
+ {
+  "kind": "grammar",
+  "stage": 1,
+  "gid": "G008",
+  "word": "G008 に(时点・着点)",
+  "reading": "に",
+  "meaning": "〔文法〕时间点・到达点・存在场所",
+  "rows": [
+   [
+    "七時に起きます。",
+    "接续：时间点、到达点、存在场所后加「に」。本句：七点起床。"
+   ],
+   [
+    "学校に行きます。",
+    "用法：到达点用「に」，星期和月份后常可省略。本句：去学校。"
+   ],
+   [
+    "机の上に猫がいます。",
+    "注意：动作进行地用「で」，存在地用「に」，别混淆。本句：桌上有猫。"
+   ]
+  ],
+  "name": "に(时点・着点)",
+  "brief": "时间点・到达点・存在场所"
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "なぜ",
+  "reading": "なぜ",
+  "meaning": "为什么〈副〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "水",
+  "reading": "みず",
+  "meaning": "【みず】水；凉水〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "飲む",
+  "reading": "のむ",
+  "meaning": "【のむ】喝；饮；吞服（药）〈动1〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "暇",
+  "reading": "ひま",
+  "meaning": "【ひま】空闲；有空；闲暇〈ナ形〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "一",
+  "reading": "いち",
+  "meaning": "【いち】一；一个〈数〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "二",
+  "reading": "に",
+  "meaning": "【に】二；两个〈数〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "三",
+  "reading": "さん",
+  "meaning": "【さん】三；三个〈数〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "四",
+  "reading": "し・よん",
+  "meaning": "【し・よん】四；四个〈数〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "五",
+  "reading": "ご",
+  "meaning": "【ご】五；五个〈数〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "六",
+  "reading": "ろく",
+  "meaning": "【ろく】六；六个〈数〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "七",
+  "reading": "しち・なな",
+  "meaning": "【しち・なな】七；七个〈数〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "八",
+  "reading": "はち",
+  "meaning": "【はち】八；八个〈数〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "九",
+  "reading": "きゅう・く",
+  "meaning": "【きゅう・く】九；九个〈数〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "十",
+  "reading": "じゅう・とお",
+  "meaning": "【じゅう・とお】十；十个〈数〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "やる",
+  "reading": "やる",
+  "meaning": "做；干；给（下级）；送〈动1〉",
+  "rows": []
+ },
+ {
+  "kind": "grammar",
+  "stage": 1,
+  "gid": "G009",
+  "word": "G009 で(场所・手段)",
+  "reading": "で",
+  "meaning": "〔文法〕动作发生地・工具方式",
+  "rows": [
+   [
+    "図書館で勉強します。",
+    "接续：名词＋「で」，接动作场所。本句：在图书馆学习。"
+   ],
+   [
+    "バスで学校へ行きます。",
+    "用法：「で」表手段、工具、交通方式。本句：坐公交车去学校。"
+   ],
+   [
+    "部屋に猫がいます。",
+    "注意：存在句用「に」，动作场所才用「で」。本句：房间里有猫。"
+   ]
+  ],
+  "name": "で(场所・手段)",
+  "brief": "动作发生地・工具方式"
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "今朝",
+  "reading": "けさ",
+  "meaning": "【けさ】今天早上〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "出る",
+  "reading": "でる",
+  "meaning": "【でる】出去；离开；出席；登（场）〈动2〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "そして",
+  "reading": "",
+  "meaning": "而且；然后〈接〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "まだ",
+  "reading": "まだ",
+  "meaning": "还；尚未；才〈副〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "半",
+  "reading": "はん",
+  "meaning": "【はん】半；一半（三時半）〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "御飯",
+  "reading": "ごはん",
+  "meaning": "【ごはん】米饭；饭；用餐〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "所",
+  "reading": "ところ",
+  "meaning": "【ところ】地方；场所；处所〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "少し",
+  "reading": "すこし",
+  "meaning": "【すこし】一点儿；稍微〈副〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "違う",
+  "reading": "ちがう",
+  "meaning": "【ちがう】不同；（回答）不是〈动1〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "男",
+  "reading": "おとこ",
+  "meaning": "【おとこ】男人；男性〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "作る",
+  "reading": "つくる",
+  "meaning": "【つくる】做；制作；建造；栽培〈动1〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "上",
+  "reading": "うえ",
+  "meaning": "【うえ】上面；上方；（等级、能力）高〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "強い",
+  "reading": "つよい",
+  "meaning": "【つよい】强的；结实的；（酒）厉害〈イ形〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "出す",
+  "reading": "だす",
+  "meaning": "【だす】拿出；取出；寄出；发出〈动1〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "毎月",
+  "reading": "まいつき・まいげつ",
+  "meaning": "【まいつき・まいげつ】每月〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "grammar",
+  "stage": 1,
+  "gid": "G010",
+  "word": "G010 へ(方向)",
+  "reading": "え",
+  "meaning": "〔文法〕移动方向",
+  "rows": [
+   [
+    "明日、東京へ行きます。",
+    "接续：名词＋「へ」＋移动动词。本句：明天去东京。"
+   ],
+   [
+    "鳥が空へ飛んでいます。",
+    "用法：「へ」表移动方向，侧重去向。本句：鸟正往天上飞。"
+   ],
+   [
+    "こちらへどうぞ。",
+    "注意：「へ」后可加「の」作定语，如「への手紙」。本句：请往这边走。"
+   ]
+  ],
+  "name": "へ(方向)",
+  "brief": "移动方向"
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "毎年",
+  "reading": "まいねん・まいとし",
+  "meaning": "【まいねん・まいとし】每年〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "姉",
+  "reading": "あね",
+  "meaning": "【あね】姐姐〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "弟",
+  "reading": "おとうと",
+  "meaning": "【おとうと】弟弟〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "妹",
+  "reading": "いもうと",
+  "meaning": "【いもうと】妹妹〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "死ぬ",
+  "reading": "しぬ",
+  "meaning": "【しぬ】死；死亡；（比赛等）告吹〈动1〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "早い",
+  "reading": "はやい",
+  "meaning": "【はやい】早的；（时间）早；快〈イ形〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "頭",
+  "reading": "あたま",
+  "meaning": "【あたま】头；脑袋；头脑〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "どうして",
+  "reading": "どうして",
+  "meaning": "为什么（=どうして）〈副〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "終わる",
+  "reading": "おわる",
+  "meaning": "【おわる】结束；完成（=終わる）〈动1〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "後",
+  "reading": "あと",
+  "meaning": "【あと】之后；后面；以后（後で：待会儿）〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "こちら",
+  "reading": "こちら",
+  "meaning": "这边；这位（礼貌用语）〈代〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "女",
+  "reading": "おんな",
+  "meaning": "【おんな】女人；女性〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "体",
+  "reading": "からだ",
+  "meaning": "【からだ】身体；躯体〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "かける",
+  "reading": "かける",
+  "meaning": "打（电话）；挂；戴（眼镜）；坐（椅子）〈动2〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "歩く",
+  "reading": "あるく",
+  "meaning": "【あるく】走；步行〈动1〉",
+  "rows": []
+ },
+ {
+  "kind": "grammar",
+  "stage": 1,
+  "gid": "G011",
+  "word": "G011 と(并列・引用)",
+  "reading": "と",
+  "meaning": "〔文法〕「和」・引用内容",
+  "rows": [
+   [
+    "犬と猫がいます。",
+    "接续：名词＋「と」＋名词，表并列。本句：有狗和猫。"
+   ],
+   [
+    "「おはよう」と言いました。",
+    "用法：「と」引出说、想、问的内容。本句：他说了早上好。"
+   ],
+   [
+    "ペンとノートと消しゴムを買いました。",
+    "注意：「と」列举全部，「や」表示还有别的。本句：买了钢笔、笔记本和橡皮。"
+   ]
+  ],
+  "name": "と(并列・引用)",
+  "brief": "「和」・引用内容"
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "今年",
+  "reading": "ことし",
+  "meaning": "【ことし】今年〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "去年",
+  "reading": "きょねん",
+  "meaning": "【きょねん】去年〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "来年",
+  "reading": "らいねん",
+  "meaning": "【らいねん】明年〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "口",
+  "reading": "くち",
+  "meaning": "【くち】嘴；口；（容器）口〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "外",
+  "reading": "そと",
+  "meaning": "【そと】外面；外部；室外〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "ほか",
+  "reading": "ほか",
+  "meaning": "别的；其他；另外〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "問題",
+  "reading": "もんだい",
+  "meaning": "【もんだい】问题；习题；麻烦事〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "春",
+  "reading": "はる",
+  "meaning": "【はる】春天；春季〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "貼る",
+  "reading": "はる",
+  "meaning": "【はる】贴；粘；张（贴）〈动1〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "夏",
+  "reading": "なつ",
+  "meaning": "【なつ】夏天；夏季〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "秋",
+  "reading": "あき",
+  "meaning": "【あき】秋天；秋季〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "冬",
+  "reading": "ふゆ",
+  "meaning": "【ふゆ】冬天；冬季〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "左",
+  "reading": "ひだり",
+  "meaning": "【ひだり】左；左边〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "右",
+  "reading": "みぎ",
+  "meaning": "【みぎ】右；右边〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "漢字",
+  "reading": "かんじ",
+  "meaning": "【かんじ】汉字〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "grammar",
+  "stage": 1,
+  "gid": "G012",
+  "word": "G012 や~など",
+  "reading": "やなど",
+  "meaning": "〔文法〕不完全列举",
+  "rows": [
+   [
+    "机の上に本やペンなどがあります。",
+    "接续：名词＋「や」＋名词＋「など」。本句：桌上有书和笔等。"
+   ],
+   [
+    "冷蔵庫に卵や野菜などが入っています。",
+    "用法：「や」举两三例，「など」暗示还有其他。本句：冰箱里有鸡蛋、蔬菜等。"
+   ],
+   [
+    "好きな色は赤や青などです。",
+    "注意：「や」语气比「と」轻，是不完全列举。本句：喜欢的颜色是红色、蓝色等。"
+   ]
+  ],
+  "name": "や~など",
+  "brief": "不完全列举"
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "多い",
+  "reading": "おおい",
+  "meaning": "【おおい】多的；大量的〈イ形〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "初めて",
+  "reading": "はじめて",
+  "meaning": "【はじめて】初次；第一次〈副〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "欲しい",
+  "reading": "ほしい",
+  "meaning": "【ほしい】想要；希望得到〈イ形〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "覚える",
+  "reading": "おぼえる",
+  "meaning": "【おぼえる】记住；记得；学会〈动2〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "入れる",
+  "reading": "いれる",
+  "meaning": "【いれる】放入；装进；加上〈动2〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "開く",
+  "reading": "あく",
+  "meaning": "【あく】（门窗等）开；打开〈动1〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "答える",
+  "reading": "こたえる",
+  "meaning": "【こたえる】回答；答复〈动2〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "年",
+  "reading": "とし",
+  "meaning": "【とし】年；岁数；年代〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "取る",
+  "reading": "とる",
+  "meaning": "【とる】取；拿；取得（资格）；拍（照）〈动1〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "撮る",
+  "reading": "とる",
+  "meaning": "【とる】拍摄（照片、录像）〈动1〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "消える",
+  "reading": "きえる",
+  "meaning": "【きえる】消失；（火、灯）熄灭〈动2〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "長い",
+  "reading": "ながい",
+  "meaning": "【ながい】长的；（时间）长久〈イ形〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "困る",
+  "reading": "こまる",
+  "meaning": "【こまる】为难；为难受；碍事〈动1〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "書く",
+  "reading": "かく",
+  "meaning": "【かく】写；书写；画（线）〈动1〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "走る",
+  "reading": "はしる",
+  "meaning": "【はしる】跑；奔跑；（车）行驶〈动1〉",
+  "rows": []
+ },
+ {
+  "kind": "grammar",
+  "stage": 1,
+  "gid": "G013",
+  "word": "G013 から・まで",
+  "reading": "からまで",
+  "meaning": "〔文法〕起点与终点(时空皆可)",
+  "rows": [
+   [
+    "九時から五時まで働きます。",
+    "接续：名词＋「から」／「まで」，表起点终点。本句：从九点工作到五点。"
+   ],
+   [
+    "駅から家まで歩きます。",
+    "用法：时间、空间的起止都能用。本句：从车站走到家。"
+   ],
+   [
+    "三時までに帰ります。",
+    "注意：表期限用「までに」，意为之前。本句：三点前回家。"
+   ]
+  ],
+  "name": "から・まで",
+  "brief": "起点与终点(时空皆可)"
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "全部",
+  "reading": "ぜんぶ",
+  "meaning": "【ぜんぶ】全部；所有〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "起きる",
+  "reading": "おきる",
+  "meaning": "【おきる】起床；（事情）发生〈动2〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "足",
+  "reading": "あし",
+  "meaning": "【あし】脚；腿；（量词）双（鞋袜）〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "子供",
+  "reading": "こども",
+  "meaning": "【こども】孩子；小孩〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "辺",
+  "reading": "へん",
+  "meaning": "【へん】一带；附近；地区〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "読む",
+  "reading": "よむ",
+  "meaning": "【よむ】读；阅读；念〈动1〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "たいへん",
+  "reading": "たいへん",
+  "meaning": "非常；很；不得了；严重〈ナ形〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "下",
+  "reading": "した",
+  "meaning": "【した】下面；下方；（等级）下〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "かかる",
+  "reading": "かかる",
+  "meaning": "花费（时间、金钱）；需要；挂（电话）〈动1〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "後ろ",
+  "reading": "うしろ",
+  "meaning": "【うしろ】后面；背后〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "鳴く",
+  "reading": "なく",
+  "meaning": "【なく】（鸟兽）叫；鸣；（时钟）报时〈动1〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "軽い",
+  "reading": "かるい",
+  "meaning": "【かるい】轻的；轻微的；（口味）清淡〈イ形〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "返す",
+  "reading": "かえす",
+  "meaning": "【かえす】归还；偿还；回答〈动1〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "痛い",
+  "reading": "いたい",
+  "meaning": "【いたい】疼；痛；痛苦〈イ形〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "つける",
+  "reading": "つける",
+  "meaning": "打开（电灯等）；点（火）；戴上；涂抹〈动2〉",
+  "rows": []
+ },
+ {
+  "kind": "grammar",
+  "stage": 1,
+  "gid": "G014",
+  "word": "G014 ね・よ",
+  "reading": "ねよ",
+  "meaning": "〔文法〕终助词: 求同/告知",
+  "rows": [
+   [
+    "いい天気ですね。",
+    "接续：句末＋「ね」／「よ」。本句：天气真好啊。"
+   ],
+   [
+    "この店は安いよ。",
+    "用法：「よ」向对方告知新信息。本句：这家店很便宜哦。"
+   ],
+   [
+    "田中さんは来ますよね。",
+    "注意：「よね」求确认，比单独「ね」语气强。本句：田中先生会来吧。"
+   ]
+  ],
+  "name": "ね・よ",
+  "brief": "终助词: 求同/告知"
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "来月",
+  "reading": "らいげつ",
+  "meaning": "【らいげつ】下个月〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "近い",
+  "reading": "ちかい",
+  "meaning": "【ちかい】近的；靠近的；（关系）亲近〈イ形〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "開ける",
+  "reading": "あける",
+  "meaning": "【あける】打开；开启〈动2〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "隣",
+  "reading": "となり",
+  "meaning": "【となり】隔壁；旁边；邻居〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "道",
+  "reading": "みち",
+  "meaning": "【みち】路；道路；方法〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "乗る",
+  "reading": "のる",
+  "meaning": "【のる】乘坐；登上；搭载〈动1〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "さあ",
+  "reading": "さあ",
+  "meaning": "来吧；喂；（表示为难）哎呀〈感〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "吹く",
+  "reading": "ふく",
+  "meaning": "【ふく】吹；刮（风）；吹奏〈动1〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "服",
+  "reading": "ふく",
+  "meaning": "【ふく】衣服；服装〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "では",
+  "reading": "では",
+  "meaning": "那么；如果那样〈接〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "少ない",
+  "reading": "すくない",
+  "meaning": "【すくない】少的；不多的〈イ形〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "空",
+  "reading": "そら",
+  "meaning": "【そら】天空；空中〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "赤い",
+  "reading": "あかい",
+  "meaning": "【あかい】红色的〈イ形〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "止まる",
+  "reading": "とまる",
+  "meaning": "【とまる】停止；停下；（车）停住〈动1〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "朝",
+  "reading": "あさ",
+  "meaning": "【あさ】早晨；早上〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "grammar",
+  "stage": 1,
+  "gid": "G015",
+  "word": "G015 动词三类・ます形",
+  "reading": "どうし三类",
+  "meaning": "〔文法〕五段/一段/サ变/カ变+礼貌形",
+  "rows": [
+   [
+    "私は毎朝六時に起きます。",
+    "接续：动词词干＋「ます」；「します」「来ます」是特殊形。本句：我每天早上六点起床。"
+   ],
+   [
+    "何を食べますか。",
+    "用法：「ます」形是礼貌体，用于日常对话。本句：你吃什么？"
+   ],
+   [
+    "明日も会社へ行きます。",
+    "注意：五段动词把「う」段变「い」段再接「ます」。本句：明天也去公司。"
+   ]
+  ],
+  "name": "动词三类・ます形",
+  "brief": "五段/一段/サ变/カ变+礼貌形"
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "結構",
+  "reading": "けっこう",
+  "meaning": "【けっこう】很好；足够；（委婉拒绝）不用了〈ナ形〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "新しい",
+  "reading": "あたらしい",
+  "meaning": "【あたらしい】新的；崭新的〈イ形〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "渡す",
+  "reading": "わたす",
+  "meaning": "【わたす】递给；交给；渡过（对岸）〈动1〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "かわいい",
+  "reading": "かわいい",
+  "meaning": "可爱的；讨人喜欢的〈イ形〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "始まる",
+  "reading": "はじまる",
+  "meaning": "【はじまる】开始〈动1〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "色",
+  "reading": "いろ",
+  "meaning": "【いろ】颜色；色彩〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "向こう",
+  "reading": "むこう",
+  "meaning": "【むこう】那边；对面；对方〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "静か",
+  "reading": "しずか",
+  "meaning": "【しずか】安静的；静静的〈ナ形〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "飛ぶ",
+  "reading": "とぶ",
+  "meaning": "【とぶ】飞；跳；（消息）传开〈动1〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "白い",
+  "reading": "しろい",
+  "meaning": "【しろい】白色的〈イ形〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "厚い",
+  "reading": "あつい",
+  "meaning": "【あつい】厚的；（人情）深厚；恳切〈イ形〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "暑い",
+  "reading": "あつい",
+  "meaning": "【あつい】（天气）热；炎热〈イ形〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "熱い",
+  "reading": "あつい",
+  "meaning": "【あつい】（物体、气温）烫；热；（感情）热烈〈イ形〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "店",
+  "reading": "みせ",
+  "meaning": "【みせ】商店；店铺〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "料理",
+  "reading": "りょうり",
+  "meaning": "【りょうり】菜肴；烹饪；饭菜〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "grammar",
+  "stage": 1,
+  "gid": "G016",
+  "word": "G016 ません・ました",
+  "reading": "ませんました",
+  "meaning": "〔文法〕动词否定・过去・过去否定",
+  "rows": [
+   [
+    "朝ごはんを食べませんでした。",
+    "接续：「ます」改「ません」表否定，「ました」表过去。本句：没吃早饭。"
+   ],
+   [
+    "昨日、図書館で勉強しました。",
+    "用法：「ました」表过去完成的动作。本句：昨天在图书馆学习了。"
+   ],
+   [
+    "週末は映画を見ませんでした。",
+    "注意：过去否定用「ませんでした」，不是「ません」。本句：周末没看电影。"
+   ]
+  ],
+  "name": "ません・ました",
+  "brief": "动词否定・过去・过去否定"
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "甘い",
+  "reading": "あまい",
+  "meaning": "【あまい】甜的；（人）宽容；（想法）天真〈イ形〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "もう一度",
+  "reading": "もういちど",
+  "meaning": "【もういちど】再一次〈副〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "遅い",
+  "reading": "おそい",
+  "meaning": "【おそい】迟的；晚的；慢的〈イ形〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "耳",
+  "reading": "みみ",
+  "meaning": "【みみ】耳朵〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "生まれる",
+  "reading": "うまれる",
+  "meaning": "【うまれる】出生；诞生；产生〈动2〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "遊ぶ",
+  "reading": "あそぶ",
+  "meaning": "【あそぶ】玩；游玩；消遣〈动1〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "要る",
+  "reading": "いる",
+  "meaning": "【いる】需要；必要〈动1〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "着る",
+  "reading": "きる",
+  "meaning": "【きる】穿（衬衫、外套等上身衣物）〈动2〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "いろいろ",
+  "reading": "いろいろ",
+  "meaning": "各种各样〈ナ形〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "どうぞ",
+  "reading": "どうぞ",
+  "meaning": "请（用于礼貌地提供或请求）〈副〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "降りる",
+  "reading": "おりる",
+  "meaning": "【おりる】下（车、楼梯）；降下〈动2〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "切る",
+  "reading": "きる",
+  "meaning": "【きる】切；割；剪；砍〈动1〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "重い",
+  "reading": "おもい",
+  "meaning": "【おもい】重的；（病情）重；（心情）沉重〈イ形〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "引く",
+  "reading": "ひく",
+  "meaning": "【ひく】拉；拖；抽（字典等查引）；退（往后退）〈动1〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "海",
+  "reading": "うみ",
+  "meaning": "【うみ】海；大海〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "grammar",
+  "stage": 1,
+  "gid": "G017",
+  "word": "G017 い形容词活用",
+  "reading": "いけいようし",
+  "meaning": "〔文法〕~い→くない・かった",
+  "rows": [
+   [
+    "この本は面白いです。",
+    "接续：「い」形直接接名词，敬体在词尾加「です」。本句：这本书有意思。"
+   ],
+   [
+    "昨日は寒かったです。",
+    "用法：过去把「い」改为「かった」，否定改为「くない」。本句：昨天很冷。"
+   ],
+   [
+    "この店はあまり高くないです。",
+    "注意：「いい」变化特殊，过去为「よかった」，否定为「よくない」。本句：这家店不太贵。"
+   ]
+  ],
+  "name": "い形容词活用",
+  "brief": "~い→くない・かった"
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "いくら",
+  "reading": "いくら",
+  "meaning": "多少钱；多少〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "結婚",
+  "reading": "けっこん",
+  "meaning": "【けっこん】结婚〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "疲れる",
+  "reading": "つかれる",
+  "meaning": "【つかれる】疲劳；累〈动2〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "冷たい",
+  "reading": "つめたい",
+  "meaning": "【つめたい】冷的；凉的；（态度）冷淡〈イ形〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "働く",
+  "reading": "はたらく",
+  "meaning": "【はたらく】劳动；工作；起作用〈动1〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "風",
+  "reading": "かぜ",
+  "meaning": "【かぜ】风；风格〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "風邪",
+  "reading": "かぜ",
+  "meaning": "【かぜ】感冒〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "黒い",
+  "reading": "くろい",
+  "meaning": "【くろい】黑色的；黑〈イ形〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "そっち",
+  "reading": "そっち",
+  "meaning": "那边（そちら的随意说法）〈代〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "大切",
+  "reading": "たいせつ",
+  "meaning": "【たいせつ】重要的；贵重的；珍惜〈ナ形〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "花",
+  "reading": "はな",
+  "meaning": "【はな】花；樱花〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "一緒",
+  "reading": "いっしょ",
+  "meaning": "【いっしょ】一起；一同〈ナ形〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "窓",
+  "reading": "まど",
+  "meaning": "【まど】窗户〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "肉",
+  "reading": "にく",
+  "meaning": "【にく】肉〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "山",
+  "reading": "やま",
+  "meaning": "【やま】山；山峰；矿山〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "grammar",
+  "stage": 1,
+  "gid": "G018",
+  "word": "G018 な形容词活用",
+  "reading": "なけいようし",
+  "meaning": "〔文法〕~です/~ではない/~だった",
+  "rows": [
+   [
+    "京都は静かな町です。",
+    "接续：「な」形接名词时中间加「な」，接「です」时只用词干。本句：京都是安静的城镇。"
+   ],
+   [
+    "駅は賑やかでした。",
+    "用法：过去加「でした」，否定用「ではありません」。本句：车站当时很热闹。"
+   ],
+   [
+    "図書館は静かではありません。",
+    "注意：修饰动词要用「に」形，如「静かに」。本句：图书馆不安静。"
+   ]
+  ],
+  "name": "な形容词活用",
+  "brief": "~です/~ではない/~だった"
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "きれい",
+  "reading": "きれい",
+  "meaning": "漂亮；干净〈ナ形〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "零",
+  "reading": "れい",
+  "meaning": "【れい】零〈数〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "若い",
+  "reading": "わかい",
+  "meaning": "【わかい】年轻的；幼小的〈イ形〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "五日",
+  "reading": "いつか",
+  "meaning": "【いつか】五天；五号〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "横",
+  "reading": "よこ",
+  "meaning": "【よこ】旁边；横向；宽度〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "休む",
+  "reading": "やすむ",
+  "meaning": "【やすむ】休息；请假；睡觉〈动1〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "質問",
+  "reading": "しつもん",
+  "meaning": "【しつもん】提问；问题〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "並ぶ",
+  "reading": "ならぶ",
+  "meaning": "【ならぶ】排队；排列；媲美〈动1〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "昨夜",
+  "reading": "ゆうべ・さくや",
+  "meaning": "【ゆうべ・さくや】昨晚；昨夜〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "どうも",
+  "reading": "どうも",
+  "meaning": "谢谢；总觉得；实在（道谢或道歉）〈副〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "弱い",
+  "reading": "よわい",
+  "meaning": "【よわい】弱的；软弱的；（茶）淡〈イ形〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "たぶん",
+  "reading": "たぶん",
+  "meaning": "大概；恐怕；可能〈副〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "低い",
+  "reading": "ひくい",
+  "meaning": "【ひくい】低的；矮的；（声音）小〈イ形〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "木",
+  "reading": "き",
+  "meaning": "【き】树；木头；木材〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "広い",
+  "reading": "ひろい",
+  "meaning": "【ひろい】宽的；宽敞的；广泛的〈イ形〉",
+  "rows": []
+ },
+ {
+  "kind": "grammar",
+  "stage": 1,
+  "gid": "G019",
+  "word": "G019 あります・います",
+  "reading": "ありますいます",
+  "meaning": "〔文法〕存在句: 物/人・场所に",
+  "rows": [
+   [
+    "冷蔵庫にジュースがあります。",
+    "接续：「场所に＋名词が＋あります／います」。本句：冰箱里有果汁。"
+   ],
+   [
+    "机の下に犬がいます。",
+    "用法：「います」用于人和动物，「あります」用于物品植物。本句：桌下有狗。"
+   ],
+   [
+    "かばんの中に何もありません。",
+    "注意：完全否定用「疑问词＋も＋ありません」。本句：包里什么都没有。"
+   ]
+  ],
+  "name": "あります・います",
+  "brief": "存在句: 物/人・场所に"
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "村",
+  "reading": "むら",
+  "meaning": "【むら】村庄；农村〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "危ない",
+  "reading": "あぶない",
+  "meaning": "【あぶない】危险的；不安全的；靠不住的〈イ形〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "お金",
+  "reading": "おかね",
+  "meaning": "【おかね】钱；金钱〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "黒",
+  "reading": "くろ",
+  "meaning": "【くろ】黑色〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "暗い",
+  "reading": "くらい",
+  "meaning": "【くらい】暗的；昏暗的；（颜色）深；（心情）阴郁〈イ形〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "戸",
+  "reading": "と",
+  "meaning": "【と】门；（日式）拉门〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "生徒",
+  "reading": "せいと",
+  "meaning": "【せいと】学生（多指中学生）〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "半分",
+  "reading": "はんぶん",
+  "meaning": "【はんぶん】一半；二分之一〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "練習",
+  "reading": "れんしゅうする",
+  "meaning": "【れんしゅうする】练习〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "始め",
+  "reading": "はじめ",
+  "meaning": "【はじめ】开始；最初（はじめに：首先）〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "売る",
+  "reading": "うる",
+  "meaning": "【うる】卖；出售〈动1〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "おいしい",
+  "reading": "おいしい",
+  "meaning": "好吃的；美味的〈イ形〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "手紙",
+  "reading": "てがみ",
+  "meaning": "【てがみ】信；书信〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "どちら",
+  "reading": "どちら",
+  "meaning": "哪边；哪一位〈代〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "千",
+  "reading": "せん",
+  "meaning": "【せん】千；一千〈数〉",
+  "rows": []
+ },
+ {
+  "kind": "grammar",
+  "stage": 1,
+  "gid": "G020",
+  "word": "G020 数量词",
+  "reading": "すうりょうし",
+  "meaning": "〔文法〕个/人/本/枚・~つ数法",
+  "rows": [
+   [
+    "りんごを三つください。",
+    "接续：数量词放在动词前面，直接说明份量。本句：给我三个苹果。"
+   ],
+   [
+    "猫が二匹います。",
+    "用法：小动物用「匹」，细长物用「本」，纸张用「枚」。本句：有两只猫。"
+   ],
+   [
+    "兄弟が三人います。",
+    "注意：「人」的读法有变化，如三人读作「さんにん」。本句：有三个兄弟。"
+   ]
+  ],
+  "name": "数量词",
+  "brief": "个/人/本/枚・~つ数法"
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "明るい",
+  "reading": "あかるい",
+  "meaning": "【あかるい】明亮的；开朗的（=明るい）〈イ形〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "廊下",
+  "reading": "ろうか",
+  "meaning": "【ろうか】走廊；过道〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "大人",
+  "reading": "おとな",
+  "meaning": "【おとな】大人；成年人〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "押す",
+  "reading": "おす",
+  "meaning": "【おす】按；推；（盖章）盖〈动1〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "皆さん",
+  "reading": "みなさん",
+  "meaning": "【みなさん】各位；大家〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "借りる",
+  "reading": "かりる",
+  "meaning": "【かりる】借（入）；租借〈动2〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "速い",
+  "reading": "はやい",
+  "meaning": "【はやい】快的；迅速的〈イ形〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "短い",
+  "reading": "みじかい",
+  "meaning": "【みじかい】短的；简短的〈イ形〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "煩い",
+  "reading": "うるさい",
+  "meaning": "【うるさい】吵闹的；烦人的；（催促）快〈イ形〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "薄い",
+  "reading": "うすい",
+  "meaning": "【うすい】薄的；（颜色）浅；（味道）淡；（感情）淡薄〈イ形〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "着く",
+  "reading": "つく",
+  "meaning": "【つく】到达；抵达〈动1〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "いす",
+  "reading": "いす",
+  "meaning": "椅子〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "お茶",
+  "reading": "おちゃ",
+  "meaning": "【おちゃ】茶；茶叶〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "雨",
+  "reading": "あめ",
+  "meaning": "【あめ】雨〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "飴",
+  "reading": "あめ",
+  "meaning": "【あめ】糖；糖果〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "grammar",
+  "stage": 1,
+  "gid": "G021",
+  "word": "G021 たい",
+  "reading": "たい",
+  "meaning": "〔文法〕想做~",
+  "rows": [
+   [
+    "日本へ行きたいです。",
+    "接续：动词「ます」形去掉「ます」加「たい」。本句：我想去日本。"
+   ],
+   [
+    "冷たい飲み物が飲みたい。",
+    "用法：对象用「が」或「を」均可，口语常省略「です」。本句：想喝冷饮。"
+   ],
+   [
+    "子供は買い物に行きたがっています。",
+    "注意：第三人称的愿望要用「たがる」形式。本句：孩子想去买东西。"
+   ]
+  ],
+  "name": "たい",
+  "brief": "想做~"
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "教室",
+  "reading": "きょうしつ",
+  "meaning": "【きょうしつ】教室〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "まずい",
+  "reading": "まずい",
+  "meaning": "难吃的；不好吃的；笨拙的〈イ形〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "消す",
+  "reading": "けす",
+  "meaning": "【けす】关掉（电源等）；擦掉；抹去〈动1〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "猫",
+  "reading": "ねこ",
+  "meaning": "【ねこ】猫〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "犬",
+  "reading": "いぬ",
+  "meaning": "【いぬ】狗〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "写真",
+  "reading": "しゃしん",
+  "meaning": "【しゃしん】照片；照相〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "薬",
+  "reading": "くすり",
+  "meaning": "【くすり】药；药物〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "階段",
+  "reading": "かいだん",
+  "meaning": "【かいだん】楼梯；台阶〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "白",
+  "reading": "しろ",
+  "meaning": "【しろ】白色〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "ちょうど",
+  "reading": "ちょうど",
+  "meaning": "正好（=ちょうど）〈副〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "電話",
+  "reading": "でんわ",
+  "meaning": "【でんわ】电话〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "かぎ",
+  "reading": "かぎ",
+  "meaning": "钥匙；锁〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "そちら",
+  "reading": "そちら",
+  "meaning": "那边；您〈代〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "荷物",
+  "reading": "にもつ",
+  "meaning": "【にもつ】行李；货物〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "両親",
+  "reading": "りょうしん",
+  "meaning": "【りょうしん】双亲；父母〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "grammar",
+  "stage": 1,
+  "gid": "G022",
+  "word": "G022 て形",
+  "reading": "てけい",
+  "meaning": "〔文法〕先后・并列・手段・原因",
+  "rows": [
+   [
+    "朝起きて、顔を洗います。",
+    "接续：「て形＋后句」，て形按动词类别有固定变化。本句：早上起床后洗脸。"
+   ],
+   [
+    "電車に乗って会社へ行きます。",
+    "用法：表动作先后，前句动作完成后再做后句。本句：乘电车去公司。"
+   ],
+   [
+    "風を引いて、学校を休みました。",
+    "注意：也能表原因，但后句不能接命令或意志。本句：感冒了没去上学。"
+   ]
+  ],
+  "name": "て形",
+  "brief": "先后・并列・手段・原因"
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "建物",
+  "reading": "たてもの",
+  "meaning": "【たてもの】建筑物；楼房〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "お父さん",
+  "reading": "おとうさん",
+  "meaning": "【おとうさん】爸爸；父亲〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "お母さん",
+  "reading": "おかあさん",
+  "meaning": "【おかあさん】妈妈；母亲〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "お兄さん",
+  "reading": "おにいさん",
+  "meaning": "【おにいさん】哥哥；大哥〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "お姉さん",
+  "reading": "おねえさん",
+  "meaning": "【おねえさん】姐姐；大姐〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "伯母さん",
+  "reading": "おばさん",
+  "meaning": "【おばさん】姑妈；姨妈；伯母；婶婶；阿姨〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "机",
+  "reading": "つくえ",
+  "meaning": "【つくえ】书桌；办公桌〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "車",
+  "reading": "くるま",
+  "meaning": "【くるま】车；汽车〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "りっぱ",
+  "reading": "りっぱ",
+  "meaning": "优秀；气派；堂堂正正〈ナ形〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "細い",
+  "reading": "ほそい",
+  "meaning": "【ほそい】细的；纤细的；瘦的〈イ形〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "寒い",
+  "reading": "さむい",
+  "meaning": "【さむい】寒冷的；（感到）冷〈イ形〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "青い",
+  "reading": "あおい",
+  "meaning": "【あおい】蓝色的；（脸色）苍白〈イ形〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "辛い",
+  "reading": "からい",
+  "meaning": "【からい】辣的；咸的；辛苦的〈イ形〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "授業",
+  "reading": "じゅぎょう",
+  "meaning": "【じゅぎょう】课；授课；上课〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "背",
+  "reading": "せ",
+  "meaning": "【せ】身高；个子；背〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "grammar",
+  "stage": 1,
+  "gid": "G023",
+  "word": "G023 ています",
+  "reading": "ています",
+  "meaning": "〔文法〕进行・结果状态・习惯",
+  "rows": [
+   [
+    "今、雨が降っています。",
+    "接续：动词て形加「います」构成进行式。本句：现在正下着雨。"
+   ],
+   [
+    "私は東京に住んでいます。",
+    "用法：住、知、结婚等动词用「ています」表持续状态。本句：我住在东京。"
+   ],
+   [
+    "毎日公園を走っています。",
+    "注意：习惯性的反复动作也可用本句型表达。本句：每天在公园跑步。"
+   ]
+  ],
+  "name": "ています",
+  "brief": "进行・结果状态・习惯"
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "川",
+  "reading": "かわ",
+  "meaning": "【かわ】河；河流〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "そば",
+  "reading": "そば",
+  "meaning": "旁边；附近〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "万",
+  "reading": "まん",
+  "meaning": "【まん】万；一万〈数〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "吸う",
+  "reading": "すう",
+  "meaning": "【すう】吸；抽（烟）；吸入〈动1〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "箱",
+  "reading": "はこ",
+  "meaning": "【はこ】箱子；盒子〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "門",
+  "reading": "もん",
+  "meaning": "【もん】大门；（校）门〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "はく",
+  "reading": "はく",
+  "meaning": "穿（裤、裙、鞋、袜）；戴（帽子除外的穿戴）〈动1〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "脱ぐ",
+  "reading": "ぬぐ",
+  "meaning": "【ぬぐ】脱（衣、鞋、帽）；摘〈动1〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "貸す",
+  "reading": "かす",
+  "meaning": "【かす】借出；借给；出租〈动1〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "パン",
+  "reading": "ぱん",
+  "meaning": "面包〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "赤",
+  "reading": "あか",
+  "meaning": "【あか】红色〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "有名",
+  "reading": "ゆうめい",
+  "meaning": "【ゆうめい】有名；著名〈ナ形〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "おなか",
+  "reading": "おなか",
+  "meaning": "肚子；腹部〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "掃除",
+  "reading": "そうじする",
+  "meaning": "【そうじする】打扫；清扫〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "絵",
+  "reading": "え",
+  "meaning": "【え】画；图画〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "grammar",
+  "stage": 1,
+  "gid": "G024",
+  "word": "G024 てもいいです",
+  "reading": "てもいいです",
+  "meaning": "〔文法〕许可: 可以~",
+  "rows": [
+   [
+    "入ってもいいですか。",
+    "接续：动词て形加「もいいです」，询问许可。本句：可以进去吗？"
+   ],
+   [
+    "ここで写真を撮ってもいいですよ。",
+    "用法：句尾升调问句问许可，肯定回答常用「どうぞ」。本句：可以在这里拍照。"
+   ],
+   [
+    "もう帰ってもいいですか。",
+    "注意：更郑重的问法用「てもよろしいでしょうか」。本句：现在可以回家吗？"
+   ]
+  ],
+  "name": "てもいいです",
+  "brief": "许可: 可以~"
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "洗う",
+  "reading": "あらう",
+  "meaning": "【あらう】洗；洗涤；调查（彻底查）〈动1〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "降る",
+  "reading": "ふる",
+  "meaning": "【ふる】下（雨、雪）；降〈动1〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "雪",
+  "reading": "ゆき",
+  "meaning": "【ゆき】雪〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "入口",
+  "reading": "いりぐち",
+  "meaning": "【いりぐち】入口〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "古い",
+  "reading": "ふるい",
+  "meaning": "【ふるい】旧的；老的；陈旧的〈イ形〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "病院",
+  "reading": "びょういん",
+  "meaning": "【びょういん】医院〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "狭い",
+  "reading": "せまい",
+  "meaning": "【せまい】狭窄的；（心胸）狭隘〈イ形〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "魚",
+  "reading": "さかな",
+  "meaning": "【さかな】鱼〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "鳥",
+  "reading": "とり",
+  "meaning": "【とり】鸟；鸡（肉）〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "紙",
+  "reading": "かみ",
+  "meaning": "【かみ】纸〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "洗濯",
+  "reading": "せんたく",
+  "meaning": "【せんたく】洗衣服；洗涤〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "出かける",
+  "reading": "でかける",
+  "meaning": "【でかける】出门；外出〈动2〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "鼻",
+  "reading": "はな",
+  "meaning": "【はな】鼻子〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "下手",
+  "reading": "へた",
+  "meaning": "【へた】不擅长；笨拙；（手法）差〈ナ形〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "午後",
+  "reading": "ごご",
+  "meaning": "【ごご】下午；午后〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "grammar",
+  "stage": 1,
+  "gid": "G025",
+  "word": "G025 てはいけません",
+  "reading": "てはいけません",
+  "meaning": "〔文法〕禁止: 不许~",
+  "rows": [
+   [
+    "ここに車を止めてはいけません。",
+    "接续：动词て形加「はいけません」，表禁止。本句：这里不许停车。"
+   ],
+   [
+    "教室で携帯を使ってはいけません。",
+    "用法：表示规则或说话人的禁止，语气较强硬。本句：教室里不许用手机。"
+   ],
+   [
+    "授業中に話してはいけません。",
+    "注意：口语里也常说「〜ちゃいけない」。本句：上课时不许说话。"
+   ]
+  ],
+  "name": "てはいけません",
+  "brief": "禁止: 不许~"
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "歌う",
+  "reading": "うたう",
+  "meaning": "【うたう】唱；唱歌〈动1〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "弾く",
+  "reading": "ひく",
+  "meaning": "【ひく】弹奏（钢琴、吉他等）〈动1〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "病気",
+  "reading": "びょうき",
+  "meaning": "【びょうき】疾病；生病〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "並べる",
+  "reading": "ならべる",
+  "meaning": "【ならべる】排列；摆；列举〈动2〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "まっすぐ",
+  "reading": "まっすぐ",
+  "meaning": "笔直；一直；直率〈副〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "お菓子",
+  "reading": "おかし",
+  "meaning": "【おかし】点心；糕点；糖果〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "買い物",
+  "reading": "かいもの",
+  "meaning": "【かいもの】购物；买东西〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "歌",
+  "reading": "うた",
+  "meaning": "【うた】歌；歌曲〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "庭",
+  "reading": "にわ",
+  "meaning": "【にわ】庭院；院子〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "学生",
+  "reading": "がくせい",
+  "meaning": "【がくせい】学生〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "テレビ",
+  "reading": "テレビ",
+  "meaning": "电视〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "いかが",
+  "reading": "いかが",
+  "meaning": "如何（=いかが）〈副〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "月曜日",
+  "reading": "げつようび",
+  "meaning": "【げつようび】星期一〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "火曜日",
+  "reading": "かようび",
+  "meaning": "【かようび】星期二〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "水曜日",
+  "reading": "すいようび",
+  "meaning": "【すいようび】星期三〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "grammar",
+  "stage": 1,
+  "gid": "G026",
+  "word": "G026 てください",
+  "reading": "てください",
+  "meaning": "〔文法〕请求: 请~",
+  "rows": [
+   [
+    "ちょっと待ってください。",
+    "接续：动词て形加「ください」，构成请求。本句：请稍等。"
+   ],
+   [
+    "こちらに名前を書いてください。",
+    "用法：礼貌的请求形式，比命令形柔和得多。本句：请在这里写名字。"
+   ],
+   [
+    "ゆっくり話してください。",
+    "注意：更客气的说法是「ていただけませんか」。本句：请慢点说。"
+   ]
+  ],
+  "name": "てください",
+  "brief": "请求: 请~"
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "木曜日",
+  "reading": "もくようび",
+  "meaning": "【もくようび】星期四〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "金曜日",
+  "reading": "きんようび",
+  "meaning": "【きんようび】星期五〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "土曜日",
+  "reading": "どようび",
+  "meaning": "【どようび】星期六〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "日曜日",
+  "reading": "にちようび",
+  "meaning": "【にちようび】星期日；星期天〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "一つ",
+  "reading": "ひとつ",
+  "meaning": "【ひとつ】一个；一岁〈数〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "二つ",
+  "reading": "ふたつ",
+  "meaning": "【ふたつ】两个；两岁〈数〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "三つ",
+  "reading": "みっつ",
+  "meaning": "【みっつ】三个；三岁〈数〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "四つ",
+  "reading": "よっつ",
+  "meaning": "【よっつ】四个；四岁〈数〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "五つ",
+  "reading": "いつつ",
+  "meaning": "【いつつ】五个；五岁〈数〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "六つ",
+  "reading": "むっつ",
+  "meaning": "【むっつ】六个；六岁〈数〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "七つ",
+  "reading": "ななつ",
+  "meaning": "【ななつ】七个；七岁〈数〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "八つ",
+  "reading": "やっつ",
+  "meaning": "【やっつ】八个；八岁〈数〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "九つ",
+  "reading": "ここのつ",
+  "meaning": "【ここのつ】九个；九岁〈数〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "あさって",
+  "reading": "",
+  "meaning": "后天〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "あちら",
+  "reading": "",
+  "meaning": "那边（=あちら）〈代〉",
+  "rows": []
+ },
+ {
+  "kind": "grammar",
+  "stage": 1,
+  "gid": "G027",
+  "word": "G027 ない形",
+  "reading": "ないけい",
+  "meaning": "〔文法〕否定形作法",
+  "rows": [
+   [
+    "今日は何もしない。",
+    "接续：动词按类别变成「ない形」，五段词尾改同行「あ」段加「ない」。本句：今天什么都不做。"
+   ],
+   [
+    "来週は忙しいから行かない。",
+    "用法：简体否定用于随意对话，也用于各种从句。本句：下周忙就不去。"
+   ],
+   [
+    "彼は野菜を食べない人です。",
+    "注意：「ない形」直接修饰名词是很常用的连体用法。本句：他是不吃蔬菜的人。"
+   ]
+  ],
+  "name": "ない形",
+  "brief": "否定形作法"
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "あっち",
+  "reading": "",
+  "meaning": "那边（あちら的随意说法）〈代〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "あびる",
+  "reading": "",
+  "meaning": "浇；淋；冲；晒（太阳）〈动2〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "いくつ",
+  "reading": "",
+  "meaning": "几个；几岁〈数〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "ええ",
+  "reading": "",
+  "meaning": "嗯；是的〈感〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "おまわりさん",
+  "reading": "",
+  "meaning": "警察先生〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "お弁当",
+  "reading": "おべんとう",
+  "meaning": "【おべんとう】盒饭；便当〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "お手洗い",
+  "reading": "おてあらい",
+  "meaning": "【おてあらい】厕所；洗手间〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "お皿",
+  "reading": "おさら",
+  "meaning": "【おさら】盘子；碟子〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "お酒",
+  "reading": "おさけ",
+  "meaning": "【おさけ】酒；日本酒〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "お風呂",
+  "reading": "おふろ",
+  "meaning": "【おふろ】澡堂；浴池；洗澡〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "かばん",
+  "reading": "",
+  "meaning": "包；皮包；提包〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "こっち",
+  "reading": "",
+  "meaning": "这边（こちら的随意说法）〈代〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "こんな",
+  "reading": "",
+  "meaning": "这样的；这种的〈连体〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "さ来年",
+  "reading": "さらいねん",
+  "meaning": "【さらいねん】后年〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "しかし",
+  "reading": "",
+  "meaning": "但是；可是；然而〈接〉",
+  "rows": []
+ },
+ {
+  "kind": "grammar",
+  "stage": 1,
+  "gid": "G028",
+  "word": "G028 ないでください",
+  "reading": "ないでください",
+  "meaning": "〔文法〕否定请求",
+  "rows": [
+   [
+    "写真を撮らないでください。",
+    "接续：动词ない形加「でください」。本句：请不要拍照。"
+   ],
+   [
+    "ここでタバコを吸わないでください。",
+    "用法：礼貌地请求对方不要做某事。本句：请不要在这里抽烟。"
+   ],
+   [
+    "忘れないでくださいね。",
+    "注意：句尾加「ね」语气更柔和亲切。本句：请别忘了哦。"
+   ]
+  ],
+  "name": "ないでください",
+  "brief": "否定请求"
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "しょうゆ",
+  "reading": "",
+  "meaning": "酱油〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "じゃあ",
+  "reading": "",
+  "meaning": "那么；再见（では的口语）〈感〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "すぐに",
+  "reading": "",
+  "meaning": "立刻；马上〈副〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "せっけん",
+  "reading": "",
+  "meaning": "肥皂；香皂〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "それから",
+  "reading": "",
+  "meaning": "然后〈接〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "それでは",
+  "reading": "",
+  "meaning": "那么〈接〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "たて",
+  "reading": "たて",
+  "meaning": "竖；纵〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "たばこ",
+  "reading": "",
+  "meaning": "烟；香烟；烟草〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "だんだん",
+  "reading": "",
+  "meaning": "渐渐；台阶〈副〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "ちゃわん",
+  "reading": "",
+  "meaning": "碗；饭碗〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "つまらない",
+  "reading": "",
+  "meaning": "无聊的；没意思的〈イ形〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "でも",
+  "reading": "",
+  "meaning": "但是；可是〈接〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "とり肉",
+  "reading": "とりにく",
+  "meaning": "【とりにく】鸡肉〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "どっち",
+  "reading": "",
+  "meaning": "哪个；哪边（どちら的随意说法）〈代〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "どなた",
+  "reading": "",
+  "meaning": "哪位（谁的礼貌说法）〈代〉",
+  "rows": []
+ },
+ {
+  "kind": "grammar",
+  "stage": 1,
+  "gid": "G029",
+  "word": "G029 なければなりません",
+  "reading": "なければなりません",
+  "meaning": "〔文法〕义务: 必须~",
+  "rows": [
+   [
+    "薬を飲まなければなりません。",
+    "接续：ない形去「い」加「なければなりません」。本句：必须吃药。"
+   ],
+   [
+    "明日までにレポートを出さなければなりません。",
+    "用法：表示义务「必须做」，主语常是说话人或一般规则。本句：必须明天前交报告。"
+   ],
+   [
+    "十時までに帰らなければなりません。",
+    "注意：口语中「なければ」常缩略成「なきゃ」。本句：必须十点前回家。"
+   ]
+  ],
+  "name": "なければなりません",
+  "brief": "义务: 必须~"
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "など",
+  "reading": "",
+  "meaning": "等等；诸如此类〈助〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "はし",
+  "reading": "",
+  "meaning": "筷子〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "ふろ",
+  "reading": "",
+  "meaning": "浴池；澡堂；洗澡水〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "ゆっくりと",
+  "reading": "",
+  "meaning": "慢慢地；从容地〈副〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "より",
+  "reading": "",
+  "meaning": "（比较）比；（方向）那边〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "アパート",
+  "reading": "",
+  "meaning": "公寓〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "エレベーター",
+  "reading": "",
+  "meaning": "电梯；升降机〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "カップ",
+  "reading": "",
+  "meaning": "杯子；茶杯〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "カメラ",
+  "reading": "",
+  "meaning": "照相机；摄像机〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "カレンダー",
+  "reading": "",
+  "meaning": "日历；挂历〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "カレー",
+  "reading": "",
+  "meaning": "咖喱（饭）〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "キロ",
+  "reading": "",
+  "meaning": "公斤；千克；公里（キログラム／キロメートル的略称）〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "ギター",
+  "reading": "",
+  "meaning": "吉他〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "クラス",
+  "reading": "",
+  "meaning": "班级；阶级〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "グラム",
+  "reading": "",
+  "meaning": "克〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "grammar",
+  "stage": 1,
+  "gid": "G030",
+  "word": "G030 なくてもいいです",
+  "reading": "なくてもいいです",
+  "meaning": "〔文法〕不必~",
+  "rows": [
+   [
+    "明日は来なくてもいいです。",
+    "接续：ない形去「い」加「くてもいいです」。本句：明天不来也行。"
+   ],
+   [
+    "靴を脱がなくてもいいですよ。",
+    "用法：表示许可「不～也可以」，句尾加「よ」给对方宽限。本句：不脱鞋也可以哦。"
+   ],
+   [
+    "お金は払わなくてもいいですか。",
+    "注意：与「なければなりません」构成义务与豁免的对立。本句：可以不付钱吗？"
+   ]
+  ],
+  "name": "なくてもいいです",
+  "brief": "不必~"
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "コップ",
+  "reading": "",
+  "meaning": "杯子；玻璃杯〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "コピーする",
+  "reading": "",
+  "meaning": "复印；复制〈动3〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "コート",
+  "reading": "",
+  "meaning": "外套；大衣；（网）球场〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "コーヒー",
+  "reading": "",
+  "meaning": "咖啡〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "シャツ",
+  "reading": "",
+  "meaning": "衬衫〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "シャワー",
+  "reading": "",
+  "meaning": "淋浴〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "スカート",
+  "reading": "",
+  "meaning": "裙子〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "ストーブ",
+  "reading": "",
+  "meaning": "暖气炉；火炉〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "スプーン",
+  "reading": "",
+  "meaning": "勺子；汤匙〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "スポーツ",
+  "reading": "",
+  "meaning": "体育；运动〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "スリッパ",
+  "reading": "",
+  "meaning": "拖鞋〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "ズボン",
+  "reading": "",
+  "meaning": "裤子〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "セーター",
+  "reading": "",
+  "meaning": "毛衣〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "ゼロ",
+  "reading": "",
+  "meaning": "零〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "タクシー",
+  "reading": "",
+  "meaning": "出租车〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "grammar",
+  "stage": 1,
+  "gid": "G031",
+  "word": "G031 ませんか・ましょう",
+  "reading": "ませんかましょう",
+  "meaning": "〔文法〕邀请/提议",
+  "rows": [
+   [
+    "一緒に昼ご飯を食べませんか。",
+    "接续：动词「ます」去「ます」加「ませんか」。本句：一起吃午饭好吗？"
+   ],
+   [
+    "少し休みましょう。",
+    "用法：「ましょう」提议一起做，比「ませんか」更直接。本句：稍微休息一下吧。"
+   ],
+   [
+    "窓を開けましょうか。",
+    "注意：「ましょうか」还可表示主动提出帮忙。本句：我来打开窗户吧？"
+   ]
+  ],
+  "name": "ませんか・ましょう",
+  "brief": "邀请/提议"
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "テスト",
+  "reading": "",
+  "meaning": "考试；测验〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "テーブル",
+  "reading": "",
+  "meaning": "桌子；餐桌〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "テープ",
+  "reading": "",
+  "meaning": "磁带；胶带〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "テープレコーダー",
+  "reading": "",
+  "meaning": "录音机〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "デパート",
+  "reading": "",
+  "meaning": "百货商店〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "トイレ",
+  "reading": "",
+  "meaning": "厕所；卫生间〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "ドア",
+  "reading": "",
+  "meaning": "门〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "ナイフ",
+  "reading": "",
+  "meaning": "刀；小刀〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "ニュース",
+  "reading": "",
+  "meaning": "新闻；消息〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "ネクタイ",
+  "reading": "",
+  "meaning": "领带〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "ノート",
+  "reading": "",
+  "meaning": "笔记本〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "ハンカチ",
+  "reading": "",
+  "meaning": "手帕〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "バス",
+  "reading": "",
+  "meaning": "公共汽车；浴室（バスルーム）〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "バター",
+  "reading": "",
+  "meaning": "黄油〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "パーティー",
+  "reading": "",
+  "meaning": "聚会；晚会〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "grammar",
+  "stage": 1,
+  "gid": "G032",
+  "word": "G032 が ほしい",
+  "reading": "がほしい",
+  "meaning": "〔文法〕想要物",
+  "rows": [
+   [
+    "新しいパソコンが欲しいです。",
+    "接续：想要的东西加「が」再接「欲しい」。本句：想要新电脑。"
+   ],
+   [
+    "誕生日にカメラがほしい。",
+    "用法：表达第一人称愿望，对象必须用「が」标记。本句：生日想要相机。"
+   ],
+   [
+    "何も欲しくないです。",
+    "注意：否定是「欲しくない」，第三人称愿望用「がる」。本句：什么都不想要。"
+   ]
+  ],
+  "name": "が ほしい",
+  "brief": "想要物"
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "フィルム",
+  "reading": "",
+  "meaning": "胶卷；胶片；影片〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "フォーク",
+  "reading": "",
+  "meaning": "叉子；（民）谣（フォークソング）〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "プール",
+  "reading": "",
+  "meaning": "游泳池〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "ベッド",
+  "reading": "",
+  "meaning": "床〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "ペット",
+  "reading": "",
+  "meaning": "宠物〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "ペン",
+  "reading": "",
+  "meaning": "钢笔；笔〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "ページ",
+  "reading": "",
+  "meaning": "页〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "ホテル",
+  "reading": "",
+  "meaning": "宾馆；饭店〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "ボタン",
+  "reading": "",
+  "meaning": "纽扣；按钮〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "ボールペン",
+  "reading": "",
+  "meaning": "圆珠笔〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "ポケット",
+  "reading": "",
+  "meaning": "口袋；衣袋〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "ポスト",
+  "reading": "",
+  "meaning": "邮筒；信箱；职位〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "マッチ",
+  "reading": "",
+  "meaning": "火柴；比赛；匹配〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "メートル",
+  "reading": "",
+  "meaning": "米；公尺〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "ラジオ",
+  "reading": "",
+  "meaning": "收音机；广播〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "grammar",
+  "stage": 1,
+  "gid": "G033",
+  "word": "G033 た形",
+  "reading": "たけい",
+  "meaning": "〔文法〕过去形作法",
+  "rows": [
+   [
+    "昨日、友達に会いました。",
+    "接续：て形去「て」改「た」，过去式敬体加「ました」。本句：昨天见了朋友。"
+   ],
+   [
+    "朝ご飯を食べてから出かけます。",
+    "用法：た形与て形同源，变化规则完全平行。本句：吃完早饭后出门。"
+   ],
+   [
+    "カードを使った方がいいですよ。",
+    "注意：た形后可直接接「ほうがいい」等句型。本句：用卡比较好哦。"
+   ]
+  ],
+  "name": "た形",
+  "brief": "过去形作法"
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "ラジカセ",
+  "reading": "",
+  "meaning": "收录机（收音机磁带一体机）〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "レコード",
+  "reading": "",
+  "meaning": "唱片；纪录〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "レストラン",
+  "reading": "",
+  "meaning": "餐厅；饭馆〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "ワイシャツ",
+  "reading": "",
+  "meaning": "（男式）衬衫〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "一人",
+  "reading": "ひとり",
+  "meaning": "【ひとり】一个人；独自〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "一日",
+  "reading": "いちにち・ついたち",
+  "meaning": "【いちにち・ついたち】一天；（每月）一号（ついたち）〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "一昨年",
+  "reading": "おととし",
+  "meaning": "【おととし】前年〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "一昨日",
+  "reading": "おととい",
+  "meaning": "【おととい】前天〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "一月",
+  "reading": "ひとつき・いちがつ",
+  "meaning": "【ひとつき・いちがつ】一个月〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "七日",
+  "reading": "なのか",
+  "meaning": "【なのか】七天；七号〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "万年筆",
+  "reading": "まんねんひつ",
+  "meaning": "【まんねんひつ】钢笔〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "丈夫",
+  "reading": "じょうぶ",
+  "meaning": "【じょうぶ】坚固；结实；（身体）健康〈ナ形〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "三日",
+  "reading": "みっか",
+  "meaning": "【みっか】三天；三号〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "上手",
+  "reading": "じょうず",
+  "meaning": "【じょうず】擅长；高明；能手〈ナ形〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "上着",
+  "reading": "うわぎ",
+  "meaning": "【うわぎ】上衣；外衣〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "grammar",
+  "stage": 1,
+  "gid": "G034",
+  "word": "G034 たことがあります",
+  "reading": "たことがあります",
+  "meaning": "〔文法〕经历: 曾经~过",
+  "rows": [
+   [
+    "富士山に登ったことがあります。",
+    "接续：动词た形加「ことがあります」。本句：登过富士山。"
+   ],
+   [
+    "寿司を食べたことがないんです。",
+    "用法：否定「たことがない」表示没有经历过。本句：没吃过寿司。"
+   ],
+   [
+    "一度も海外へ行ったことがありません。",
+    "注意：只谈经历，不涉及具体时间场合。本句：一次也没出过国。"
+   ]
+  ],
+  "name": "たことがあります",
+  "brief": "经历: 曾经~过"
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "丸い",
+  "reading": "まるい",
+  "meaning": "【まるい】圆的〈イ形〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "九日",
+  "reading": "ここのか",
+  "meaning": "【ここのか】九天；九号〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "二人",
+  "reading": "ふたり",
+  "meaning": "【ふたり】两个人；一对〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "二十日",
+  "reading": "はつか",
+  "meaning": "【はつか】二十天；二十号〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "二十歳",
+  "reading": "はたち",
+  "meaning": "【はたち】二十岁；成年〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "二日",
+  "reading": "ふつか",
+  "meaning": "【ふつか】两天；二号〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "交差点",
+  "reading": "こうさてん",
+  "meaning": "【こうさてん】十字路口；交叉点〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "交番",
+  "reading": "こうばん",
+  "meaning": "【こうばん】派出所；岗亭〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "今晩",
+  "reading": "こんばん",
+  "meaning": "【こんばん】今晚；今天晚上〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "今月",
+  "reading": "こんげつ",
+  "meaning": "【こんげつ】本月；这个月〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "今週",
+  "reading": "こんしゅう",
+  "meaning": "【こんしゅう】本周；这个星期〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "休み",
+  "reading": "やすみ",
+  "meaning": "【やすみ】休息；休假；假期〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "会社",
+  "reading": "かいしゃ",
+  "meaning": "【かいしゃ】公司〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "伯父",
+  "reading": "おじ",
+  "meaning": "【おじ】伯父；叔叔；舅舅（对年长男性的称呼）〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "作文",
+  "reading": "さくぶん",
+  "meaning": "【さくぶん】作文；写作〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "grammar",
+  "stage": 1,
+  "gid": "G035",
+  "word": "G035 てから・たあとで",
+  "reading": "てからたあとで",
+  "meaning": "〔文法〕~之后再~",
+  "rows": [
+   [
+    "宿題をしてから遊びます。",
+    "接续：动词て形加「から」再加后句。本句：写完作业再玩。"
+   ],
+   [
+    "お風呂に入ってから寝ました。",
+    "用法：强调先后顺序，前句必须完成；「あとで」要求较宽松。本句：洗完澡睡了。"
+   ],
+   [
+    "会議が終わったあとで、電話してください。",
+    "注意：「あとで」前还可用名词加「の」。本句：开完会后请打电话。"
+   ]
+  ],
+  "name": "てから・たあとで",
+  "brief": "~之后再~"
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "便利",
+  "reading": "べんり",
+  "meaning": "【べんり】方便；便利〈ナ形〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "傘",
+  "reading": "かさ",
+  "meaning": "【かさ】伞；雨伞〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "兄弟",
+  "reading": "きょうだい",
+  "meaning": "【きょうだい】兄弟姐妹；兄弟〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "先",
+  "reading": "さき",
+  "meaning": "【さき】前方；先前；将来；先〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "先月",
+  "reading": "せんげつ",
+  "meaning": "【せんげつ】上个月〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "先週",
+  "reading": "せんしゅう",
+  "meaning": "【せんしゅう】上周；上星期〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "八日",
+  "reading": "ようか",
+  "meaning": "【ようか】八天；八号〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "八百屋",
+  "reading": "やおや",
+  "meaning": "【やおや】蔬菜店；菜店〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "公園",
+  "reading": "こうえん",
+  "meaning": "【こうえん】公园〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "六日",
+  "reading": "むいか",
+  "meaning": "【むいか】六天；六号〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "冷蔵庫",
+  "reading": "れいぞうこ",
+  "meaning": "【れいぞうこ】冰箱〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "出口",
+  "reading": "でぐち",
+  "meaning": "【でぐち】出口〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "切手",
+  "reading": "きって",
+  "meaning": "【きって】邮票〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "切符",
+  "reading": "きっぷ",
+  "meaning": "【きっぷ】票；车票〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "動物",
+  "reading": "どうぶつ",
+  "meaning": "【どうぶつ】动物〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "grammar",
+  "stage": 1,
+  "gid": "G036",
+  "word": "G036 前に・とき",
+  "reading": "まえにとき",
+  "meaning": "〔文法〕~之前/~的时候",
+  "rows": [
+   [
+    "寝る前に、歯を磨きます。",
+    "接续：动词原形或名词加「に」再加「前に」。本句：睡前刷牙。"
+   ],
+   [
+    "テストのとき、辞書を使いません。",
+    "用法：「とき」直接接修饰句，名词后加「の」。本句：考试时不用词典。"
+   ],
+   [
+    "日本へ行くとき、パスポートが要ります。",
+    "注意：行くとき表去之前，行ったとき表到达之后。本句：去日本时需要护照。"
+   ]
+  ],
+  "name": "前に・とき",
+  "brief": "~之前/~的时候"
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "勤める",
+  "reading": "つとめる",
+  "meaning": "【つとめる】任职；在……工作；努力〈动2〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "北",
+  "reading": "きた",
+  "meaning": "【きた】北；北方〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "医者",
+  "reading": "いしゃ",
+  "meaning": "【いしゃ】医生；大夫〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "十日",
+  "reading": "とおか",
+  "meaning": "【とおか】十天；十号〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "午前",
+  "reading": "ごぜん",
+  "meaning": "【ごぜん】上午〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "南",
+  "reading": "みなみ",
+  "meaning": "【みなみ】南；南方〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "卵",
+  "reading": "たまご",
+  "meaning": "【たまご】鸡蛋；卵〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "台所",
+  "reading": "だいどころ",
+  "meaning": "【だいどころ】厨房〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "咲く",
+  "reading": "さく",
+  "meaning": "【さく】（花）开〈动1〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "喫茶店",
+  "reading": "きっさてん",
+  "meaning": "【きっさてん】咖啡馆；咖啡厅〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "四日",
+  "reading": "よっか",
+  "meaning": "【よっか】四天；四号〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "図書館",
+  "reading": "としょかん",
+  "meaning": "【としょかん】图书馆〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "地下鉄",
+  "reading": "ちかてつ",
+  "meaning": "【ちかてつ】地铁〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "地図",
+  "reading": "ちず",
+  "meaning": "【ちず】地图〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "塩",
+  "reading": "しお",
+  "meaning": "【しお】盐；食盐〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "grammar",
+  "stage": 1,
+  "gid": "G037",
+  "word": "G037 ながら",
+  "reading": "ながら",
+  "meaning": "〔文法〕一边~一边~",
+  "rows": [
+   [
+    "音楽を聞きながら勉強します。",
+    "接续：动词ます形去「ます」加「ながら」。本句：边听音乐边学习。"
+   ],
+   [
+    "テレビを見ながらご飯を食べる。",
+    "用法：同一主体同时进行两个动作。本句：边看电视边吃饭。"
+   ],
+   [
+    "何か飲みながら話しましょう。",
+    "注意：前后句主语必须相同，动作同时进行。本句：边喝点什么边聊吧。"
+   ]
+  ],
+  "name": "ながら",
+  "brief": "一边~一边~"
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "夏休み",
+  "reading": "なつやすみ",
+  "meaning": "【なつやすみ】暑假〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "夕方",
+  "reading": "ゆうがた",
+  "meaning": "【ゆうがた】傍晚；黄昏〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "夕飯",
+  "reading": "ゆうはん",
+  "meaning": "【ゆうはん】晚饭；晚餐〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "外国",
+  "reading": "がいこく",
+  "meaning": "【がいこく】外国〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "外国人",
+  "reading": "がいこくじん",
+  "meaning": "【がいこくじん】外国人〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "大使館",
+  "reading": "たいしかん",
+  "meaning": "【たいしかん】大使馆〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "大勢",
+  "reading": "おおぜい",
+  "meaning": "【おおぜい】许多人；一大群人〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "大学",
+  "reading": "だいがく",
+  "meaning": "【だいがく】大学〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "天気",
+  "reading": "てんき",
+  "meaning": "【てんき】天气；晴天〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "太い",
+  "reading": "ふとい",
+  "meaning": "【ふとい】粗的；胖的；（声音）低沉〈イ形〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "奥さん",
+  "reading": "おくさん",
+  "meaning": "【おくさん】太太；夫人（对他人妻子的尊称）〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "字引",
+  "reading": "じびき",
+  "meaning": "【じびき】词典；字典〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "安い",
+  "reading": "やすい",
+  "meaning": "【やすい】便宜的；廉价的〈イ形〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "家庭",
+  "reading": "かてい",
+  "meaning": "【かてい】家庭〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "宿題",
+  "reading": "しゅくだい",
+  "meaning": "【しゅくだい】作业；家庭作业〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "grammar",
+  "stage": 1,
+  "gid": "G038",
+  "word": "G038 と思います",
+  "reading": "とおもいます",
+  "meaning": "〔文法〕想法: 我觉得~",
+  "rows": [
+   [
+    "明日は雨が降ると思います。",
+    "接续：简体句加「と思います」，名词和な形接だ。本句：我想明天会下雨。"
+   ],
+   [
+    "田中さんは来ないと思います。",
+    "用法：否定多放在从句内部「来ない」。本句：我认为田中不会来。"
+   ],
+   [
+    "この店は安いと思いますか。",
+    "注意：第一人称想法专用，别人想法用「思っている」。本句：你觉得这家店便宜吗？"
+   ]
+  ],
+  "name": "と思います",
+  "brief": "想法: 我觉得~"
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "封筒",
+  "reading": "ふうとう",
+  "meaning": "【ふうとう】信封〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "小さな",
+  "reading": "ちいさな",
+  "meaning": "【ちいさな】小的（后接名词）〈连体〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "差す",
+  "reading": "さす",
+  "meaning": "【さす】（撑）伞；（日）照；（潮）涨；（刀）插入〈动1〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "帽子",
+  "reading": "ぼうし",
+  "meaning": "【ぼうし】帽子〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "散歩",
+  "reading": "さんぽする",
+  "meaning": "【さんぽする】散步〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "文章",
+  "reading": "ぶんしょう",
+  "meaning": "【ぶんしょう】文章；句子〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "新聞",
+  "reading": "しんぶん",
+  "meaning": "【しんぶん】报纸〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "旅行",
+  "reading": "りょこう",
+  "meaning": "【りょこう】旅行；旅游〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "映画",
+  "reading": "えいが",
+  "meaning": "【えいが】电影〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "映画館",
+  "reading": "えいがかん",
+  "meaning": "【えいがかん】电影院〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "昼",
+  "reading": "ひる",
+  "meaning": "【ひる】中午；白天〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "昼御飯",
+  "reading": "ひるごはん",
+  "meaning": "【ひるごはん】午饭〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "時々",
+  "reading": "ときどき",
+  "meaning": "【ときどき】有时；时常〈副〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "時計",
+  "reading": "とけい",
+  "meaning": "【とけい】钟表；手表〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "晩御飯",
+  "reading": "ばんごはん",
+  "meaning": "【ばんごはん】晚饭〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "grammar",
+  "stage": 1,
+  "gid": "G039",
+  "word": "G039 と言いました",
+  "reading": "といいました",
+  "meaning": "〔文法〕转述: (他)说~",
+  "rows": [
+   [
+    "先生は、明日来ると言いました。",
+    "接续：简体句加「と言いました」表转述。本句：老师说明了天来。"
+   ],
+   [
+    "ニュースで地震があったと聞きました。",
+    "用法：と引出引用内容，新闻传闻常用「聞く」。本句：新闻里说发生了地震。"
+   ],
+   [
+    "「寒い」と隣の人が言いました。",
+    "注意：直接引用要用引号并原样保留语气。本句：旁边的人说「好冷」。"
+   ]
+  ],
+  "name": "と言いました",
+  "brief": "转述: (他)说~"
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "晴れ",
+  "reading": "はれ",
+  "meaning": "【はれ】晴天；晴朗〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "晴れる",
+  "reading": "はれる",
+  "meaning": "【はれる】（天）放晴；（心情）开朗；（误会）消除〈动2〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "暖かい",
+  "reading": "あたたかい",
+  "meaning": "【あたたかい】温暖的；暖和的〈イ形〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "曇り",
+  "reading": "くもり",
+  "meaning": "【くもり】阴天；多云〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "曇る",
+  "reading": "くもる",
+  "meaning": "【くもる】（天）阴；（玻璃等）模糊〈动1〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "曲がる",
+  "reading": "まがる",
+  "meaning": "【まがる】转弯；弯曲（=曲がる）〈动1〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "朝御飯",
+  "reading": "あさごはん",
+  "meaning": "【あさごはん】早饭〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "本棚",
+  "reading": "ほんだな",
+  "meaning": "【ほんだな】书架〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "来週",
+  "reading": "らいしゅう",
+  "meaning": "【らいしゅう】下周；下星期〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "東",
+  "reading": "ひがし",
+  "meaning": "【ひがし】东；东方〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "果物",
+  "reading": "くだもの",
+  "meaning": "【くだもの】水果〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "橋",
+  "reading": "はし",
+  "meaning": "【はし】桥；桥梁〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "歯",
+  "reading": "は",
+  "meaning": "【は】牙齿〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "毎晩",
+  "reading": "まいばん",
+  "meaning": "【まいばん】每天晚上〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "毎朝",
+  "reading": "まいあさ",
+  "meaning": "【まいあさ】每天早晨〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "grammar",
+  "stage": 1,
+  "gid": "G040",
+  "word": "G040 でしょう",
+  "reading": "でしょう",
+  "meaning": "〔文法〕推测/确认",
+  "rows": [
+   [
+    "明日は晴れるでしょう。",
+    "接续：简体句加「でしょう」，名词和な形接でしょう。本句：明天大概晴天。"
+   ],
+   [
+    "田中さんも来るでしょう。",
+    "用法：根据情况做有把握的推测「大概～吧」。本句：田中大概也会来吧。"
+   ],
+   [
+    "それは高かったでしょう。",
+    "注意：读升调时变成向对方求证。本句：那个当时很贵吧？"
+   ]
+  ],
+  "name": "でしょう",
+  "brief": "推测/确认"
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "毎週",
+  "reading": "まいしゅう",
+  "meaning": "【まいしゅう】每周〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "汚い",
+  "reading": "きたない",
+  "meaning": "【きたない】脏的；（手段）卑鄙；（字）潦草〈イ形〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "池",
+  "reading": "いけ",
+  "meaning": "【いけ】池塘；水池〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "泳ぐ",
+  "reading": "およぐ",
+  "meaning": "【およぐ】游泳〈动1〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "洋服",
+  "reading": "ようふく",
+  "meaning": "【ようふく】西服；（西式）服装〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "涼しい",
+  "reading": "すずしい",
+  "meaning": "【すずしい】凉爽的；凉快的〈イ形〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "渡る",
+  "reading": "わたる",
+  "meaning": "【わたる】过（河、马路）；渡过〈动1〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "温い",
+  "reading": "ぬるい",
+  "meaning": "【ぬるい】温的；不烫的；（性格）温和〈イ形〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "灰皿",
+  "reading": "はいざら",
+  "meaning": "【はいざら】烟灰缸〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "無くす",
+  "reading": "なくす",
+  "meaning": "【なくす】丢失；弄丢；丧失〈动1〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "牛乳",
+  "reading": "ぎゅうにゅう",
+  "meaning": "【ぎゅうにゅう】牛奶〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "牛肉",
+  "reading": "ぎゅうにく",
+  "meaning": "【ぎゅうにく】牛肉〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "玄関",
+  "reading": "げんかん",
+  "meaning": "【げんかん】玄关；门口；正门〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "留学生",
+  "reading": "りゅうがくせい",
+  "meaning": "【りゅうがくせい】留学生〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "番号",
+  "reading": "ばんごう",
+  "meaning": "【ばんごう】号码；编号〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "grammar",
+  "stage": 1,
+  "gid": "G041",
+  "word": "G041 が 好きです",
+  "reading": "がすきです",
+  "meaning": "〔文法〕好恶・擅长",
+  "rows": [
+   [
+    "私は犬が好きです。",
+    "接续：名词＋「が」＋「好きです」，表喜好。本句：我喜欢狗。"
+   ],
+   [
+    "田中さんは音楽が好きです。",
+    "用法：「が」前的名词是喜欢或讨厌的对象。本句：田中喜欢音乐。"
+   ],
+   [
+    "私は魚が嫌いです。",
+    "注意：喜欢和讨厌的对象都用「が」；讨厌说「嫌いです」。本句：我讨厌鱼。"
+   ]
+  ],
+  "name": "が 好きです",
+  "brief": "好恶・擅长"
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "登る",
+  "reading": "のぼる",
+  "meaning": "【のぼる】攀登；爬（山）；登上〈动1〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "百",
+  "reading": "ひゃく",
+  "meaning": "【ひゃく】百；一百〈数〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "眼鏡",
+  "reading": "めがね",
+  "meaning": "【めがね】眼镜〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "砂糖",
+  "reading": "さとう",
+  "meaning": "【さとう】糖；砂糖〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "磨く",
+  "reading": "みがく",
+  "meaning": "【みがく】刷（牙）；磨；擦亮；磨练〈动1〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "紅茶",
+  "reading": "こうちゃ",
+  "meaning": "【こうちゃ】红茶〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "緑",
+  "reading": "みどり",
+  "meaning": "【みどり】绿色〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "締める",
+  "reading": "しめる",
+  "meaning": "【しめる】系紧；拧紧；勒紧；收紧〈动2〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "習う",
+  "reading": "ならう",
+  "meaning": "【ならう】学习（跟随老师学）〈动1〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "背広",
+  "reading": "せびろ",
+  "meaning": "【せびろ】西装；西服〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "自動車",
+  "reading": "じどうしゃ",
+  "meaning": "【じどうしゃ】汽车；机动车〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "自転車",
+  "reading": "じてんしゃ",
+  "meaning": "【じてんしゃ】自行车〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "花瓶",
+  "reading": "かびん",
+  "meaning": "【かびん】花瓶〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "英語",
+  "reading": "えいご",
+  "meaning": "【えいご】英语〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "茶色",
+  "reading": "ちゃいろ",
+  "meaning": "【ちゃいろ】茶色；棕色；褐色〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "grammar",
+  "stage": 1,
+  "gid": "G042",
+  "word": "G042 より~のほうが",
+  "reading": "よりのほうが",
+  "meaning": "〔文法〕比较: 更~",
+  "rows": [
+   [
+    "電車より飛行機のほうが速いです。",
+    "接续：名词＋「より」＋名词＋「のほうが」＋形容词。本句：比起电车，飞机更快。"
+   ],
+   [
+    "昨日より今日のほうが暑いです。",
+    "用法：比较两者时，「のほうが」后的一方程度更高。本句：比起昨天，今天更热。"
+   ],
+   [
+    "肉と魚とどちらのほうが好きですか。",
+    "注意：「より」前是基准，「のほうが」后是更胜的一方，位置不能换。本句：肉和鱼你更喜欢哪个？"
+   ]
+  ],
+  "name": "より~のほうが",
+  "brief": "比较: 更~"
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "葉書",
+  "reading": "はがき",
+  "meaning": "【はがき】明信片〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "西",
+  "reading": "にし",
+  "meaning": "【にし】西；西方〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "角",
+  "reading": "かど",
+  "meaning": "【かど】角；拐角；四角〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "誕生日",
+  "reading": "たんじょうび",
+  "meaning": "【たんじょうび】生日〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "警官",
+  "reading": "けいかん",
+  "meaning": "【けいかん】警察；警官〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "豚肉",
+  "reading": "ぶたにく",
+  "meaning": "【ぶたにく】猪肉〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "財布",
+  "reading": "さいふ",
+  "meaning": "【さいふ】钱包〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "賑やか",
+  "reading": "にぎやか",
+  "meaning": "【にぎやか】热闹的；繁华的〈ナ形〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "辞書",
+  "reading": "じしょ",
+  "meaning": "【じしょ】词典；字典〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "近く",
+  "reading": "ちかく",
+  "meaning": "【ちかく】附近；近处〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "遠い",
+  "reading": "とおい",
+  "meaning": "【とおい】远的；遥远的；（关系）疏远〈イ形〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "郵便局",
+  "reading": "ゆうびんきょく",
+  "meaning": "【ゆうびんきょく】邮局〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "野菜",
+  "reading": "やさい",
+  "meaning": "【やさい】蔬菜〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "鉛筆",
+  "reading": "えんぴつ",
+  "meaning": "【えんぴつ】铅笔〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "銀行",
+  "reading": "ぎんこう",
+  "meaning": "【ぎんこう】银行〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "grammar",
+  "stage": 1,
+  "gid": "G043",
+  "word": "G043 中で~がいちばん",
+  "reading": "なかでがいちばん",
+  "meaning": "〔文法〕范围最",
+  "rows": [
+   [
+    "果物の中でりんごがいちばん好きです。",
+    "接续：名词＋「の中で」＋名词＋「が」＋「いちばん」＋形容词。本句：在水果里我最喜欢苹果。"
+   ],
+   [
+    "家族の中で父がいちばん背が高いです。",
+    "用法：「の中で」限定比较范围，「いちばん」后接形容词。本句：在家人里爸爸个子最高。"
+   ],
+   [
+    "この中でどれがいちばん安いですか。",
+    "注意：范围是场所时只用「で」；疑问用「どれ」或「誰が」。本句：这里面哪个最便宜？"
+   ]
+  ],
+  "name": "中で~がいちばん",
+  "brief": "范围最"
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "閉まる",
+  "reading": "しまる",
+  "meaning": "【しまる】（门窗等）关上；闭〈动1〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "閉める",
+  "reading": "しめる",
+  "meaning": "【しめる】把（门、窗等）关上〈动2〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "雑誌",
+  "reading": "ざっし",
+  "meaning": "【ざっし】杂志〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "電気",
+  "reading": "でんき",
+  "meaning": "【でんき】电；电灯〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "電車",
+  "reading": "でんしゃ",
+  "meaning": "【でんしゃ】电车；电气火车〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "青",
+  "reading": "あお",
+  "meaning": "【あお】蓝色〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "靴",
+  "reading": "くつ",
+  "meaning": "【くつ】鞋〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "靴下",
+  "reading": "くつした",
+  "meaning": "【くつした】袜子〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "音楽",
+  "reading": "おんがく",
+  "meaning": "【おんがく】音乐〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "飛行機",
+  "reading": "ひこうき",
+  "meaning": "【ひこうき】飞机〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "食べ物",
+  "reading": "たべもの",
+  "meaning": "【たべもの】食物；食品〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "食堂",
+  "reading": "しょくどう",
+  "meaning": "【しょくどう】食堂；餐馆〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "飲み物",
+  "reading": "のみもの",
+  "meaning": "【のみもの】饮料〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "駅",
+  "reading": "えき",
+  "meaning": "【えき】车站〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "黄色",
+  "reading": "きいろ",
+  "meaning": "【きいろ】黄色〈名〉",
+  "rows": []
+ },
+ {
+  "kind": "grammar",
+  "stage": 1,
+  "gid": "G044",
+  "word": "G044 つもりです",
+  "reading": "つもりです",
+  "meaning": "〔文法〕打算",
+  "rows": [
+   [
+    "来月、日本へ旅行に行くつもりです。",
+    "接续：动词辞书形或「ない形」＋「つもりです」，表打算。本句：我打算下个月去日本旅行。"
+   ],
+   [
+    "健康のため、タバコを吸わないつもりです。",
+    "用法：接「ない形」表示不打算做某事。本句：为了健康，我不打算抽烟。"
+   ],
+   [
+    "来年、大学に入るつもりですか。",
+    "注意：「つもり」是主观打算，既定安排要用「予定」。本句：你打算明年上大学吗？"
+   ]
+  ],
+  "name": "つもりです",
+  "brief": "打算"
+ },
+ {
+  "kind": "word",
+  "stage": 1,
+  "gid": "",
+  "word": "黄色い",
+  "reading": "きいろい",
+  "meaning": "【きいろい】黄色的〈イ形〉",
+  "rows": []
+ },
+ {
+  "kind": "grammar",
+  "stage": 1,
+  "gid": "G045",
+  "word": "G045 たり~たりします",
+  "reading": "たりたりします",
+  "meaning": "〔文法〕列举动作",
+  "rows": [
+   [
+    "週末は本を読んだり、音楽を聞いたりします。",
+    "接续：动词「た形」＋「り」并列两次＋「します」。本句：周末看书、听音乐。"
+   ],
+   [
+    "休みの日は掃除をしたり洗濯をしたりします。",
+    "用法：列举有代表性的多个动作，顺序不限。本句：休息日打扫、洗衣等。"
+   ],
+   [
+    "このごろ、天気はよかったり悪かったりです。",
+    "注意：结尾也可不接「します」，表状态直接接「です」。本句：最近天气时好时坏。"
+   ]
+  ],
+  "name": "たり~たりします",
+  "brief": "列举动作"
+ }
+]

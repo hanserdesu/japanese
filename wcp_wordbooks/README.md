@@ -250,3 +250,18 @@ ildump.py               游戏DLL IL 反汇编工具(逆向用)
   见上文), 音频由 night_loop 后台续传。
 - **JLPT 四书的表头行问题已修正**: 旧版 xlsx 有表头且 B列=读音, 直接导入会
   得到"读音当释义"的错误词书, 现已重新生成并复制到 persistentDataPath。
+
+## 例句全覆盖 (2026-09-11 完成)
+
+全部 15,812 词每词 3 条日文例句 + 中文翻译, 已写入游戏本地库。
+
+- 管线: `build_sentence_jobs.py`(词块 gen_words_XX + 翻译块 tr_chunk_XX)
+  → 子代理生产 `work/gen_out_NN_Y.json`(每批100词×3句, 契约见
+  `work/AGENT_SPEC.md` + `work/PATCH_SPEC.md`, `gen_pipeline.py check-one`
+  逐批校验) → `apply_sentences.py`(合并 master + 落库)
+- 旧库已有例句 10,251 句的中文翻译全部补齐 (`work/tr_out_*.json`)
+- 最终状态: `gen_pipeline.py summary` = 达标 15812/15812, 剩余批次 0;
+  `sentences_master.json` 15,812 词 缺翻译 0 <3条 0;
+  wcpFullEng.db sentence2 逐词全查 15,812 词全部 ≥3 条
+- master: `data/translations/sentences_master.json` {word: [[ja,zh],...]},
+  是 `patch_local_db.py` 灌 sentence2 的数据源 (幂等, 游戏无需重启)

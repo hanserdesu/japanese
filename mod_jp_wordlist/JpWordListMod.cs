@@ -1,4 +1,4 @@
-// WCP JP Word List — BepInEx 5 插件 (C# 5 语法)  v1.7.4
+// WCP JP Word List — BepInEx 5 插件 (C# 5 语法)  v1.7.5
 //
 // 目的:
 //   A) 日语词书(游戏里就是 自定义词书一~四)与其它词书彻底互不干扰。
@@ -51,6 +51,11 @@
 //      <假名>.mp3 落空并回退 AI —— 发音时临时换回汉字形取音, 播完立即还原;
 //      ③ 重建/重采样测试词池时按面板上的「正序/倒序/随机 + 未测词优先」排序, 与游戏的
 //      ChooseWordManager.TestWordPos/Neg/Ran(含 Off) 一致, 免得重修过的词池顺序与设置不符。
+//      v1.7.5: 上面②覆盖到所有小游戏 —— 实测 VocabularyAudioPlayer 出现在
+//      Scene7_Fight / Scene8_Review / Scene9_ChooseWords / Scene13_FruitInjaChoosing /
+//      Scene15_Bat / Scene16_FreeReview / Scene17_SpellingGame 等每个显示单词的场景,
+//      所以「发音前把假名换回汉字形」一处即可覆盖战斗机/水果/拼写等全部小游戏;
+//      再加一道兜底(当前题目的假名读音 -> 当前题目的词)与一行诊断日志便于核对。
 //   L) 版本兼容: ① 完全不碰游戏数据库(wcpOnlyWord.db / wcpFullEng.db), 只读游戏已经在用的
 //      ES3 存档; ② 新增逻辑对 MyParameters 一律走反射 (SetParameterField / GetField),
 //      字段改名或消失时只记一条日志, 不抛异常; ③ 自己存的数据只用字符串键, 不依赖任何
@@ -90,7 +95,7 @@ using WcpBookProfiles;
 
 namespace JpWordList
 {
-    [BepInPlugin("dev.hanserdesu.jpwordlist", "WCP JP Word List", "1.7.4")]
+    [BepInPlugin("dev.hanserdesu.jpwordlist", "WCP JP Word List", "1.7.5")]
     public class JpWordListPlugin : BaseUnityPlugin
     {
         internal const string ReviewRangeType = "复习范围词";

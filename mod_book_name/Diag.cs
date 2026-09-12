@@ -27,6 +27,7 @@ namespace WcpBookName
                 System.IO.File.Delete(_path);
                 Line("=== dump " + DateTime.Now.ToString("HH:mm:ss") + " ===");
                 DumpAccentLabels();
+                DumpJpButtons();
                 int n = DumpReadButtons();
                 DumpSentenceSources();
                 Line("=== end ===\n");
@@ -115,7 +116,48 @@ namespace WcpBookName
             return b.name + "|" + PathOf(b.transform);
         }
 
+        // 所有含 "JP" 标签的按钮: 完整路径 + 组件 + onClick 目标,
+        // 用来精确定位「例句区右下那个圆形切换按钮」。
+        private static void DumpJpButtons()
+        {
+            Line("--- jp buttons ---");
+            var btns = Resources.FindObjectsOfTypeAll(typeof(Button));
+            for (int i = 0; i < btns.Length; i++)
+            {
+                var b = btns[i] as Button;
+                if (b == null) continue;
+                var tmps = b.GetComponentsInChildren<TMP_Text>(true);
+                bool hasJp = false;
+                for (int j = 0; j < tmps.Length; j++)
+                {
+                    var s = tmps[j] == null ? null : tmps[j].text;
+                    if (s != null && s.Trim() == "JP") { hasJp = true; break; }
+                }
+                if (!hasJp) continue;
+                var comps = b.GetComponents<Component>();
+                var cs = new StringBuilder();
+                for (int c = 0; c < comps.Length; c++)
+                {
+                    if (comps[c] == null) continue;
+                    cs.Append(comps[c].GetType().Name).Append(",");
+                }
+                int n = b.onClick.GetPersistentEventCount();
+                var ev = new StringBuilder();
+                for (int e = 0; e < n; e++)
+                {
+                    ev.Append(" {").Append(b.onClick.GetPersistentTarget(e))
+                      .Append(".").Append(b.onClick.GetPersistentMethodName(e))
+                      .Append("}");
+                }
+                Line(string.Format("BTN '{0}' active={1} inHier={2}{3} comps={4} path={5}",
+                    b.name, b.gameObject.activeSelf,
+                    b.gameObject.activeInHierarchy, ev.ToString(), cs.ToString(),
+                    PathOf(b.transform)));
+            }
+        }
+
         private static int DumpReadButtons()
+
         {
             Line("--- read buttons ---");
             var t = Type.GetType("ShowReadButtons, Assembly-CSharp");

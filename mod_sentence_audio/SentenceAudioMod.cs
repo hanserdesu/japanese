@@ -49,9 +49,13 @@ namespace SentenceAudioMod
                 AudioDirName);
             Log.LogInfo(string.Format(
                 "WCP Sentence Audio 1.0.0 loaded, audio dir = {0}", _audioDir));
-            if (File.Exists(Path.Combine(Application.dataPath, "..",
-                    "BepInEx", "selftest.flag")))
+            var flag = Path.Combine(Application.dataPath, "..",
+                "BepInEx", "selftest.flag");
+            if (File.Exists(flag))
+            {
+                File.Delete(flag);   // 一次性: 读到即删, 只在下一次启动生效
                 StartCoroutine(SelfTest());
+            }
         }
 
         // 一次性自检 (仅当 BepInEx/selftest.flag 存在):

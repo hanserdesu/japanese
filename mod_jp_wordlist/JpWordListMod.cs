@@ -1,4 +1,4 @@
-// WCP JP Word List — BepInEx 5 插件 (C# 5 语法)  v1.3.0
+// WCP JP Word List — BepInEx 5 插件 (C# 5 语法)  v1.3.2
 //
 // 目的:
 //   A) 日语词书(游戏里就是 自定义词书一~四)与其它词书彻底互不干扰。
@@ -7,6 +7,15 @@
 //        已学词测试(MultipleChoiceGeneratorS9)取 allTestWordsS10_Para[S8Progress_Para],
 //        词表被剔空后第一时间 ArgumentOutOfRangeException 崩溃; 空表还被写回 ES3 存档,
 //        每次启动重写一遍, 游戏无法自愈。
+//   D) 自选测试(自由选择)的选词界面(截图里那份「已学词汇」)渲染 MyParameters.S9CurrentArray_Para,
+//      勾选写 S9extraStudy_Para; 开始测试 = ChooseWordManager.ResetTestListQuick_FreeChoose
+//      把 allTestWordsS10_Para 设成 S9extraStudy_Para。所以这两张表也必须只含本书词,
+//      否则用户只能从一串英语词里选, 测试里也还是英语。
+//   E) 已学词测试与自选测试都跑 MultipleChoiceGeneratorS9: 题目取 allTestWordsS10_Para[progress],
+//      题干取 S8needToLearnWordList_Para[0]。两者错位会答非所问, 越界会直接崩; 每次进入前都要摆正。
+//   F) 读档之前 MyParameters 全是编译期默认值(默认书「四级大纲词汇」), 那时按内存剔词并写回 ES3
+//      会把存档写坏(实测: 默认的 69313 词全词表被当成"别的词书"筛过一遍写回存档)。
+//      所以 BookState() 先用存档里的词书名和内存对比, 确认读过档才动手。
 //
 // 逆向依据 (Assembly-CSharp, 2026-09-12):
 //   · 战斗/复习四选一 = MultipleChoiceGenerator: 题干 = testWordText,
@@ -32,7 +41,7 @@ using UnityEngine;
 
 namespace JpWordList
 {
-    [BepInPlugin("dev.hanserdesu.jpwordlist", "WCP JP Word List", "1.3.0")]
+    [BepInPlugin("dev.hanserdesu.jpwordlist", "WCP JP Word List", "1.3.2")]
     public class JpWordListPlugin : BaseUnityPlugin
     {
         internal const string ReviewRangeType = "复习范围词";
@@ -46,6 +55,10 @@ namespace JpWordList
         private static ConfigEntry<bool> _kanaStem;
         private static readonly HashSet<string> Warned = new HashSet<string>();
         private static readonly Dictionary<string, string> LastSig = new Dictionary<string, string>();
+
+        // 存档里的词书名缓存(判断游戏是否已经读档)
+        private static string _diskBook;
+        private static float _diskBookAt = -1E9f;
 
         // 换行 / 释义里转义过的换行 (游戏写的是两个反斜杠加 n)
         private static readonly string NL = ((char)10).ToString();
@@ -115,6 +128,15 @@ namespace JpWordList
             int bookCount = PatchOne(harmony, "WordChooseButtonS10", "MakeCertainChange", postBook);
             int healCount = PatchOne(harmony, "SetS8Data", "SetAsLearnedTest", postS8);
             int s9Count = PatchPre(harmony, "MultipleChoiceGeneratorS9", "Start", preS9);
+            s9Count += PatchPre(harmony, "MultipleChoiceGeneratorS9", "GenerateOptions", preS9);
+
+            // 选词界面(截图里那份「已学词汇」)渲染前 / 词组重建后立刻摆正候选表
+            MethodInfo preSel = AccessTools.Method(typeof(JpWordListPlugin), "PreFixSelection");
+            MethodInfo postSel = AccessTools.Method(typeof(JpWordListPlugin), "PostFixSelection");
+            int selCount = 0;
+            selCount += PatchPre(harmony, "PageController", "SetThis", preSel);
+            selCount += PatchOne(harmony, "GoToAllS9", "ArrayToAll", postSel);
+            selCount += PatchOne(harmony, "SwitchCurrentArrayS9", "SwitchThis", postSel);
 
             int stemCount = 0;
             stemCount += PatchOne(harmony, "MultipleChoiceGenerator", "GenerateOptions",
@@ -126,7 +148,8 @@ namespace JpWordList
 
             Log.LogInfo("JPWordList: 补丁完成 scene=" + preCount + " post=" + postCount +
                         " addref=" + refCount + " bookchange=" + bookCount +
-                        " heal=" + healCount + " s9pre=" + s9Count + " stem=" + stemCount);
+                        " heal=" + healCount + " s9pre=" + s9Count + " sel=" + selCount +
+                        " stem=" + stemCount);
         }
 
         private int PatchSet(Harmony harmony, string[] typeNames, string[] methodNames, MethodInfo patch)
@@ -187,14 +210,14 @@ namespace JpWordList
         private static void Pre()
         {
             if (!IsEnabled()) return;
-            try { Enforce(true); }
+            try { Enforce(); }
             catch (Exception e) { Warn("prefix 异常: " + e.Message); }
         }
 
         private static void Post()
         {
             if (!IsEnabled()) return;
-            try { Enforce(false); }
+            try { Enforce(); }
             catch (Exception e) { Warn("postfix 异常: " + e.Message); }
         }
 
@@ -219,11 +242,11 @@ namespace JpWordList
             if (!IsEnabled()) return;
             try
             {
-                if (JapaneseBookSelected()) Enforce(true);
+                if (JapaneseBookSelected()) Enforce();
                 else
                 {
                     RegenerateByGame();
-                    Enforce(false);
+                    Enforce();
                 }
             }
             catch (Exception e) { Warn("换书异常: " + e.Message); }
@@ -235,7 +258,7 @@ namespace JpWordList
             if (!IsEnabled()) return;
             if (Time.unscaledTime < _nextPoll) return;
             _nextPoll = Time.unscaledTime + 1f;
-            try { Enforce(false); }
+            try { Enforce(); }
             catch (Exception e) { Warn("轮询异常: " + e.Message); }
         }
 
@@ -250,7 +273,8 @@ namespace JpWordList
             catch (Exception e) { Warn("测试词表自愈异常: " + e.Message); }
         }
 
-        // MultipleChoiceGeneratorS9.Start 之前再挡一次 (取 allTestWordsS10_Para[进度], 空表必崩)
+        // MultipleChoiceGeneratorS9 出题之前再挡一次
+        // (Start 与 completeThis 都会调 GenerateOptions, 取 allTestWordsS10_Para[进度], 空表/越界必崩)
         private static void PreMcGenS9()
         {
             if (!IsEnabled()) return;
@@ -259,33 +283,76 @@ namespace JpWordList
             catch (Exception e) { Warn("S9 前置自愈异常: " + e.Message); }
         }
 
+        // 选词界面渲染前 / 词组重建后: 立刻把候选表与已选表摆正
+        private static void PreFixSelection()
+        {
+            try { FixSelectionLists(); }
+            catch (Exception e) { Warn("选词表校正异常: " + e.Message); }
+        }
+
+        private static void PostFixSelection()
+        {
+            try { FixSelectionLists(); }
+            catch (Exception e) { Warn("选词表校正异常: " + e.Message); }
+        }
+
         private static void HealTestList()
         {
             List<string> cur = MyParameters.allTestWordsS10_Para;
-            if (cur != null && cur.Count >= 5) return;
 
-            List<string> rebuilt = Rebuild(5, 30, true);
-            if (rebuilt == null) return;
+            if (cur == null || cur.Count < 5)
+            {
+                List<string> rebuilt = RebuildWithFallback(cur, 5, 30, true);
+                if (rebuilt == null) return;
 
-            MyParameters.allTestWordsS10_Para = rebuilt;
-            ES3.Save("allTestWordsS10_Para", rebuilt);
-            MyParameters.S8TestWordList_Para = new List<string>(rebuilt);
-            ES3.Save("S8TestWordList_Para", MyParameters.S8TestWordList_Para);
-            MyParameters.S8TestWordList_LearnedTest_left = new List<string>(rebuilt);
-            ES3.Save("S8TestWordList_LearnedTest_left", MyParameters.S8TestWordList_LearnedTest_left);
-            MyParameters.S8needToLearnWordList_Para = new List<string>(rebuilt);
-            ES3.Save("S8needToLearnWordList_Para", MyParameters.S8needToLearnWordList_Para);
-            MyParameters.S8Progress_Para = 0;
-            ES3.Save("S8Progress_Para", 0);
-            Warn("已学词测试词表为空/过短, 已用本书词重建 " + rebuilt.Count + " 个");
-            LogChange("allTestWordsS10_Para", rebuilt.Count, Sample(rebuilt));
+                MyParameters.allTestWordsS10_Para = rebuilt;
+                MyParameters.S8TestWordList_Para = new List<string>(rebuilt);
+                MyParameters.S8TestWordList_LearnedTest_left = new List<string>(rebuilt);
+                MyParameters.S8needToLearnWordList_Para = new List<string>(rebuilt);
+                ES3.Save("allTestWordsS10_Para", MyParameters.allTestWordsS10_Para);
+                ES3.Save("S8TestWordList_Para", MyParameters.S8TestWordList_Para);
+                ES3.Save("S8TestWordList_LearnedTest_left", MyParameters.S8TestWordList_LearnedTest_left);
+                ES3.Save("S8needToLearnWordList_Para", MyParameters.S8needToLearnWordList_Para);
+                // 词表是新造的, 「已完成」记录必须一起清掉, 否则进度会指向错位的词
+                if (MyParameters.S8TestWordList_LearnedTest_Finished != null)
+                {
+                    MyParameters.S8TestWordList_LearnedTest_Finished.Clear();
+                    ES3.Save("S8TestWordList_LearnedTest_Finished", MyParameters.S8TestWordList_LearnedTest_Finished);
+                }
+                if (MyParameters.S8HaveLearnedWordList_Para != null)
+                {
+                    MyParameters.S8HaveLearnedWordList_Para.Clear();
+                    ES3.Save("S8HaveLearnedWordList_Para", MyParameters.S8HaveLearnedWordList_Para);
+                }
+                ResetProgress();
+                Warn("已学词测试词表为空/过短, 已用本书词重建 " + rebuilt.Count + " 个");
+                LogChange("allTestWordsS10_Para", rebuilt.Count, Sample(rebuilt));
+                return;
+            }
+
+            int progress = LoadInt("S8Progress_Para", MyParameters.S8Progress_Para);
+            if (progress < 0 || progress >= cur.Count)
+            {
+                ResetProgress();
+                Warn("测试进度越界(" + progress + "/" + cur.Count + "), 已重置到第 1 题");
+                return;
+            }
+
+            // 题干队列 = allTestWordsS10_Para 从 progress 起的尾巴; 历史 bug 会把两者弄错位
+            List<string> need = MyParameters.S8needToLearnWordList_Para;
+            if (need == null || need.Count == 0 || need[0] != cur[progress])
+            {
+                List<string> tail = cur.GetRange(progress, cur.Count - progress);
+                MyParameters.S8needToLearnWordList_Para = tail;
+                ES3.Save("S8needToLearnWordList_Para", tail);
+                Warn("题干队列与题目错位, 已按进度重新对齐 " + tail.Count + " 个");
+            }
         }
 
         // ---------------- 主逻辑 ----------------
 
-        internal static void Enforce(bool refreshFromSave)
+        internal static void Enforce()
         {
-            if (refreshFromSave) RefreshFromSave();
             int state = BookState();
             if (state == 0) return;                 // 词书状态不明 -> 一律不动
             bool jp = (state == 1);
@@ -299,16 +366,27 @@ namespace JpWordList
 
             if (!_guardOtherLists.Value) return;
 
-            // 已学词测试表: S9 会取 allTestWordsS10_Para[S8Progress_Para] 且要求 >= 5
+            // 测试词池: S9 取 allTestWordsS10_Para[S8Progress_Para], 既要求 >= 5, 也不能夹带别的词书的词。
+            // 池子一换, 进度与「已完成」记录必须一起归零, 否则题干与正确答案会错位。
             List<string> testFixed = Filter(MyParameters.allTestWordsS10_Para, 5, true);
+            if (testFixed == null && (MyParameters.allTestWordsS10_Para == null ||
+                                      MyParameters.allTestWordsS10_Para.Count < 5))
+            {
+                testFixed = RebuildWithFallback(MyParameters.allTestWordsS10_Para, 5, 30, true);
+            }
             if (testFixed != null)
             {
                 MyParameters.allTestWordsS10_Para = testFixed;
                 SaveField("allTestWordsS10_Para", testFixed);
-                // _left 在生成时就是它的副本; 必须一起改, 否则题干与选项会错位
                 List<string> left = new List<string>(testFixed);
                 MyParameters.S8TestWordList_LearnedTest_left = left;
                 SaveField("S8TestWordList_LearnedTest_left", left);
+                if (MyParameters.S8TestWordList_LearnedTest_Finished != null)
+                {
+                    MyParameters.S8TestWordList_LearnedTest_Finished.Clear();
+                    SaveField("S8TestWordList_LearnedTest_Finished", MyParameters.S8TestWordList_LearnedTest_Finished);
+                }
+                ResetProgress();
             }
             else
             {
@@ -325,8 +403,7 @@ namespace JpWordList
             FixField("S8TestWordList_ExtraStudy_left", ref MyParameters.S8TestWordList_ExtraStudy_left, 1, false);
 
             // 选词列表(截图里那份「已学词汇」)与自选测试集合
-            FixArray("S9CurrentArray_Para", ref MyParameters.S9CurrentArray_Para, 1, true);
-            FixArray("S9extraStudy_Para", ref MyParameters.S9extraStudy_Para, 1, false);
+            FixSelectionLists();
         }
 
         private static void FixField(string key, ref List<string> field, int minKeep, bool preferLearned)
@@ -344,6 +421,62 @@ namespace JpWordList
             if (fixedList == null) return;
             field = fixedList.ToArray();
             SaveField(key, field);
+        }
+
+        // 选词界面: 候选表(S9CurrentArray_Para)补足到本书词, 已选表(S9extraStudy_Para)只剔除书外词
+        internal static void FixSelectionLists()
+        {
+            if (!IsEnabled()) return;
+            if (_guardOtherLists == null || !_guardOtherLists.Value) return;
+            FixArray("S9CurrentArray_Para", ref MyParameters.S9CurrentArray_Para, 1, true);
+            string[] extra = FilterDropArray(MyParameters.S9extraStudy_Para);
+            if (extra == null) return;
+            MyParameters.S9extraStudy_Para = extra;
+            SaveField("S9extraStudy_Para", extra);
+            Warn("已选词里剔除了词书外的词, 剩 " + extra.Length + " 个");
+        }
+
+        // 只剔除词书外的词, 不补词, 允许剔空(用户选了几个就是几个, 不足 5 个游戏自己会提示)
+        private static string[] FilterDropArray(string[] cur)
+        {
+            if (cur == null || cur.Length == 0) return null;
+            int state = BookState();
+            if (state == 0) return null;
+            bool jp = (state == 1);
+            List<string> book = MyParameters.ChosenBook_List;
+            HashSet<string> bookSet = jp ? new HashSet<string>(book) : null;
+            HashSet<string> seen = new HashSet<string>();
+            List<string> keep = new List<string>();
+            bool changed = false;
+            for (int i = 0; i < cur.Length; i++)
+            {
+                string w = cur[i];
+                if (string.IsNullOrEmpty(w) || !Allowed(w, jp, bookSet) || !seen.Add(w))
+                {
+                    changed = true;
+                    continue;
+                }
+                keep.Add(w);
+            }
+            return changed ? keep.ToArray() : null;
+        }
+
+        private static void ResetProgress()
+        {
+            MyParameters.S8Progress_Para = 0;
+            MyParameters.S8LookBack_Para = 0;
+            ES3.Save("S8Progress_Para", 0);
+            ES3.Save("S8LookBack_Para", 0);
+        }
+
+        private static int LoadInt(string key, int fallback)
+        {
+            try { return ES3.Load<int>(key, fallback); }
+            catch (Exception e)
+            {
+                WarnOnce("ld:" + key, "读取 " + key + " 失败: " + e.Message);
+                return fallback;
+            }
         }
 
         // 返回校正后的词表; 无需改动时返回 null。绝不返回空表/过短表。
@@ -393,6 +526,58 @@ namespace JpWordList
             HashSet<string> seen = new HashSet<string>();
             if (target < minKeep) target = minKeep;
             Rebuild(dest, seen, jp, bookSet, preferLearned, target);
+            if (dest.Count < minKeep) return null;
+            return dest;
+        }
+
+        // 保留现有词(限定本书内)再补足到 target: 用于「用户已选了几个词」或「历史表被剔空」
+        private static List<string> RebuildKeeping(List<string> cur, int minKeep, int target, bool preferLearned)
+        {
+            int state = BookState();
+            if (state == 0) return null;
+            bool jp = (state == 1);
+            List<string> book = MyParameters.ChosenBook_List;
+            HashSet<string> bookSet = jp ? new HashSet<string>(book) : null;
+            List<string> dest = new List<string>();
+            HashSet<string> seen = new HashSet<string>();
+            if (cur != null)
+            {
+                for (int i = 0; i < cur.Count; i++)
+                {
+                    string w = cur[i];
+                    if (string.IsNullOrEmpty(w) || !Allowed(w, jp, bookSet)) continue;
+                    if (seen.Add(w)) dest.Add(w);
+                }
+            }
+            if (target < minKeep) target = minKeep;
+            if (dest.Count > target) target = dest.Count;
+            Rebuild(dest, seen, jp, bookSet, preferLearned, target);
+            if (dest.Count < minKeep) return null;
+            return dest;
+        }
+
+        // 重建词表: 优先按当前词书筛/补; 词书状态不明时退化成「用当前词书列表硬补」。
+        // 崩不崩不能取决于能不能认出词书, 所以只要有 ChosenBook_List 就一定能凑够 minKeep。
+        private static List<string> RebuildWithFallback(List<string> cur, int minKeep, int target, bool preferLearned)
+        {
+            List<string> rebuilt = RebuildKeeping(cur, minKeep, target, preferLearned);
+            if (rebuilt != null) return rebuilt;
+
+            List<string> book = MyParameters.ChosenBook_List;
+            if (book == null || book.Count < minKeep) return null;
+            if (target < minKeep) target = minKeep;
+            List<string> dest = new List<string>();
+            HashSet<string> seen = new HashSet<string>();
+            if (cur != null)
+            {
+                for (int i = 0; i < cur.Count && dest.Count < target; i++)
+                {
+                    string w = cur[i];
+                    if (string.IsNullOrEmpty(w)) continue;
+                    if (seen.Add(w)) dest.Add(w);
+                }
+            }
+            FillFromList(dest, seen, book, target);
             if (dest.Count < minKeep) return null;
             return dest;
         }
@@ -461,6 +646,14 @@ namespace JpWordList
         // 词书状态: 0 = 不明(不要动), 1 = 日语词书, 2 = 其它词书
         internal static int BookState()
         {
+            int state = BookStateRaw();
+            LogBookState(state);
+            return state;
+        }
+
+        private static int BookStateRaw()
+        {
+            if (!BookReady()) return 0;      // 还没读档 -> 一律不动
             string name = MyParameters.ChosenBook_Para;
             if (string.IsNullOrEmpty(name)) return 0;
             List<string> book = MyParameters.ChosenBook_List;
@@ -479,6 +672,20 @@ namespace JpWordList
                 if (!LooksJapanese(book[i])) return 2;
             }
             return 0;
+        }
+
+        // 状态变了才打一行: 方便从日志判断「为什么这次没动手」(0=不明/1=日语/2=其它)
+        private static void LogBookState(int state)
+        {
+            List<string> book = MyParameters.ChosenBook_List;
+            int n = (book == null) ? -1 : book.Count;
+            string head = (book != null && book.Count > 0) ? (LooksJapanese(book[0]) ? "jp" : "en") : "?";
+            string sig = state + "|" + MyParameters.ChosenBook_Para + "|" + n + "|" + head;
+            string prev;
+            if (LastSig.TryGetValue("bookstate", out prev) && prev == sig) return;
+            LastSig["bookstate"] = sig;
+            Log.LogInfo("JPWordList: 词书状态=" + state + " 内存书名=" + MyParameters.ChosenBook_Para +
+                        " 内存词表=" + n + "条(" + head + ") 存档书名=" + (DiskBookName() ?? "<读不到>"));
         }
 
         // 单词是否像日语 (含假名 / 汉字 / 半角片假名 / 々)
@@ -706,18 +913,38 @@ namespace JpWordList
 
         // ---------------- ES3 ----------------
 
-        private static void RefreshFromSave()
+        // ES3 读 string 必须写命名参数 defaultValue:, 否则 C# 会选到 (key, filePath) 重载,
+        // 把字符串默认值当文件名去找文件 (游戏自己那些 ES3.Load<string>(key, 值) 就是这么写坏的)。
+        private static string LoadString(string key, string fallback)
         {
-            try { MyParameters.ChosenBook_Para = ES3.Load<string>("ChosenBook_Para", MyParameters.ChosenBook_Para); }
-            catch (Exception e) { WarnOnce("ld:book", "读取 ChosenBook_Para 失败: " + e.Message); }
-            try { MyParameters.ChosenBook_List = ES3.Load<List<string>>("ChosenBook_List", MyParameters.ChosenBook_List); }
-            catch (Exception e) { WarnOnce("ld:list", "读取 ChosenBook_List 失败: " + e.Message); }
-            try { MyParameters.HaveLearnedDictionary = ES3.Load<Dictionary<string, WordInfo>>("HaveLearnedDictionary", MyParameters.HaveLearnedDictionary); }
-            catch (Exception e) { WarnOnce("ld:learned", "读取 HaveLearnedDictionary 失败: " + e.Message); }
-            try { MyParameters.S7FightWordMax = ES3.Load<int>("S7FightWordMax", MyParameters.S7FightWordMax); }
-            catch (Exception e) { WarnOnce("ld:max", "读取 S7FightWordMax 失败: " + e.Message); }
-            try { MyParameters.S7FightWordType = ES3.Load<string>("S7FightWordType", MyParameters.S7FightWordType); }
-            catch (Exception e) { WarnOnce("ld:type", "读取 S7FightWordType 失败: " + e.Message); }
+            try { return ES3.Load<string>(key, defaultValue: fallback); }
+            catch (Exception e)
+            {
+                WarnOnce("ldstr:" + key, "读取 " + key + " 失败: " + e.Message);
+                return fallback;
+            }
+        }
+
+        // 存档里的词书名(1 秒缓存)
+        private static string DiskBookName()
+        {
+            if (Time.realtimeSinceStartup - _diskBookAt < 1f) return _diskBook;
+            _diskBookAt = Time.realtimeSinceStartup;
+            _diskBook = LoadString("ChosenBook_Para", null);
+            return _diskBook;
+        }
+
+        // 游戏还没把存档读进 MyParameters 之前, 内存里全是编译期默认值(默认书是「四级大纲词汇」),
+        // 那时按内存里的词书剔词再写回 ES3 会把存档写坏。确认内存与存档一致了才动手。
+        internal static bool BookReady()
+        {
+            string disk = DiskBookName();
+            if (string.IsNullOrEmpty(disk))
+            {
+                WarnOnce("noready", "读不到存档里的词书名, 暂不改动词表");
+                return false;
+            }
+            return disk == MyParameters.ChosenBook_Para;
         }
 
         private static void SaveField(string key, List<string> list)

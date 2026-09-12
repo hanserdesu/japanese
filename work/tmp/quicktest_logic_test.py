@@ -67,6 +67,14 @@ def recency_key(word):
     return -int(info.get("lastStudyTime", 0))
 
 
+# The live level switches are whatever the user last toggled. If they select fewer than
+# 5 book-learned words the model degenerates to an empty pool and stops testing anything,
+# so pin to all-levels here. The fix under test (in-book restriction) is independent of it.
+if sum(1 for w in learned if w in book_set and lvl(w)) < 5:
+    print("   [note] live level switches select <5 book-learned words; using all levels here")
+    levels = {i: True for i in range(6)}
+
+
 def game_generate_wordlist(n):
     """clickChangeImageSource.GenerateWordList: global learned dict, level filter, recent first."""
     pool = [w for w in learned if lvl(w)]

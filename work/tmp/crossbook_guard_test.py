@@ -6,7 +6,7 @@ sys.path.insert(0, r"D:\Japanese\work\tmp")
 from guard_model import (  # noqa: E402
     BAK, ENGLISH_LEARNED, JP_FIELDS, JP_POOL, LEFT, NEED,
     OWNED_ARRAYS, OWNED_LISTS, POOL, check, contains_japanese,
-    cross_book_guard, fresh_save, OK,
+    cross_book_guard, fresh_save, OK, restore_shared_fields,
 )
 
 print("--- A. quit in JP book, resume in another book (the leak) ---")
@@ -82,6 +82,34 @@ print("   Japanese baseline -> action = %s" % how)
 check("Japanese array baseline is emptied", s[ARR] == [])
 check("Japanese array baseline ends the unfinished test",
       s["testingIf_Para"] is False and s["testingIf_CompleteIf"] is True)
+
+print()
+print("--- G. restart in the JP book, then switch books in-session (v1.7.3 leak) ---")
+# The process wrote nothing this session, but the save still carries the markers
+# and the Japanese queues from the previous session's test.
+s, ended = restore_shared_fields(fresh_save(), touched_lists=(), touched_arrays=())
+print("   ended = %s" % ended)
+check("queues were restored without any in-session write", s[POOL] == ENGLISH_LEARNED)
+check("no Japanese left after the in-session switch", not contains_japanese(s[POOL]))
+check("markers cleared on the in-session switch", not s[OWNED_LISTS] and not s[OWNED_ARRAYS])
+
+print()
+print("--- H. in-session baseline wins over the stale disk baseline ---")
+d = fresh_save()
+d[POOL] = list(JP_POOL)
+s, _ = restore_shared_fields(d, touched_lists=(POOL,),
+                             mem={POOL: list(ENGLISH_LEARNED)})
+check("field touched this session restored from the in-memory baseline",
+      s[POOL] == ENGLISH_LEARNED)
+
+print()
+print("--- I. never took over anything -> in-session switch writes nothing ---")
+d = {"allTestWordsS10_Para": ["apple", "banana", "cherry", "melon", "peach"],
+     "testingIf_Para": True, "testingIf_CompleteIf": False}
+plain = list(d["allTestWordsS10_Para"])
+s, ended = restore_shared_fields(d, touched_lists=(), touched_arrays=())
+check("an untouched book is left alone", s["allTestWordsS10_Para"] == plain and not ended)
+check("its resumable test is untouched", s["testingIf_Para"] is True)
 
 print()
 print("RESULT:", "ALL PASS" if OK[0] else "FAILED")

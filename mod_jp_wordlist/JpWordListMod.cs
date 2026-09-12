@@ -1,4 +1,4 @@
-// WCP JP Word List — BepInEx 5 插件 (C# 5 语法)  v1.7.2
+// WCP JP Word List — BepInEx 5 插件 (C# 5 语法)  v1.7.4
 //
 // 目的:
 //   A) 日语词书(游戏里就是 自定义词书一~四)与其它词书彻底互不干扰。
@@ -39,6 +39,18 @@
 //      「接管了哪些字段」和「接管前的原值」(自己的 JpWL_* 键), 启动时若当前不是本词书,
 //      就把队列还原; 原值不可用(读不到 / 本身就是日语)时清空队列并把本轮测试标记为已完成
 //      —— 绝不能留少于 5 个词的词池给 game 的 GenerateOptions, 那会越界崩。
+//      v1.7.3 补两条同类漏点: ① 游戏内切书也走同一套「接管记录」还原 —— 只靠本次会话的
+//      内存标记会漏掉「重启后仍停在日语词书, 再在游戏内切到别的词书」这条路(该进程可能
+//      一次都没写过, 存档里却还留着上一次的日语队列); ② 基线读不到时 ES3 会返回空表,
+//      之前会被当成「可用基线」静默回填, 于是空词池配一个未完成的测试留给别的词书 ->
+//      点「继续」时 GenerateOptions 越界崩。现在统一按「清空过 or 还原后词池 < 5」结束本轮。
+//   M) 周边修正 (v1.7.4): ① 查词面板(DatabaseManagerS8 / S8checkWordMeaning /
+//      ButtonTextTransfer.OnSearchButtonClick)只查英语库, 日语词会显示「本地暂未收录」
+//      且音标行为空 —— 受管词书下改用本书释义, 音标位填假名读音;
+//      ② 本地单词音频按「汉字形」命名(全部.mp3), 而题干已改成假名(ぜんぶ), 点喇叭会查
+//      <假名>.mp3 落空并回退 AI —— 发音时临时换回汉字形取音, 播完立即还原;
+//      ③ 重建/重采样测试词池时按面板上的「正序/倒序/随机 + 未测词优先」排序, 与游戏的
+//      ChooseWordManager.TestWordPos/Neg/Ran(含 Off) 一致, 免得重修过的词池顺序与设置不符。
 //   L) 版本兼容: ① 完全不碰游戏数据库(wcpOnlyWord.db / wcpFullEng.db), 只读游戏已经在用的
 //      ES3 存档; ② 新增逻辑对 MyParameters 一律走反射 (SetParameterField / GetField),
 //      字段改名或消失时只记一条日志, 不抛异常; ③ 自己存的数据只用字符串键, 不依赖任何
@@ -78,7 +90,7 @@ using WcpBookProfiles;
 
 namespace JpWordList
 {
-    [BepInPlugin("dev.hanserdesu.jpwordlist", "WCP JP Word List", "1.7.2")]
+    [BepInPlugin("dev.hanserdesu.jpwordlist", "WCP JP Word List", "1.7.4")]
     public class JpWordListPlugin : BaseUnityPlugin
     {
         internal const string ReviewRangeType = "复习范围词";
@@ -113,9 +125,8 @@ namespace JpWordList
         private static string _stateMem = "<none>";   // 本次判定信号，仅供日志
         private static string _stateSlot = "<none>";
 
-        // 本插件只能临时接管已登记词书的共享队列。绝不把改写后的队列保存到 ES3；
-        // 离开词书时从游戏自己的存档基线恢复内存，避免残留影响其它词书。
-        private static bool _managedScopeActive;
+        // 插件只临时接管已登记词书的共享队列: 改写时同步落盘(否则游戏的 ES3.Load 会顶掉内存值),
+        // 同时记下接管前的基线, 离开词书(或是在别的词书里启动)时再还原, 避免残留影响其它词书。
         private static readonly HashSet<string> TouchedListFields = new HashSet<string>();
         private static readonly HashSet<string> TouchedArrayFields = new HashSet<string>();
         private static readonly HashSet<string> TouchedIntFields = new HashSet<string>();
@@ -137,6 +148,14 @@ namespace JpWordList
 
         // 跨词书启动守卫: 每次进游戏只做一次
         private static bool _crossBookGuardDone;
+
+        // 发音修正: 本地单词音频按「汉字形」命名(全部.mp3/歯医者.mp3), 而题干会被改写成假名
+        // (ぜんぶ/しかいしゃ)。VocabularyAudioPlayer 用的是 text1.text, 查 <假名>.mp3 必然落空
+        // 并回退 AI。这里维护 假名 -> 汉字形 的映射, 发音前临时换回原词。
+        private static readonly Dictionary<string, string> KanaToSurface = new Dictionary<string, string>();
+        private static int _kanaMapIdx = -1;
+        private static bool _audioSwapped;
+        private static string _audioOriginal;
 
         // 换行 / 释义里转义过的换行 (游戏写的是两个反斜杠加 n)
         private static readonly string NL = ((char)10).ToString();
@@ -230,10 +249,24 @@ namespace JpWordList
             stemCount += PatchOne(harmony, "clickChangeImageSource", "StartQuickTest",
                 AccessTools.Method(typeof(JpWordListPlugin), "PostStartQuickTest"));
 
+            // 查词面板: 日语词在英语词库里查不到 -> 用本书释义 / 假名读音补上
+            int dictCount = 0;
+            dictCount += PatchOne(harmony, "DatabaseManagerS8", "OnSearchButtonClick",
+                AccessTools.Method(typeof(JpWordListPlugin), "PostSearchDictS8"));
+            dictCount += PatchOne(harmony, "S8checkWordMeaning", "OnSearchButtonClick",
+                AccessTools.Method(typeof(JpWordListPlugin), "PostSearchDictCheck"));
+            dictCount += PatchOne(harmony, "ButtonTextTransfer", "OnSearchButtonClick",
+                AccessTools.Method(typeof(JpWordListPlugin), "PostSearchDictTransfer"));
+            // 发音: 题干改成假名后, 本地音频(按汉字形命名)会查不到, 发音前换回原词再查
+            int audioCount = PatchPre(harmony, "VocabularyAudioPlayer", "PlayWordAudio",
+                AccessTools.Method(typeof(JpWordListPlugin), "PrePlayWordAudio"));
+            audioCount += PatchOne(harmony, "VocabularyAudioPlayer", "PlayWordAudio",
+                AccessTools.Method(typeof(JpWordListPlugin), "PostPlayWordAudio"));
+
             Log.LogInfo("JPWordList: 补丁完成 scene=" + preCount + " post=" + postCount +
                         " addref=" + refCount + " bookchange=" + bookCount +
                         " heal=" + healCount + " s9pre=" + s9Count + " sel=" + selCount +
-                        " stem=" + stemCount);
+                        " stem=" + stemCount + " dict=" + dictCount + " audio=" + audioCount);
         }
 
         private int PatchSet(Harmony harmony, string[] typeNames, string[] methodNames, MethodInfo patch)
@@ -338,13 +371,14 @@ namespace JpWordList
                 _memoryProfileCount = -1;
                 if (BookState() == 1)
                 {
-                    _managedScopeActive = true;
                     Enforce();
                 }
-                else if (_managedScopeActive)
+                else
                 {
+                    // 离开受管词书: 不管本次会话有没有动过这些队列, 只要存档里留着接管记录就还原。
+                    // 只看本次会话的内存标记会漏掉「重启后游戏仍停在日语词书, 再在游戏内切书」
+                    // 这条路 —— 那个进程可能一次都没写过, 存档里却还留着上一次的日语队列。
                     RestoreSharedFields();
-                    _managedScopeActive = false;
                     RegenerateByGame();
                 }
             }
@@ -476,7 +510,8 @@ namespace JpWordList
             catch (Exception e) { Warn("快速测试重采样异常: " + e.Message); }
         }
 
-        // 复刻 clickChangeImageSource.GenerateWordList 的「0~5 级筛选 + 最近学习优先」, 但只取本书内已学词
+        // 复刻快速测试的「0~5 级筛选」, 但只取本书内已学词; 排序按面板上的
+        // 「正序/倒序/随机 + 未测词优先」(见 OrderByTestSetting), 与游戏自己的取样一致。
         private static List<string> SampleBookLearned(int target)
         {
             Dictionary<string, WordInfo> learned = MyParameters.HaveLearnedDictionary;
@@ -492,14 +527,7 @@ namespace JpWordList
                 cand.Add(kv.Key);
             }
             if (cand.Count == 0) return null;
-            cand.Sort(delegate(string a, string b)
-            {
-                WordInfo wa = learned[a];
-                WordInfo wb = learned[b];
-                int ta = (wa == null) ? int.MinValue : wa.lastStudyTime;
-                int tb = (wb == null) ? int.MinValue : wb.lastStudyTime;
-                return tb.CompareTo(ta);
-            });
+            OrderByTestSetting(cand, learned);
             if (target > 0 && cand.Count > target) cand.RemoveRange(target, cand.Count - target);
             return cand;
         }
@@ -695,7 +723,6 @@ namespace JpWordList
         private static void ResetProgress()
         {
             if (BookState() != 1) return;
-            _managedScopeActive = true;
             TouchedIntFields.Add("S8Progress_Para");
             TouchedIntFields.Add("S8LookBack_Para");
             MyParameters.S8Progress_Para = 0;
@@ -849,14 +876,73 @@ namespace JpWordList
         {
             Dictionary<string, WordInfo> learned = MyParameters.HaveLearnedDictionary;
             if (learned == null) return;
+            List<string> cand = new List<string>();
             foreach (KeyValuePair<string, WordInfo> kv in learned)
             {
-                if (dest.Count >= target) break;
                 string w = kv.Key;
                 if (string.IsNullOrEmpty(w)) continue;
                 if (!Allowed(w, jp, bookSet)) continue;
-                if (seen.Add(w)) dest.Add(w);
+                cand.Add(w);
             }
+            // 重建也要按玩家的排序设置来, 不然修过的词池顺序会跟他选的正序/倒序/随机对不上
+            OrderByTestSetting(cand, learned);
+            for (int i = 0; i < cand.Count && dest.Count < target; i++)
+                if (seen.Add(cand[i])) dest.Add(cand[i]);
+        }
+
+        // 复刻 ChooseWordManager.TestWordPos/Neg/Ran(含 Off):
+        //   「未测词优先」开: 主键 testTimes 升序, 次键 lastStudyTime(正序升/倒序降);
+        //   「未测词优先」关: 正序 = lastStudyTime 升序, 倒序 = testTimes 降序;
+        //   随机 = 纯随机(游戏里 testTimes 那一级会被随机键打散)。
+        private static void OrderByTestSetting(List<string> cand, Dictionary<string, WordInfo> learned)
+        {
+            if (cand == null || cand.Count < 2) return;
+            string mode = MyParameters.testNegOrPos;
+            if (string.IsNullOrEmpty(mode)) mode = "正序";
+            if (mode == "随机")
+            {
+                System.Random rng = new System.Random();
+                for (int i = cand.Count - 1; i > 0; i--)
+                {
+                    int j = rng.Next(i + 1);
+                    string t = cand[i]; cand[i] = cand[j]; cand[j] = t;
+                }
+                return;
+            }
+            bool desc = (mode == "倒序");
+            if (MyParameters.testPriorityOn)
+            {
+                cand.Sort(delegate(string a, string b)
+                {
+                    int c = Times(a, learned).CompareTo(Times(b, learned));
+                    if (c != 0) return c;
+                    int sa = Study(a, learned);
+                    int sb = Study(b, learned);
+                    return desc ? sb.CompareTo(sa) : sa.CompareTo(sb);
+                });
+            }
+            else if (desc)
+            {
+                cand.Sort(delegate(string a, string b)
+                { return Times(b, learned).CompareTo(Times(a, learned)); });
+            }
+            else
+            {
+                cand.Sort(delegate(string a, string b)
+                { return Study(a, learned).CompareTo(Study(b, learned)); });
+            }
+        }
+
+        private static int Times(string w, Dictionary<string, WordInfo> d)
+        {
+            WordInfo i;
+            return (d != null && d.TryGetValue(w, out i) && i != null) ? i.testTimes : 0;
+        }
+
+        private static int Study(string w, Dictionary<string, WordInfo> d)
+        {
+            WordInfo i;
+            return (d != null && d.TryGetValue(w, out i) && i != null) ? i.lastStudyTime : 0;
         }
 
         private static void FillFromList(List<string> dest, HashSet<string> seen, List<string> src, int target)
@@ -1152,6 +1238,148 @@ namespace JpWordList
                 if (vaps[i] == null || vaps[i].text1 == null) continue;
                 if (vaps[i].text1.text == word) vaps[i].text1.text = kana;
             }
+            // 记下这一题的确切映射: 发音按钮会把 text1 当本地音频文件名用(按汉字形命名),
+            // 而这里刚把它换成了假名, 所以发音前要用这张表换回原词。先让字典映射就位,
+            // 再用本题的确切值覆盖(同音词时确切值更准)。
+            if (kana != word)
+            {
+                BuildKanaMap(SelfBookIndexOf(MyParameters.ChosenBook_Para));
+                KanaToSurface[kana] = word;
+            }
+        }
+
+        // ---------------- 查词面板释义 / 音标 (日语词在英语库里查不到) ----------------
+
+        // 这些面板的释义/音标只来自英语词库(wcpFullEng.db / wcpOnlyWord.db): 日语词既没有
+        // 音标也查不到释义, 面板会显示「本地暂未收录这个单词」, 音标行留空。
+        // 当前是受管日语词书时, 改用本书释义(插件本来就能读到的那份), 音标位填假名读音。
+        private static void PostSearchDictS8(DatabaseManagerS8 __instance)
+        {
+            if (__instance == null) return;
+            FixDictPanel(__instance.meaningText, __instance.usPhoneticText, __instance.ukPhoneticText);
+        }
+
+        private static void PostSearchDictCheck(S8checkWordMeaning __instance)
+        {
+            if (__instance == null) return;
+            FixDictPanel(__instance.meaningText, null, null);
+        }
+
+        private static void PostSearchDictTransfer(ButtonTextTransfer __instance)
+        {
+            if (__instance == null) return;
+            FixDictPanel(__instance.meaningText, null, null);
+        }
+
+        private static void FixDictPanel(TextMeshProUGUI meaning, TextMeshProUGUI us, TextMeshProUGUI uk)
+        {
+            if (!IsEnabled()) return;
+            if (BookState() != 1) return;      // 只改受管日语词书, 别的词书原样
+            try
+            {
+                string word = MyParameters.checkWordInDictionary;
+                if (string.IsNullOrEmpty(word)) return;
+                string entry = EntryOf(word);
+                if (entry == null) return;      // 本书释义里没有就别动, 免得把好的覆盖成空
+                if (meaning != null) meaning.text = entry + NL;
+                string kana = ReadingOf(entry);
+                if (kana == null && IsKanaOnly(word)) kana = word;
+                if (us != null && kana != null) us.text = kana;
+                if (uk != null) uk.text = "";
+            }
+            catch (Exception e) { WarnOnce("dict", "查词面板释义修正异常: " + e.Message); }
+        }
+
+        // ---------------- 发音词形 (本地音频按汉字形命名) ----------------
+
+        // PlayWordAudio 用 text1.text 拼 <词>.mp3。插件把题干改成了假名, 于是查 ぜんぶ.mp3
+        // 落空 -> 回退 AI(英语 TTS)。发音前把它换回汉字形, 播完还原(文件名在开头就取好了)。
+        // VocabularyAudioPlayer 出现在 Fight/Review/ChooseWords/FruitInja/Bat/FreeReview/
+        // SpellingGame 等所有会显示单词的场景里, 所以这一处就覆盖了各个小游戏。
+        private static void PrePlayWordAudio(VocabularyAudioPlayer __instance)
+        {
+            _audioSwapped = false;
+            _audioOriginal = null;
+            if (!IsEnabled()) return;
+            if (__instance == null || __instance.text1 == null) return;
+            try
+            {
+                if (BookState() != 1) return;
+                BuildKanaMap(SelfBookIndexOf(MyParameters.ChosenBook_Para));
+                string raw = __instance.text1.text;
+                if (string.IsNullOrEmpty(raw)) return;
+                string shown = raw.Trim();
+                string surface = SurfaceOf(shown);
+                if (surface == null) surface = SurfaceFromCurrentQuestion(shown);
+                if (surface == null || surface == shown)
+                {
+                    // 诊断: 明明是日语词却换不回汉字形 -> 本地音频必然找不到, 会退回英语 TTS
+                    if (LooksJapanese(shown))
+                        WarnOnce("audionosurf:" + shown,
+                            "发音: " + shown + " 找不到本地音频对应的汉字形, 将退回 AI(英语)发音");
+                    return;
+                }
+                _audioOriginal = raw;
+                __instance.text1.text = surface;
+                _audioSwapped = true;
+                InfoOnce("audioswap:" + shown,
+                    "发音词形: " + shown + " -> " + surface + " (用本地单词音频)");
+            }
+            catch (Exception e) { WarnOnce("audio", "发音词形修正异常: " + e.Message); }
+        }
+
+        // 兜底: 发音文本就是当前这题的假名读音 -> 直接拿当前题目的词当作汉字形。
+        // 覆盖「映射表还没建好 / 词条缺读音」但题目本身已知的情况。
+        private static string SurfaceFromCurrentQuestion(string shown)
+        {
+            string w = CurrentTestWordS9();
+            if (string.IsNullOrEmpty(w)) w = CurrentFightWord();
+            if (string.IsNullOrEmpty(w) || w == shown) return null;
+            string kana = KanaOf(w);
+            return (kana != null && kana == shown) ? w : null;
+        }
+
+        private static void PostPlayWordAudio(VocabularyAudioPlayer __instance)
+        {
+            if (!_audioSwapped) return;
+            _audioSwapped = false;
+            try
+            {
+                if (__instance != null && __instance.text1 != null && _audioOriginal != null)
+                    __instance.text1.text = _audioOriginal;
+            }
+            catch (Exception e) { WarnOnce("audio2", "发音词形还原异常: " + e.Message); }
+        }
+
+        // 假名读音 -> 本书里的汉字写法。查不到返回 null(此时按原样发音)。
+        private static string SurfaceOf(string kana)
+        {
+            if (string.IsNullOrEmpty(kana)) return null;
+            string v;
+            if (KanaToSurface.TryGetValue(kana, out v) && !string.IsNullOrEmpty(v)) return v;
+            return null;
+        }
+
+        // 本书释义字典里逐条取「【假名】-> 词」, 同一读音有多个写法时取最短的那个。
+        // 只在换书时重算一次; SetStemText 记下的确切映射会覆盖字典推断(同音词用它更准)。
+        private static void BuildKanaMap(int idx)
+        {
+            if (idx <= 0) return;               // 认不出词书序号: 不动现有映射
+            if (_kanaMapIdx == idx) return;
+            _kanaMapIdx = idx;
+            KanaToSurface.Clear();
+            Dictionary<string, string> d = BookDict();
+            if (d == null) return;
+            foreach (KeyValuePair<string, string> kv in d)
+            {
+                string surface = kv.Key;
+                if (string.IsNullOrEmpty(surface)) continue;
+                string kana = ReadingOf(CleanEntry(kv.Value));
+                if (kana == null || kana == surface) continue;
+                string cur;
+                if (!KanaToSurface.TryGetValue(kana, out cur) || surface.Length < cur.Length)
+                    KanaToSurface[kana] = surface;
+            }
         }
 
         // ---------------- 释义字典: 取假名 / 组选项 ----------------
@@ -1344,7 +1572,6 @@ namespace JpWordList
         private static void SaveField(string key, List<string> list)
         {
             if (BookState() != 1) return;
-            _managedScopeActive = true;
             if (!BaselineLists.ContainsKey(key))
             {
                 BaselineLists[key] = LoadBaselineList(key);
@@ -1359,7 +1586,6 @@ namespace JpWordList
         private static void SaveField(string key, string[] arr)
         {
             if (BookState() != 1) return;
-            _managedScopeActive = true;
             if (!BaselineArrays.ContainsKey(key))
             {
                 BaselineArrays[key] = LoadBaselineArray(key);
@@ -1493,34 +1719,20 @@ namespace JpWordList
         // 插件现在会落盘, 所以不能再靠「从存档重读」回填(读到的会是插件自己的值)。
         // 用改动前记下的基线把内存和存档一起还原, 这样切到别的词书时, 别的词书看到的是
         // 游戏原本的队列, 插件也不会把自己的筛选结果带过去。
-        private static void RestoreSharedFields()
+        //
+        // 还原范围 = 本次会话动过的字段 ∪ 存档里的接管记录。后者不可省:
+        // 「在日语词书里关掉游戏 -> 重启(游戏仍停在日语词书) -> 游戏内切到别的词书」
+        // 这条路上本次进程一次都没写过, 只看内存标记会把日语队列留给别的词书。
+        // 返回「本轮未完成的测试是否已被结束」。
+        private static bool RestoreSharedFields()
         {
-            foreach (string key in TouchedListFields)
-            {
-                List<string> value;
-                if (!BaselineLists.TryGetValue(key, out value) || value == null)
-                    value = new List<string>();
-                try
-                {
-                    SetParameterField(key, new List<string>(value));
-                    ES3.Save(key, new List<string>(value));
-                }
-                catch (Exception e) { Warn("恢复 " + key + " 失败: " + e.Message); }
-            }
-            foreach (string key in TouchedArrayFields)
-            {
-                string[] value;
-                if (!BaselineArrays.TryGetValue(key, out value) || value == null)
-                    value = new string[0];
-                try
-                {
-                    SetParameterField(key, (string[])value.Clone());
-                    ES3.Save(key, (string[])value.Clone());
-                }
-                catch (Exception e) { Warn("恢复 " + key + " 失败: " + e.Message); }
-            }
-            foreach (string key in TouchedIntFields)
-                SetParameterField(key, LoadInt(key, 0));
+            bool acted;
+            bool cleared = RestoreQueues(out acted);
+            if (!acted) return false;   // 没接管过任何队列: 别的词书原样不动, 不写它的存档
+            // 只有插件真的接管过队列才动测试状态。
+            // 词池 < 5 或队列被清空时必须结束本轮, 否则别的词书点「继续」会越界崩。
+            bool ended = cleared || PoolTooShort();
+            if (ended) MarkNoTestInProgress();
             TouchedListFields.Clear();
             TouchedArrayFields.Clear();
             TouchedIntFields.Clear();
@@ -1528,6 +1740,68 @@ namespace JpWordList
             BaselineArrays.Clear();
             ClearOwned();
             Log.LogInfo("JPWordList: 已恢复游戏共享队列基线，离开猫条词书后不保留插件状态");
+            return ended;
+        }
+
+        // 统一还原核心: 逐字段优先用内存基线(本次会话第一次接管前的值), 没有才读存档基线
+        // (上一次会话留下的)。基线读不到(ES3 返回空表)或本身含日语时清空该字段 ——
+        // 把日语队列回填给别的词书等于继续泄漏。acted = 是否存在需要还原的字段。
+        private static bool RestoreQueues(out bool acted)
+        {
+            bool clearedAny = false;
+
+            List<string> listKeys = new List<string>();
+            foreach (string k in TouchedListFields) if (!listKeys.Contains(k)) listKeys.Add(k);
+            AddMissing(listKeys, LoadStringList(OwnedListKey));
+            for (int i = 0; i < listKeys.Count; i++)
+            {
+                string key = listKeys[i];
+                List<string> value;
+                if (!BaselineLists.TryGetValue(key, out value) || value == null)
+                    value = LoadBaselineListFromDisk(key);
+                if (value == null || ContainsJapanese(value))
+                {
+                    RestoreList(key, new List<string>());
+                    clearedAny = true;
+                }
+                else RestoreList(key, value);
+            }
+
+            List<string> arrKeys = new List<string>();
+            foreach (string k in TouchedArrayFields) if (!arrKeys.Contains(k)) arrKeys.Add(k);
+            AddMissing(arrKeys, LoadStringList(OwnedArrayKey));
+            for (int i = 0; i < arrKeys.Count; i++)
+            {
+                string key = arrKeys[i];
+                string[] value;
+                if (!BaselineArrays.TryGetValue(key, out value) || value == null)
+                    value = LoadBaselineArrayFromDisk(key);
+                if (value == null || ContainsJapanese(value))
+                {
+                    RestoreArray(key, new string[0]);
+                    clearedAny = true;
+                }
+                else RestoreArray(key, value);
+            }
+
+            foreach (string key in TouchedIntFields)
+                SetParameterField(key, LoadInt(key, 0));
+
+            acted = listKeys.Count > 0 || arrKeys.Count > 0 || TouchedIntFields.Count > 0;
+            return clearedAny;
+        }
+
+        private static void AddMissing(List<string> dest, List<string> src)
+        {
+            for (int i = 0; i < src.Count; i++)
+                if (!dest.Contains(src[i])) dest.Add(src[i]);
+        }
+
+        // 词池 < 5 时游戏 MultipleChoiceGeneratorS9.GenerateOptions 会取空表越界崩。
+        private static bool PoolTooShort()
+        {
+            List<string> pool = MyParameters.allTestWordsS10_Para;
+            return pool == null || pool.Count < 5;
         }
 
         // ---------------- 跨词书启动守卫 ----------------
@@ -1546,41 +1820,16 @@ namespace JpWordList
             if (!BookReady()) return;            // 还没读档: 现在判断不了当前词书, 等下一轮
             _crossBookGuardDone = true;
 
-            if (BookState() == 1) return;        // 当前就是日语词书: Enforce 负责, 不动
+            if (BookState() == 1) return;        // 当前就是日语词书: Enforce / 换书还原负责, 不动
 
             List<string> ownedLists = LoadStringList(OwnedListKey);
             List<string> ownedArrs = LoadStringList(OwnedArrayKey);
             if (ownedLists.Count == 0 && ownedArrs.Count == 0) return;   // 没接管过, 不动
 
-            bool dirty = false;
-            for (int i = 0; i < ownedLists.Count; i++)
-            {
-                string key = ownedLists[i];
-                List<string> baseVal = LoadBaselineListFromDisk(key);
-                if (baseVal == null || ContainsJapanese(baseVal))
-                {
-                    // 基线读不到, 或基线本身就是日语(接管期间已在日语语系词书): 回填只会
-                    // 把日语队列继续留在别的词书里, 所以清空并结束这个未完成的测试。
-                    RestoreList(key, new List<string>());
-                    dirty = true;
-                }
-                else RestoreList(key, baseVal);
-            }
-            for (int i = 0; i < ownedArrs.Count; i++)
-            {
-                string key = ownedArrs[i];
-                string[] baseVal = LoadBaselineArrayFromDisk(key);
-                if (baseVal == null || ContainsJapanese(baseVal))
-                {
-                    RestoreArray(key, new string[0]);
-                    dirty = true;
-                }
-                else RestoreArray(key, baseVal);
-            }
-
-            if (dirty) MarkNoTestInProgress();
-            ClearOwned();
-            Warn("跨词书守卫: 已还原插件接管前的测试队列" + (dirty ? " (残留日语队列改为清空并结束本轮测试)" : ""));
+            // 走和「游戏内切书」同一套还原逻辑, 两条路不会各自漂移。
+            bool ended = RestoreSharedFields();
+            Warn("跨词书守卫: 已还原插件接管前的测试队列" +
+                 (ended ? " (残留日语队列改为清空并结束本轮测试)" : ""));
         }
 
         private static void RestoreList(string key, List<string> value)
@@ -1680,6 +1929,13 @@ namespace JpWordList
         {
             if (!Warned.Add(key)) return;
             Warn(s);
+        }
+
+        // 同一个 key 只记一次(用于换形成功这类正常但值得留痕的事件, 不想按 Warning 刷屏)
+        private static void InfoOnce(string key, string s)
+        {
+            if (!Warned.Add("info:" + key)) return;
+            if (Log != null) Log.LogInfo("JPWordList: " + s);
         }
     }
 }

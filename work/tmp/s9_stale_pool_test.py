@@ -2,9 +2,13 @@
 """Regression test for the reported 已学词测试 bug:
 English stem + Japanese options (screenshot: superiority + 割れる/黄色/続ける/歯医者).
 
-Reproduces the live save state (allTestWordsS10_Para and S8needToLearnWordList_Para
-both stale-English while the options are fresh Japanese) and checks that the v1.7.1
+Reproduces the broken state (allTestWordsS10_Para and S8needToLearnWordList_Para both
+stale-English while the options are fresh Japanese) and checks that the v1.7.1
 HealTestList book-validity rule heals it, where the old alignment-only rule did not.
+
+The broken pool/stem are CONSTRUCTED from out-of-book learned words rather than read
+from the live save: once the plugin heals the save the live state is no longer broken,
+and a fixture that reads it would silently stop testing anything.
 """
 import io
 import json
@@ -121,9 +125,14 @@ def check(name, cond):
     ok[0] = ok[0] and bool(cond)
 
 
-print("--- reported broken state ---")
-stale_pool = [w for w in pool if w in learned] or pool
-stale_need = [w for w in need if w in learned] or need
+print("--- reported broken state (constructed) ---")
+# Out-of-book learned words stand in for the previous session's stale English queue.
+english_outside = [w for w in learned if w and not is_jp(w) and w not in book_set]
+if len(english_outside) < 6:
+    english_outside = ["superiority", "grocer", "bar", "doom", "nerve", "erosion", "canoe"]
+stale_pool = list(english_outside[:10])
+stale_need = list(english_outside[:10])
+print("   stale pool = %s" % stale_pool)
 print("   pool is book-only? %s   need is book-only? %s"
       % (all(w in book_set for w in stale_pool), all(w in book_set for w in stale_need)))
 

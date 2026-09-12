@@ -12,6 +12,7 @@ set CSC=C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe
 set REFS=/r:"%GAME%\BepInEx\core\BepInEx.dll" ^
  /r:"%GAME%\BepInEx\core\0Harmony.dll" ^
  /r:"%MGD%\Assembly-CSharp.dll" ^
+ /r:"%MGD%\Assembly-CSharp-firstpass.dll" ^
  /r:"%MGD%\netstandard.dll" ^
  /r:"%MGD%\mscorlib.dll" ^
  /r:"%MGD%\System.dll" ^
@@ -23,7 +24,7 @@ set REFS=/r:"%GAME%\BepInEx\core\BepInEx.dll" ^
  /r:"%MGD%\UnityEngine.TextRenderingModule.dll" ^
  /r:"%MGD%\Unity.TextMeshPro.dll"
 "%CSC%" /nologo /noconfig /nostdlib+ /target:library /langversion:5 /optimize+ %REFS% ^
- /out:"%~dp0BookNameMod.dll" "%~dp0BookNameMod.cs" "%~dp0Diag.cs"
+ /out:"%~dp0BookNameMod.dll" "%~dp0BookNameMod.cs" "%~dp0BookProfiles.cs" "%~dp0Diag.cs"
 if errorlevel 1 (echo BUILD FAILED & exit /b 1)
 echo BUILD OK
 copy /y "%~dp0BookNameMod.dll" "%GAME%\BepInEx\plugins\BookNameMod.dll" >nul

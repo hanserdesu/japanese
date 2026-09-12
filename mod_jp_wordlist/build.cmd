@@ -24,7 +24,7 @@ set REFS=/r:"%GAME%\BepInEx\core\BepInEx.dll" ^
  /r:"%MGD%\UnityEngine.TextRenderingModule.dll" ^
  /r:"%MGD%\Unity.TextMeshPro.dll"
 "%CSC%" /nologo /noconfig /nostdlib+ /target:library /langversion:5 /optimize+ /codepage:65001 %REFS% ^
- /out:"%~dp0JpWordListMod.dll" "%~dp0JpWordListMod.cs"
+ /out:"%~dp0JpWordListMod.dll" "%~dp0JpWordListMod.cs" "%~dp0..\mod_book_name\BookProfiles.cs"
 if errorlevel 1 (echo BUILD FAILED & exit /b 1)
 echo BUILD OK
 copy /y "%~dp0JpWordListMod.dll" "%GAME%\BepInEx\plugins\JpWordListMod.dll" >nul

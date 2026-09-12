@@ -1,0 +1,98 @@
+// Shared identity registry for the portable WCP word-book plugins.
+//
+// A profile is identified by the complete normalized word set, never by the
+// custom-book slot or by a language heuristic.  Add future French/Russian
+// profiles here with their own Id/Language/DisplayName/count/fingerprint;
+// their behaviour plugins can then opt in by Language without touching books
+// that do not exactly match a profile.
+using System;
+using System.Collections.Generic;
+using System.Security.Cryptography;
+using System.Text;
+
+namespace WcpBookProfiles
+{
+    internal sealed class BookProfile
+    {
+        internal readonly string Id;
+        internal readonly string Language;
+        internal readonly string DisplayName;
+        internal readonly int WordCount;
+        internal readonly string Fingerprint;
+
+        internal BookProfile(string id, string language, string displayName,
+                             int wordCount, string fingerprint)
+        {
+            Id = id;
+            Language = language;
+            DisplayName = displayName;
+            WordCount = wordCount;
+            Fingerprint = fingerprint;
+        }
+    }
+
+    internal static class BookProfiles
+    {
+        internal const string Japanese = "ja";
+
+        // 猫条版 JLPT 四册。指纹基于排序后的完整词形集合，导入到任意槽位均相同。
+        // 新语言词书只需在此添加新的 BookProfile；现有日语逻辑只接管 Language=ja。
+        internal static readonly BookProfile[] All = new BookProfile[]
+        {
+            new BookProfile("catbar-jlpt-n5n4", Japanese, "日语词库(猫条版)", 1293,
+                "10950ce79c5ddec598fa834b85f71ec0f87ae395bba16f0217f4d673f763832e"),
+            new BookProfile("catbar-jlpt-n3", Japanese, "日语词库(猫条版)", 1784,
+                "44f7d7ad1386dc0ca9c2662219a4de6cdc8564522eb381541e3c76df3b28419e"),
+            new BookProfile("catbar-jlpt-n2", Japanese, "日语词库(猫条版)", 1791,
+                "39787a3b46b9d00016be4401af30ad199bfc1bf13d724eda2e4f27bdc62d322a"),
+            new BookProfile("catbar-jlpt-n1", Japanese, "日语词库(猫条版)", 3463,
+                "702617886ef278c79c3f8b1c78e06021b4aa51e4d863d81d6757b9bf1dc5a568")
+        };
+
+        internal static BookProfile Match(IList<string> words)
+        {
+            if (words == null || words.Count == 0) return null;
+            string hash = null;
+            for (int i = 0; i < All.Length; i++)
+            {
+                BookProfile p = All[i];
+                if (words.Count != p.WordCount) continue;
+                if (hash == null) hash = FingerprintOf(words);
+                if (hash == p.Fingerprint) return p;
+            }
+            return null;
+        }
+
+        internal static bool IsManagedDisplayName(string text)
+        {
+            if (string.IsNullOrEmpty(text)) return false;
+            for (int i = 0; i < All.Length; i++)
+                if (text.StartsWith(All[i].DisplayName, StringComparison.Ordinal)) return true;
+            return false;
+        }
+
+        internal static string FingerprintOf(IList<string> words)
+        {
+            if (words == null) return null;
+            List<string> normalized = new List<string>(words.Count);
+            for (int i = 0; i < words.Count; i++)
+            {
+                string word = words[i];
+                if (word == null) return null;
+                normalized.Add(word.Trim().Normalize(NormalizationForm.FormC));
+            }
+            normalized.Sort(StringComparer.Ordinal);
+            StringBuilder payload = new StringBuilder();
+            for (int i = 0; i < normalized.Count; i++)
+                payload.Append(normalized[i]).Append('\n');
+            byte[] bytes = Encoding.UTF8.GetBytes(payload.ToString());
+            using (SHA256 sha = SHA256.Create())
+            {
+                byte[] digest = sha.ComputeHash(bytes);
+                StringBuilder hex = new StringBuilder(digest.Length * 2);
+                for (int i = 0; i < digest.Length; i++) hex.Append(digest[i].ToString("x2"));
+                return hex.ToString();
+            }
+        }
+    }
+}

@@ -291,3 +291,17 @@ ildump.py               游戏DLL IL 反汇编工具(逆向用)
 - 已复制到 persistentDataPath: 语法路线.xlsx / wcp_grammar.db,
   导入任一自定义词书槽或外接词库即可开始; 词块单词的例句/发音
   复用既有 JLPT 数据
+
+## 例句语音 + 播放 Mod (2026-09-12 完成)
+
+56,941 条唯一例句全部生成日语语音 (edge-tts ja-JP-NanamiNeural),
+配 BepInEx 插件在游戏内一键朗读。
+
+- 生成: `tools/gen_sentence_audio.py` — 输出到
+  `%USERPROFILE%\AppData\LocalLow\WCP\wcp\sentence_audio\<md5(ja)>.mp3`,
+  断点续传(按文件存在+大小), 12 并发, 0 失败
+- 播放: `mod_sentence_audio/` (BepInEx 5 插件, NETFX csc 编译,
+  `build.cmd` 一键构建部署) — 每 0.3s 反射扫描 每日学习/词典查询 的
+  `exmplesentences` 文本, 剥掉「例句：」前缀与「（中文）」后按 md5(ja)
+  命中本地 mp3, 例句旁挂 ▶ 按钮; 不 Harmony 补丁, 游戏更新可自动降级
+- 语法路线词书的 927 条讲解例句复用同目录同命名规则, 播放 Mod 直接命中

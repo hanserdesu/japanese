@@ -16,13 +16,14 @@ import sqlite3
 import sys
 from pathlib import Path
 
+import wcp_paths
+
 sys.stdout.reconfigure(encoding='utf-8')
 ROOT = Path(__file__).resolve().parent.parent
 OUT = ROOT / 'output'
 WORK = ROOT / 'work'
 TDIR = ROOT / 'data' / 'translations'
-DB = Path(r'E:\SteamLibrary\steamapps\common\WCP-WordGirlgriend'
-          r'\wcp_Data\StreamingAssets\wcpFullEng.db')
+DB = wcp_paths.full_db()
 
 # ---- 收集翻译 ----
 zh_map = {}
@@ -73,12 +74,16 @@ con.execute('PRAGMA busy_timeout=30000')
 cur = con.cursor()
 cur.execute('BEGIN')
 n_upd = n_ins = 0
-for idx, rowid, word, ja, old_tr in wl:
+for idx, _rowid, word, ja, old_tr in wl:
     items = master.get(word) or []
     zh = items[0][1] if items and items[0][0] == ja else zh_map.get(idx, '')
     if zh:
-        cur.execute('UPDATE sentence2 SET sentences=? WHERE rowid=?',
-                    (f'例句：{ja}（{zh}）', rowid))
+        # 不能用 worklist 里的 rowid: 那份清单是 patch_local_db 重建 sentence2
+        # 之前抓的, 行号早已指向别的词 —— 曾因此把 10251 条例句写串行。
+        # 改成「按词 + 原句」定位, 幂等且不会跨词覆盖。
+        cur.execute("UPDATE sentence2 SET sentences=? "
+                    "WHERE word=? AND sentences LIKE ?",
+                    (f'例句：{ja}（{zh}）', word, f'例句：{ja}%'))
         n_upd += 1
 for word, items in master.items():
     have = cur.execute('SELECT COUNT(*) FROM sentence2 WHERE word=?',

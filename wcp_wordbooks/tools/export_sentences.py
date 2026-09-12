@@ -8,9 +8,10 @@ import sqlite3
 import sys
 from pathlib import Path
 
+import wcp_paths
+
 sys.stdout.reconfigure(encoding='utf-8')
-DB = Path(r'E:\SteamLibrary\steamapps\common\WCP-WordGirlgriend'
-          r'\wcp_Data\StreamingAssets\wcpFullEng.db')
+DB = wcp_paths.full_db()
 OUT = Path(r'D:\Japanese\wcp_wordbooks\logs\sentence_worklist.tsv')
 
 CJK_RE = re.compile(r'[\u4e00-\u9fff]')

@@ -29,6 +29,8 @@ import sqlite3
 import sys
 from pathlib import Path
 
+import wcp_paths
+
 sys.stdout.reconfigure(encoding='utf-8')
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -36,7 +38,7 @@ DATA = ROOT / 'data'
 OUT = ROOT / 'output'
 GB = OUT / 'grammar_book'
 CONTENT_DIR = DATA / 'grammar' / 'content'
-SA = Path(r'E:\SteamLibrary\steamapps\common\WCP-WordGirlgriend\wcp_Data\StreamingAssets')
+SA = wcp_paths.streaming_assets()
 
 CN_NUM = ['一', '二', '三', '四', '五']
 

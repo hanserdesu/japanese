@@ -173,7 +173,8 @@ fetch_readings.py       Jisho 补读音 (data/readings_jisho.json)
 merge_translations.py   合并翻译/读音 -> 重建 jlpt_books.json
                         --write-game 同时重写 MyBook.es3 + 导入文件
 make_llm_batch.py       导出下一批 LLM 精翻任务 llm_batch_pending.json
-rename_books.py         SaveFile.es3 书名改名 (仅游戏关闭时执行)
+rename_books.py         SaveFile.es3 写入词书署名昵称 (仅游戏关闭时执行)
+wcp_paths.py            解析「实际在跑的那份」游戏目录 (所有写库脚本共用)
 auto_worker.py          夜间自动化工人: 音频+机翻+读音+合并+改名一轮跑完
                         (带锁防重入; 进度写 logs/progress.json)
 ildump.py               游戏DLL IL 反汇编工具(逆向用)
@@ -218,6 +219,68 @@ ildump.py               游戏DLL IL 反汇编工具(逆向用)
   `audio_manifest.json`), 4479 词 MP3 后台生成
 - 文件名「主题_·例句版」前缀避免与会话A/B 同名交付互相覆盖
 
+## ⚠️ 灌库目标路径 (2026-09-12 修正, 必读)
+
+**症状:** 游戏里仍然显示「[糟糕！本地暂未收录这个单词！我们会继续为您扩充
+词库的！]」, 例句栏空白。
+
+**原因:** 本机有两份游戏副本, 而工具硬编码的是**没在跑的那份**:
+
+- 真正在跑的: `E:\Steam\steamapps\common\WCP-WordGirlgriend` —— 证据是
+  `%USERPROFILE%\AppData\LocalLow\WCP\wcp\Player.log` 第一行
+  `Mono path[0] = 'E:/Steam/.../wcp_Data/Managed'`; `E:\Steam` 是 Steam
+  库 0 (见 `E:\Steam\steamapps\libraryfolders.vdf`)
+- 被误灌的旧副本: `E:\SteamLibrary\...` —— 已不在任何 Steam 库里, 游戏
+  永远读不到它
+
+**修复:** 新增 `tools/wcp_paths.py` 统一解析游戏目录 (env `WCP_GAME_DIR` →
+注册表 SteamPath/InstallPath → 各库 libraryfolders.vdf → 候选目录; 只认
+「存在 `wcp_Data/StreamingAssets/wcpFullEng.db`」的那份)。写库/校验脚本
+`patch_local_db` / `apply_sentences` / `apply_readings` / `verify_all` /
+`build_grammar_book` / `export_sentences` / `ildump` 全部改用它;
+`patch_local_db.backup()` 也改为按库文件绝对路径加 tag, 多副本互不覆盖。
+`verify_all.py` 复核: pron 15812/15812、sentence2 每词 ≥3 条、音频
+15812/15812、外接库同步。
+
+**会被 Steam 还原:** 「验证游戏文件完整性」或游戏更新会把 StreamingAssets 下的
+4 个 .db 换回英文原库 (2026-09-12 06:19 发生过一次)。之后重跑:
+
+    python tools/patch_local_db.py
+    python tools/build_grammar_book.py --patch
+
+(persistentDataPath 里的词书文件与音频不受影响。)
+
+**另一个坑 (已修):** `apply_sentences.py` 原先用 `logs/sentence_worklist.tsv`
+里的 rowid 做 `UPDATE sentence2 ... WHERE rowid=?`, 而那份清单是
+`patch_local_db.py` **重建 sentence2 之前**抓的 —— 行号早已指向别的词, 于是
+10,251 条例句被写串到别的词上 (词数/条数全对, 内容全错)。现已改为按
+「词 + 原句」定位, 幂等且不跨词覆盖。
+
+## ⚠️ 词书署名 (2026-09-12)
+
+游戏书单里的书名是 `"自定义词书一（" + SelfBookName1 + ")"`
+(AddElementsToScrollView:180 / WordChooseButtonS10:1042), **括号内那段就是官方
+留给玩家的昵称/署名位**, 存在 SaveFile.es3 的 `SelfBookName1..4`。
+
+关键: 昵称**不参与**槽位身份。学习/查词看的是 `ChosenBook_Para`
+(必须是 `自定义词书一`..`四`) + MyBook.es3 的 `SelfBookList1..4`; 游戏内
+改名 UI (`SaveSourceType.setBookName`) 也只写 `SelfBookNameN`。所以改昵称
+安全 (真正的字典开关是 `ChosenBook_Para`, 不要动它)。
+
+`tools/rename_books.py` 已改为写署名, 游戏内显示为:
+
+    自定义词书一（猫条·JLPT初级 N5+N4）
+    自定义词书二（猫条·JLPT N3）
+    自定义词书三（猫条·JLPT N2）
+    自定义词书四（猫条·JLPT N1）
+
+- 署名常量在脚本顶部的 `AUTHOR = '猫条'`, 换名字只改这一行
+- `--restore` 还原为「自定义词书N（自定义词书N）」的默认状态
+- 写前备份 SaveFile.es3, 只在 wcp.exe 未运行时执行, 写完回读校验
+- night_worker / setb_worker / auto_worker 都调用它, 署名会被保持
+- 改的是 `%USERPROFILE%\AppData\LocalLow\WCP\wcp\SaveFile.es3`; 若开了
+  Steam 云同步, 换机时可能被云端旧存档覆盖, 重跑本脚本即可
+
 ## ⚠️ 游戏内释义/例句机制与书名约束 (2026-09-06 晚 关键逆向)
 
 **为什么之前游戏里"本地暂未收录这个单词":**
@@ -237,15 +300,15 @@ ildump.py               游戏DLL IL 反汇编工具(逆向用)
 - **游戏无需重启** — 每次查词现开数据库连接, 下一个词立即生效;
 - 模拟游戏 SQL 抽验 (低い/焼け石に水/正規表現/愛) 释义+注音+例句全部命中。
 
-**书名约束:** 四个槽位请保持默认名「自定义词书一~四」(改名会切断内置字典路径;
-本地库兜底后改名也能显示释义, 但内置路径响应更快)。曾被夜班改成的
-「JLPT N5+N4」等名字, rename_books.py 已改为"恢复默认名", 游戏下次关闭后
-自动还原。
+**书名约束 (2026-09-12 更正):** 上面这条早期结论有误 —— 改的是**昵称**, 不是
+槽位身份。真正决定「是否加载词书内置字典」的是 `ChosenBook_Para` (槽位名
+`自定义词书一~四`), 由选书逻辑写入, 游戏内改名 UI 不会碰它。四个槽位名保持
+`自定义词书一~四` 不变即可, 昵称随便写 (见上文「词书署名」)。
 
 ## 尚未完成 (下一步)
 
-- **~~书名改名~~**: ❌ 已取消并反转 — 改名会导致游戏不加载词书字典。
-  rename_books.py 现在的职责是**恢复默认书名**(游戏关闭时自动执行)。
+- **书名署名**: ✅ 已生效 — 昵称走 `SelfBookName1..4`, 与槽位名
+  `ChosenBook_Para` 相互独立, 见上文「词书署名」。
 - **~~四字熟语/拟声拟态/惯用句词书~~**: ✅ 会话A已交付 (Set B-1, 共1431词,
   见上文), 音频由 night_loop 后台续传。
 - **JLPT 四书的表头行问题已修正**: 旧版 xlsx 有表头且 B列=读音, 直接导入会

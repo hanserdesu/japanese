@@ -18,14 +18,15 @@ import sys
 import time
 from pathlib import Path
 
+import wcp_paths
+
 sys.stdout.reconfigure(encoding='utf-8')
 ROOT = Path(__file__).resolve().parent.parent
 WORK = ROOT / 'work'
 OUT = ROOT / 'output'
-SA = Path(r'E:\SteamLibrary\steamapps\common\WCP-WordGirlgriend'
-          r'\wcp_Data\StreamingAssets')
-FULL = SA / 'wcpFullEng.db'
-ONLY = SA / 'wcpOnlyWord.db'
+SA = wcp_paths.streaming_assets()
+FULL = wcp_paths.full_db()
+ONLY = wcp_paths.only_db()
 BACKUP_DIR = ROOT / 'backups'
 FURIGANA = ROOT / 'data' / 'translations' / 'furigana_map.json'
 

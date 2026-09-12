@@ -13,6 +13,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
 using BepInEx;
+using BepInEx.Configuration;
 using BepInEx.Logging;
 using TMPro;
 using UnityEngine;
@@ -29,6 +30,7 @@ namespace SentenceAudioMod
         private const string AudioDirName = "sentence_audio";
 
         private AudioSource _audio;
+        private ConfigEntry<bool> _enabled;
         private float _nextScan;
         private string _audioDir;
         private Type _t8, _t17;
@@ -45,6 +47,9 @@ namespace SentenceAudioMod
             _audio = go.AddComponent<AudioSource>();
             _audio.playOnAwake = false;
             _audio.volume = 1f;
+            _audio.spatialBlend = 0f;   // 2D, 无视听位置衰减
+            _enabled = Config.Bind("General", "Enabled", true,
+                "显示例句旁的 ▶ 朗读按钮。");
             _audioDir = Path.Combine(Application.persistentDataPath,
                 AudioDirName);
             Log.LogInfo(string.Format(
@@ -56,6 +61,37 @@ namespace SentenceAudioMod
                 File.Delete(flag);   // 一次性: 读到即删, 只在下一次启动生效
                 StartCoroutine(SelfTest());
             }
+            // 播放链路自检 (BepInEx/audiotest.flag): 按钮出现后自动点一次 ▶,
+            // 用来在无人操作的情况下复现/验证播放路径是否稳定
+            var atest = Path.Combine(Application.dataPath, "..",
+                "BepInEx", "audiotest.flag");
+            if (File.Exists(atest))
+            {
+                File.Delete(atest);
+                StartCoroutine(AutoPlayTest());
+            }
+        }
+
+        private IEnumerator AutoPlayTest()
+        {
+            Log.LogInfo("AUDIOTEST: waiting for a sentence button");
+            for (float t = 0f; t < 120f; t += 0.5f)
+            {
+                foreach (var kv in _buttons)
+                {
+                    if (kv.Key == null || kv.Value == null) continue;
+                    if (!kv.Value.activeSelf) continue;
+                    var spb = kv.Value.GetComponent<SentencePlayButton>();
+                    if (spb == null || string.IsNullOrEmpty(spb.file)) continue;
+                    Log.LogInfo("AUDIOTEST: invoking play for " + spb.file);
+                    spb.Play();
+                    yield return new WaitForSeconds(3f);
+                    Log.LogInfo("AUDIOTEST: survived playback, done");
+                    yield break;
+                }
+                yield return new WaitForSeconds(0.5f);
+            }
+            Log.LogWarning("AUDIOTEST: no button appeared, aborted");
         }
 
         // 一次性自检 (仅当 BepInEx/selftest.flag 存在):
@@ -135,6 +171,7 @@ namespace SentenceAudioMod
 
         void Update()
         {
+            if (_enabled != null && !_enabled.Value) return;
             if (Time.unscaledTime < _nextScan) return;
             _nextScan = Time.unscaledTime + ScanInterval;
             try { ScanAll(); }
@@ -284,23 +321,56 @@ namespace SentenceAudioMod
 
         private IEnumerator LoadAndPlay(string file)
         {
+            // 与游戏 VocabularyAudioPlayer.LoadAndPlayAudio 同构:
+            // AudioSource.clip + Play() (游戏自身已验证可用), 不用 PlayOneShot。
             string url = "file:///" + file.Replace('\\', '/');
-            var www = UnityWebRequestMultimedia.GetAudioClip(url,
-                AudioType.MPEG);
-            yield return www.SendWebRequest();
-            if (!string.IsNullOrEmpty(www.error))
+            UnityWebRequest www = null;
+            try
             {
-                Log.LogWarning("audio load failed: " + www.error + " " + file);
+                www = UnityWebRequestMultimedia.GetAudioClip(url,
+                    AudioType.MPEG);
+            }
+            catch (Exception e)
+            {
+                Log.LogWarning("audio request failed: " + e.Message + " " + file);
                 yield break;
             }
-            var clip = DownloadHandlerAudioClip.GetContent(www);
+            yield return www.SendWebRequest();
+            bool ok = false;
+            string err = null;
+            try
+            {
+                ok = www.result == UnityWebRequest.Result.Success;
+                err = www.error;
+            }
+            catch (Exception e) { err = e.Message; }
+            if (!ok)
+            {
+                Log.LogWarning("audio load failed: " + err + " " + file);
+                www.Dispose();
+                yield break;
+            }
+            AudioClip clip = null;
+            try { clip = DownloadHandlerAudioClip.GetContent(www); }
+            catch (Exception e) { Log.LogWarning("decode failed: " + e.Message); }
             if (clip == null)
             {
                 Log.LogWarning("audio clip null: " + file);
+                www.Dispose();
                 yield break;
             }
-            _audio.Stop();
-            _audio.PlayOneShot(clip);
+            try
+            {
+                _audio.Stop();
+                _audio.clip = clip;
+                _audio.Play();
+                Log.LogInfo("playing " + Path.GetFileName(file));
+            }
+            catch (Exception e)
+            {
+                Log.LogWarning("play failed: " + e.Message);
+            }
+            www.Dispose();
         }
 
         // "ja（zh）" / TMP 标记 / "例句：" 前缀 → 还原出纯 ja 文本

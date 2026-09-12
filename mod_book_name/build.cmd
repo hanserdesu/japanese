@@ -1,15 +1,17 @@
 @echo off
-rem Build WCP Sentence Audio plugin (BepInEx 5, C#5 via NETFX csc)
-rem 游戏目录: 可用 WCP_GAME_DIR 覆盖, 缺省取实际在跑的那份 (E:\Steam\...)
+rem Build WCP Book Name plugin (BepInEx 5, C#5 via NETFX csc)
+rem Override game dir with WCP_GAME_DIR; default is the live install.
 if "%WCP_GAME_DIR%"=="" set WCP_GAME_DIR=E:\Steam\steamapps\common\WCP-WordGirlgriend
 set GAME=%WCP_GAME_DIR%
 set MGD=%GAME%\wcp_Data\Managed
-if not exist "%MGD%\mscorlib.dll" (
-  echo Missing %MGD%\mscorlib.dll - wrong game dir: %GAME%
+if not exist "%GAME%\BepInEx\core\BepInEx.dll" (
+  echo Missing %GAME%\BepInEx\core\BepInEx.dll - install BepInEx first
   exit /b 1
 )
 set CSC=C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe
 set REFS=/r:"%GAME%\BepInEx\core\BepInEx.dll" ^
+ /r:"%GAME%\BepInEx\core\0Harmony.dll" ^
+ /r:"%MGD%\Assembly-CSharp.dll" ^
  /r:"%MGD%\netstandard.dll" ^
  /r:"%MGD%\mscorlib.dll" ^
  /r:"%MGD%\System.dll" ^
@@ -17,15 +19,12 @@ set REFS=/r:"%GAME%\BepInEx\core\BepInEx.dll" ^
  /r:"%MGD%\UnityEngine.dll" ^
  /r:"%MGD%\UnityEngine.CoreModule.dll" ^
  /r:"%MGD%\UnityEngine.UIModule.dll" ^
- /r:"%MGD%\UnityEngine.AudioModule.dll" ^
- /r:"%MGD%\UnityEngine.UnityWebRequestModule.dll" ^
- /r:"%MGD%\UnityEngine.UnityWebRequestAudioModule.dll" ^
  /r:"%MGD%\UnityEngine.UI.dll" ^
  /r:"%MGD%\UnityEngine.TextRenderingModule.dll" ^
  /r:"%MGD%\Unity.TextMeshPro.dll"
 "%CSC%" /nologo /noconfig /nostdlib+ /target:library /langversion:5 /optimize+ %REFS% ^
- /out:"%~dp0SentenceAudioMod.dll" "%~dp0SentenceAudioMod.cs"
+ /out:"%~dp0BookNameMod.dll" "%~dp0BookNameMod.cs"
 if errorlevel 1 (echo BUILD FAILED & exit /b 1)
 echo BUILD OK
-copy /y "%~dp0SentenceAudioMod.dll" "%GAME%\BepInEx\plugins\SentenceAudioMod.dll" >nul
+copy /y "%~dp0BookNameMod.dll" "%GAME%\BepInEx\plugins\BookNameMod.dll" >nul
 echo DEPLOYED to BepInEx\plugins

@@ -5,7 +5,9 @@ from dncil.cil.error import MethodBodyFormatError
 from dncil.clr.token import Token, StringToken, InvalidToken
 from dncil.cil.body.reader import CilMethodBodyReaderBase
 
-DLL = r'E:\SteamLibrary\steamapps\common\WCP-WordGirlgriend\wcp_Data\Managed\Assembly-CSharp.dll'
+import wcp_paths
+
+DLL = str(wcp_paths.managed_dll())
 
 pe = dnfile.dnPE(DLL)
 

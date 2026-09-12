@@ -14,6 +14,7 @@
 
 幂等: 先 DELETE 同批 word 再 INSERT。写前自动备份。
 """
+import hashlib
 import json
 import re
 import sqlite3
@@ -22,13 +23,15 @@ import sys
 import time
 from pathlib import Path
 
+import wcp_paths
+
 sys.stdout.reconfigure(encoding='utf-8')
 
 ROOT = Path(__file__).resolve().parent.parent
 OUT = ROOT / 'output'
-SA = Path(r'E:\SteamLibrary\steamapps\common\WCP-WordGirlgriend\wcp_Data\StreamingAssets')
-FULL = SA / 'wcpFullEng.db'
-ONLY = SA / 'wcpOnlyWord.db'
+SA = wcp_paths.streaming_assets()
+FULL = wcp_paths.full_db()
+ONLY = wcp_paths.only_db()
 BACKUP_DIR = ROOT / 'backups'
 
 KANA_OK = re.compile(r'^[\u3040-\u30ffー・]+$')
@@ -80,12 +83,16 @@ def collect():
 
 
 def backup(db: Path):
+    """写前备份。按「库文件绝对路径」区分 —— 本机存在多份安装副本, 不能混用。"""
     BACKUP_DIR.mkdir(exist_ok=True)
+    tag = hashlib.sha1(str(db.resolve()).lower().encode('utf-8')).hexdigest()[:6]
+    if any(BACKUP_DIR.glob(f'{db.stem}.original_{tag}_*')):
+        return None
     stamp = time.strftime('%Y%m%d_%H%M%S')
-    dst = BACKUP_DIR / f'{db.stem}.original_{stamp}{db.suffix}'
-    if not any(BACKUP_DIR.glob(f'{db.stem}.original_*')):
-        shutil.copy2(db, dst)
-        print('已备份 ->', dst.name)
+    dst = BACKUP_DIR / f'{db.stem}.original_{tag}_{stamp}{db.suffix}'
+    shutil.copy2(db, dst)
+    print('已备份 ->', dst.name)
+    return dst
 
 
 def patch(db: Path, words: dict, with_sentence: bool, force=False):
@@ -164,6 +171,7 @@ def main():
     force = '--force' in sys.argv
     words = collect()
     ex = sum(1 for v in words.values() if v['ex_ja'])
+    print(f'游戏目录 {wcp_paths.game_dir()}')
     print(f'汇总词条 {len(words)} (含例句 {ex})')
     patch(FULL, words, with_sentence=True, force=force)
     patch(ONLY, words, with_sentence=False, force=force)

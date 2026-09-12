@@ -104,12 +104,17 @@ namespace WcpBookName
     {
         internal static ManualLogSource Log;
         private static bool _patched;
+        internal static BookNamePlugin Instance;
 
         // 游戏里这些组件会在 Start / 切换时把标签写回 美/英/UK/US,
-        // 打补丁强制显示 JP
-        internal static void ForceJpLabels(Component c)
+        // 打补丁强制显示 JP。
+        // 只在日语词书里做, 且写入前先记账, 离开日语词书时由
+        // RestoreWordSide() 原样还回去 —— 否则英语词书的发音设置面板
+        // 会被一起改成 JP(这就是跨词书冲突的来源)。
+        internal void ForceJpLabels(Component c)
         {
             if (c == null) return;
+            if (!JapaneseBookSelected()) return;
             var texts = c.GetComponentsInChildren<TMP_Text>(true);
             for (int i = 0; i < texts.Length; i++)
             {
@@ -117,6 +122,8 @@ namespace WcpBookName
                 if (string.IsNullOrEmpty(s)) continue;
                 if (!BookNamePlugin.IsAccentLabelPublic(s)) continue;
                 if (!HasButtonAncestorPublic(texts[i])) continue;
+                if (!_labelBackup.ContainsKey(texts[i]))
+                    _labelBackup[texts[i]] = s;
                 texts[i].text = "JP";
             }
         }
@@ -184,6 +191,7 @@ namespace WcpBookName
         void Awake()
         {
             Log = Logger;
+            Instance = this;
             _enabled = Config.Bind("General", "Enabled", true,
                 "把书单里的「自定义词书N（昵称）」显示成「日语词书N（昵称）」。");
             _jpLabels = Config.Bind("General", "JpSoundLabels", true,
@@ -351,7 +359,7 @@ namespace WcpBookName
 
         private static bool IsSwitchLike(Button b, string nm)
         {
-            if (nm.IndexOf("Switch",
+            if (nm.IndexOf("SwitchSentence",
                     StringComparison.OrdinalIgnoreCase) >= 0) return true;
             int n = b.onClick.GetPersistentEventCount();
             for (int i = 0; i < n; i++)
@@ -468,9 +476,12 @@ namespace WcpBookName
                         node.gameObject.SetActive(keep);
                         Log.LogInfo("WordAccent: " + node.name
                             + (keep ? " kept" : " hidden"));
+                        // 只记「我们亲手关掉」的节点, 离开日语词书时才会把它
+                        // 还原成显示; 游戏自己关掉的不要碰, 否则英语词书里会
+                        // 把本来该隐藏的那个图标又点亮。
+                        if (!keep && !_hiddenNodes.Contains(node.gameObject))
+                            _hiddenNodes.Add(node.gameObject);
                     }
-                    if (!keep && !_hiddenNodes.Contains(node.gameObject))
-                        _hiddenNodes.Add(node.gameObject);
                 }
             }
         }
@@ -524,44 +535,51 @@ namespace WcpBookName
     // 游戏自带脚本会把发音按钮写成 美/英(UK/US), 打补丁强制显示 JP
     internal static class AccentLabelPatches
     {
+        // 转调实例方法: 实例里才有「当前是否日语词书」和标签记账
+        private static void Call(Component c)
+        {
+            var p = BookNamePlugin.Instance;
+            if (p != null) p.ForceJpLabels(c);
+        }
+
         [HarmonyPostfix]
         [HarmonyPatch(typeof(changePreferredSoundS8), "Start")]
         private static void A1(changePreferredSoundS8 __instance)
-        { BookNamePlugin.ForceJpLabels(__instance); }
+        { Call(__instance); }
 
         [HarmonyPostfix]
         [HarmonyPatch(typeof(changePreferredSoundS8), "ToggleSoundUSIf_Para")]
         private static void A2(changePreferredSoundS8 __instance)
-        { BookNamePlugin.ForceJpLabels(__instance); }
+        { Call(__instance); }
 
         [HarmonyPostfix]
         [HarmonyPatch(typeof(changePreferredSoundS9), "Start")]
         private static void A3(changePreferredSoundS9 __instance)
-        { BookNamePlugin.ForceJpLabels(__instance); }
+        { Call(__instance); }
 
         [HarmonyPostfix]
         [HarmonyPatch(typeof(changePreferredSoundS9), "ToggleSoundUSIf_Para")]
         private static void A4(changePreferredSoundS9 __instance)
-        { BookNamePlugin.ForceJpLabels(__instance); }
+        { Call(__instance); }
 
         [HarmonyPostfix]
         [HarmonyPatch(typeof(ChangeLocalVoiceIf), "Start")]
         private static void A5(ChangeLocalVoiceIf __instance)
-        { BookNamePlugin.ForceJpLabels(__instance); }
+        { Call(__instance); }
 
         [HarmonyPostfix]
         [HarmonyPatch(typeof(ChangeLocalVoiceIf), "ToggleLocalIf")]
         private static void A6(ChangeLocalVoiceIf __instance)
-        { BookNamePlugin.ForceJpLabels(__instance); }
+        { Call(__instance); }
 
         [HarmonyPostfix]
         [HarmonyPatch(typeof(SoundLocalManager), "Start")]
         private static void A7(SoundLocalManager __instance)
-        { BookNamePlugin.ForceJpLabels(__instance); }
+        { Call(__instance); }
 
         [HarmonyPostfix]
         [HarmonyPatch(typeof(SoundLocalManager), "Switch_SoundLocalIf")]
         private static void A8(SoundLocalManager __instance)
-        { BookNamePlugin.ForceJpLabels(__instance); }
+        { Call(__instance); }
     }
 }

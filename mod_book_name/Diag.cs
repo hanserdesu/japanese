@@ -26,6 +26,7 @@ namespace WcpBookName
                 _path = System.IO.Path.Combine(Paths.BepInExRootPath, "diag.txt");
                 System.IO.File.Delete(_path);
                 Line("=== dump " + DateTime.Now.ToString("HH:mm:ss") + " ===");
+                DumpBookState();
                 DumpAccentLabels();
                 DumpJpButtons();
                 DumpToggleButtons();
@@ -67,6 +68,15 @@ namespace WcpBookName
             return false;
         }
 
+        // 当前选中的词书 + 是否按「日语词书」处理 —— 判断跨词书冲突的关键
+        private static void DumpBookState()
+        {
+            Line("--- book state ---");
+            string cb = null;
+            try { cb = MyParameters.ChosenBook_Para; } catch (Exception) { }
+            Line("ChosenBook_Para='" + cb + "' jpBook="
+                + BookNamePlugin.JapaneseBookSelected());
+        }
         private static void DumpAccentLabels()
         {
             Line("--- accent labels ---");

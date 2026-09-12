@@ -30,11 +30,6 @@ namespace WcpBookName
                 int n = DumpReadButtons();
                 DumpSentenceSources();
                 Line("=== end ===\n");
-                if (n == 0 && LastCount <= 0)
-                {
-                    // 还没进词页: 不留无内容的结果, 下次再试
-                    System.IO.File.Delete(_path);
-                }
                 LastCount = n;
             }
             catch (Exception e)

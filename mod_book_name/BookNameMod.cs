@@ -156,7 +156,7 @@ namespace WcpBookName
         private ConfigEntry<bool> _singleJp;
         private readonly Dictionary<TMP_Text, string> _labelBackup =
             new Dictionary<TMP_Text, string>();
-        private readonly List<Button> _hiddenButtons = new List<Button>();
+        private readonly List<GameObject> _hiddenNodes = new List<GameObject>();
         private bool _lastJpBook;
         private bool _groupLogged;
 
@@ -275,15 +275,14 @@ namespace WcpBookName
                 }
                 _labelBackup.Clear();
             }
-            if (_hiddenButtons.Count > 0)
+            if (_hiddenNodes.Count > 0)
             {
-                for (int i = 0; i < _hiddenButtons.Count; i++)
+                for (int i = 0; i < _hiddenNodes.Count; i++)
                 {
-                    var b = _hiddenButtons[i];
-                    if (b != null && !b.gameObject.activeSelf)
-                        b.gameObject.SetActive(true);
+                    var go = _hiddenNodes[i];
+                    if (go != null && !go.activeSelf) go.SetActive(true);
                 }
-                _hiddenButtons.Clear();
+                _hiddenNodes.Clear();
             }
         }
 
@@ -343,19 +342,21 @@ namespace WcpBookName
                     return a.transform.GetSiblingIndex()
                         .CompareTo(b.transform.GetSiblingIndex());
                 });
+                // 这对图标本身不是 Button(纯显示容器), 直接把多余的那个
+                // 容器节点停用即可。保留第一个, 隐藏其余。
                 for (int i = 0; i < lst.Count; i++)
                 {
-                    var btn = FindButtonUp(lst[i].transform);
-                    if (btn == null) continue;
+                    var node = lst[i].transform.parent;
+                    if (node == null) continue;
                     bool keep = i == 0;
-                    if (btn.gameObject.activeSelf != keep)
+                    if (node.gameObject.activeSelf != keep)
                     {
-                        btn.gameObject.SetActive(keep);
-                        Log.LogInfo("WordAccent: " + btn.name
+                        node.gameObject.SetActive(keep);
+                        Log.LogInfo("WordAccent: " + node.name
                             + (keep ? " kept" : " hidden"));
                     }
-                    if (!keep && !_hiddenButtons.Contains(btn))
-                        _hiddenButtons.Add(btn);
+                    if (!keep && !_hiddenNodes.Contains(node.gameObject))
+                        _hiddenNodes.Add(node.gameObject);
                 }
             }
         }
@@ -371,17 +372,28 @@ namespace WcpBookName
             return null;
         }
 
-        // 只认单词旁那一对: 标签节点名 t-uk / t-us, 父节点 Voice-UK / Voice-US
+        // 只认单词释义区(Canvas-scrollMeaningSquare)里那一对:
+        // .../all/Voice-UK/t-uk 与 .../all/Voice-US/t-us。
+        // 它们本身不是 Button(纯图标容器), 所以隐藏时直接停用父节点。
         private static bool IsWordSideAccentNode(TMP_Text t)
         {
             var p = t.transform.parent;
             if (p == null) return false;
             var pn = p.name.ToLowerInvariant();
             var tn = t.name.ToLowerInvariant();
-            if (!pn.StartsWith("voice", StringComparison.Ordinal)) return false;
-            return pn.EndsWith("uk", StringComparison.Ordinal)
-                || pn.EndsWith("us", StringComparison.Ordinal)
-                || tn == "t-uk" || tn == "t-us";
+            bool named = pn.StartsWith("voice", StringComparison.Ordinal)
+                && (pn.EndsWith("uk", StringComparison.Ordinal)
+                    || pn.EndsWith("us", StringComparison.Ordinal)
+                    || tn == "t-uk" || tn == "t-us");
+            if (!named) return false;
+            var tr = t.transform;
+            for (int d = 0; d < 6 && tr != null; d++)
+            {
+                if (tr.name.IndexOf("scrollMeaningSquare",
+                        StringComparison.OrdinalIgnoreCase) >= 0) return true;
+                tr = tr.parent;
+            }
+            return false;
         }
 
         private static bool IsAccentLabel(string s)

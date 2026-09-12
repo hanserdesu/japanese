@@ -15,6 +15,7 @@ using System.Text.RegularExpressions;
 using BepInEx;
 using BepInEx.Configuration;
 using BepInEx.Logging;
+using HarmonyLib;
 using TMPro;
 using UnityEngine;
 using UnityEngine.Networking;
@@ -42,6 +43,9 @@ namespace SentenceAudioMod
             new Dictionary<Button, ReadBtnState>();
         private bool _gameButtonsActive;
         private static FieldInfo _fSentences;
+        private readonly Dictionary<string, AudioClip> _clips =
+            new Dictionary<string, AudioClip>();
+        private readonly HashSet<string> _loading = new HashSet<string>();
         private Type _t8, _t17;
         private FieldInfo _f8, _f17;
         private object _s8, _s17;
@@ -51,6 +55,7 @@ namespace SentenceAudioMod
         void Awake()
         {
             Log = Logger;
+            PatchSoundTheWord();
             try
             {
                 File.AppendAllText(Path.Combine(Paths.BepInExRootPath, "diag.txt"),
@@ -356,22 +361,37 @@ namespace SentenceAudioMod
                         var b = arr[i];
                         if (b == null) continue;
                         any = true;
-                        if (_takenOver.Contains(b)) continue;
-                        if (b.GetComponent<JpReadTag>() != null)
-                        {
-                            _takenOver.Add(b);
-                            continue;
-                        }
-                        string file = LocalAudio(SentenceAt(sentences, i));
+                        string file = ResolveReadButtonAudio(sentences, i);
                         if (file == null) continue;   // 无本地日语音频 -> 保留原样
-                        _takenOver.Add(b);
-                        b.gameObject.AddComponent<JpReadTag>();
-                        var f2 = file;
+                        ReadBtnState st;
+                        bool isNew = false;
+                        if (!_readStates.TryGetValue(b, out st) || st == null)
+                        {
+                            st = new ReadBtnState();
+                            st.btn = b;
+                            st.owner = this;
+                            _readStates[b] = st;
+                            isNew = true;
+                        }
+                        if (b.GetComponent<JpReadTag>() == null)
+                            b.gameObject.AddComponent<JpReadTag>();
+                        if (st.action == null)
+                            st.action = new UnityEngine.Events.UnityAction(st.Play);
+                        bool changed = isNew ||
+                            !string.Equals(st.file, file, StringComparison.Ordinal);
+                        st.file = file;
+                        // 游戏在这些按钮上挂了 SoundTheWordS8: 点一下会转去播
+                        // 单词的英文 TTS(底部 UK/US), 和例句日语叠在一起就是
+                        // 「乱读」。禁用它, 并把 onClick 收口成只剩我们的监听
+                        // (游戏的 Start 里 AddListener 会晚于本插件执行)。
+                        SuppressWordTts(b);
                         b.onClick.RemoveAllListeners();
-                        b.onClick.AddListener(delegate { PlayFile(f2); });
-                        Relabel(b, i);
-                        Diag("took over read button " + i + " -> "
-                             + Path.GetFileName(f2));
+                        b.onClick.AddListener(st.action);
+                        EnsurePreloaded(file);
+                        if (isNew) Relabel(b, i);
+                        if (changed)
+                            Diag("read button " + i + " -> "
+                                 + Path.GetFileName(file));
                     }
                 }
                 _gameButtonsActive = any;
@@ -379,20 +399,41 @@ namespace SentenceAudioMod
             catch (Exception e) { Diag("takeover error: " + e.Message); }
         }
 
-        private string SentenceAt(System.Collections.IList sentences, int i)
+        // 该序号按钮当前应播放的本地日语 mp3。
+        // 依次尝试当前界面的例句来源, 用「能命中本地音频」来判定正确来源,
+        // 换词时每次都会重算, 不会沿用上一个词的映射。
+        private string ResolveReadButtonAudio(System.Collections.IList sentences, int i)
         {
+            string s;
+            s = TmpSentenceAt(_s17, _f17, i);
+            if (s != null) { string f = LocalAudio(s); if (f != null) return f; }
+            s = TmpSentenceAt(_s8, _f8, i);
+            if (s != null) { string f = LocalAudio(s); if (f != null) return f; }
             if (sentences != null && i < sentences.Count)
             {
-                var s = sentences[i] as string;
-                if (!string.IsNullOrEmpty(s)) return s;
-            }
-            if (_s8 != null && _f8 != null)
-            {
-                var arr = _f8.GetValue(_s8) as TMP_Text[];
-                if (arr != null && i < arr.Length && arr[i] != null)
-                    return arr[i].text;
+                s = sentences[i] as string;
+                if (!string.IsNullOrEmpty(s))
+                {
+                    string f = LocalAudio(s);
+                    if (f != null) return f;
+                }
             }
             return null;
+        }
+
+        private static string TmpSentenceAt(object mgr, FieldInfo field, int i)
+        {
+            if (mgr == null || field == null) return null;
+            try
+            {
+                var comp = mgr as Component;
+                if (comp != null && !comp.gameObject.activeInHierarchy) return null;
+                var arr = field.GetValue(mgr) as TMP_Text[];
+                if (arr == null || i >= arr.Length || arr[i] == null) return null;
+                var s = arr[i].text;
+                return string.IsNullOrEmpty(s) ? null : s;
+            }
+            catch (Exception) { return null; }
         }
 
         // 由例句文本(或 TMP 富文本)定位本地日语 mp3
@@ -422,13 +463,7 @@ namespace SentenceAudioMod
 
         internal static void Diag(string msg)
         {
-            try
-            {
-                File.AppendAllText(
-                    Path.Combine(Paths.BepInExRootPath, "diag.txt"),
-                    DateTime.Now.ToString("HH:mm:ss") + " " + msg + "\n");
-            }
-            catch (Exception) { }
+            if (Log != null) Log.LogInfo("[SAT] " + msg);
         }
 
         private void Scan(TMP_Text[] arr)
@@ -544,13 +579,50 @@ namespace SentenceAudioMod
 
         internal void PlayFile(string file)
         {
+            if (string.IsNullOrEmpty(file)) return;
+            AudioClip cached;
+            if (_clips.TryGetValue(file, out cached) && cached != null)
+            {
+                PlayClip(cached, file);
+                return;
+            }
             StartCoroutine(LoadAndPlay(file));
         }
 
-        private IEnumerator LoadAndPlay(string file)
+        private void PlayClip(AudioClip clip, string file)
         {
-            // 与游戏 VocabularyAudioPlayer.LoadAndPlayAudio 同构:
-            // AudioSource.clip + Play() (游戏自身已验证可用), 不用 PlayOneShot。
+            try
+            {
+                _audio.Stop();
+                _audio.clip = clip;
+                _audio.Play();
+            }
+            catch (Exception e)
+            {
+                Log.LogWarning("play failed: " + e.Message + " " + file);
+            }
+        }
+
+        // 预解码当前词条会用到的例句音频: MP3 解码在主线程, 若等到点击才做
+        // 会掉帧(就是"读第一句卡一下")。提前加载进缓存后点击即播。
+        private void EnsurePreloaded(string file)
+        {
+            if (string.IsNullOrEmpty(file)) return;
+            if (_clips.ContainsKey(file) || _loading.Contains(file)) return;
+            _loading.Add(file);
+            StartCoroutine(Preload(file));
+        }
+
+        private IEnumerator Preload(string file)
+        {
+            AudioClip clip = null;
+            yield return LoadClip(file, delegate(AudioClip c) { clip = c; });
+            _loading.Remove(file);
+            if (clip != null) _clips[file] = clip;
+        }
+
+        private IEnumerator LoadClip(string file, Action<AudioClip> done)
+        {
             string url = "file:///" + file.Replace('\\', '/');
             UnityWebRequest www = null;
             try
@@ -561,44 +633,63 @@ namespace SentenceAudioMod
             catch (Exception e)
             {
                 Log.LogWarning("audio request failed: " + e.Message + " " + file);
+                done(null);
                 yield break;
             }
             yield return www.SendWebRequest();
-            bool ok = false;
-            string err = null;
-            try
-            {
-                ok = www.result == UnityWebRequest.Result.Success;
-                err = www.error;
-            }
-            catch (Exception e) { err = e.Message; }
-            if (!ok)
-            {
-                Log.LogWarning("audio load failed: " + err + " " + file);
-                www.Dispose();
-                yield break;
-            }
             AudioClip clip = null;
-            try { clip = DownloadHandlerAudioClip.GetContent(www); }
-            catch (Exception e) { Log.LogWarning("decode failed: " + e.Message); }
-            if (clip == null)
-            {
-                Log.LogWarning("audio clip null: " + file);
-                www.Dispose();
-                yield break;
-            }
             try
             {
-                _audio.Stop();
-                _audio.clip = clip;
-                _audio.Play();
-                Log.LogInfo("playing " + Path.GetFileName(file));
+                if (www.result == UnityWebRequest.Result.Success)
+                    clip = DownloadHandlerAudioClip.GetContent(www);
+                else
+                    Log.LogWarning("audio load failed: " + www.error + " " + file);
             }
             catch (Exception e)
             {
-                Log.LogWarning("play failed: " + e.Message);
+                Log.LogWarning("decode failed: " + e.Message + " " + file);
             }
             www.Dispose();
+            done(clip);
+        }
+
+        // 缓存未命中时的兜底: 载入 -> 入缓存 -> 播放。
+        // 正常路径是 EnsurePreloaded 已把 clip 放进 _clips, 这里是首次点击
+        // 时预载还没完成的情况。
+        private IEnumerator LoadAndPlay(string file)
+        {
+            AudioClip clip = null;
+            yield return LoadClip(file, delegate(AudioClip c) { clip = c; });
+            if (clip == null)
+            {
+                Log.LogWarning("audio clip null: " + file);
+                yield break;
+            }
+            _clips[file] = clip;
+            PlayClip(clip, file);
+        }
+
+        // 游戏在例句按钮上挂了 SoundTheWordS8, 点一下会转去触发单词的
+        // 英文 TTS(底部 UK/US 按钮) —— 这就是「例句乱读」的来源。
+        // 按类型名禁用, 避免编译期依赖游戏类型。
+        private void SuppressWordTts(Button b)
+        {
+            try
+            {
+                var comps = b.GetComponents<MonoBehaviour>();
+                for (int i = 0; i < comps.Length; i++)
+                {
+                    var m = comps[i];
+                    if (m == null) continue;
+                    if (m.GetType().Name != "SoundTheWordS8") continue;
+                    if (m.enabled)
+                    {
+                        m.enabled = false;
+                        Diag("disabled SoundTheWordS8 on " + b.name);
+                    }
+                }
+            }
+            catch (Exception e) { Diag("suppress error: " + e.Message); }
         }
 
         // "ja（zh）" / TMP 标记 / "例句：" 前缀 → 还原出纯 ja 文本
@@ -667,5 +758,19 @@ namespace SentenceAudioMod
     // 标记: 该按钮已被改造成日语朗读 (避免重复接管)
     public class JpReadTag : MonoBehaviour
     {
+    }
+
+    // 已接管按钮的当前音频映射 (换词时原地更新, 不重新挂监听)
+    internal class ReadBtnState
+    {
+        public Button btn;
+        public SentenceAudioPlugin owner;
+        public string file;
+        public UnityEngine.Events.UnityAction action;
+
+        public void Play()
+        {
+            if (owner != null) owner.PlayFile(file);
+        }
     }
 }

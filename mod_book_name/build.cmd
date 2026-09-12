@@ -23,7 +23,7 @@ set REFS=/r:"%GAME%\BepInEx\core\BepInEx.dll" ^
  /r:"%MGD%\UnityEngine.TextRenderingModule.dll" ^
  /r:"%MGD%\Unity.TextMeshPro.dll"
 "%CSC%" /nologo /noconfig /nostdlib+ /target:library /langversion:5 /optimize+ %REFS% ^
- /out:"%~dp0BookNameMod.dll" "%~dp0BookNameMod.cs"
+ /out:"%~dp0BookNameMod.dll" "%~dp0BookNameMod.cs" "%~dp0Diag.cs"
 if errorlevel 1 (echo BUILD FAILED & exit /b 1)
 echo BUILD OK
 copy /y "%~dp0BookNameMod.dll" "%GAME%\BepInEx\plugins\BookNameMod.dll" >nul

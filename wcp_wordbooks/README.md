@@ -265,3 +265,29 @@ ildump.py               游戏DLL IL 反汇编工具(逆向用)
   wcpFullEng.db sentence2 逐词全查 15,812 词全部 ≥3 条
 - master: `data/translations/sentences_master.json` {word: [[ja,zh],...]},
   是 `patch_local_db.py` 灌 sentence2 的数据源 (幂等, 游戏无需重启)
+
+## 语法路线词书 (2026-09-12 完成)
+
+不单是背单词的「单词语法融合」词书: 8,331 个 JLPT 词按学习路线重排
+(Kaishi 频率优先), 每 15/16/25/30/40 词一个词块, 块后插入 1 个语法
+占位词 (G001...G304 + 5 个阶段头), **语法讲解写在占位词的例句栏**
+(3 行 = 接续/用法/注意, ja 是可朗读例句, 中文讲解在括号内)。
+
+- 5 阶段: 一 入门N5(45点) → 二 基础N4(40) → 三 进阶N3(72) →
+  四 上级N2(60) → 五 精通N1(87), 大纲 `data/grammar/curriculum.json`
+- 内容生产: 分片 `work/gchunk_XX.json` + 契约 `work/GRAMMAR_SPEC.md`
+  → 子代理/主会话写 `work/grammar_out_XX.json` → 合并
+  `data/grammar/content/gc_XX.json` → `check_grammar_content.py`
+  全量校验 (304/304, 0 问题)
+- 构建: `tools/build_grammar_book.py [--stages ...] [--patch]`
+  → `output/grammar_route.json` (8,640 行) +
+  `output/grammar_book/语法路线.xlsx` (无表头 A词B义) +
+  `output/grammar_book/wcp_grammar.db` (pron + route 明细)
+- 落库: `--patch` 把 309 个占位词灌 wcpFullEng.db (pron+ukPhonic+
+  sentence2 共 927 条讲解) 与 wcpOnlyWord.db; 幂等, 游戏无需重启
+- 发音: `tools/gen_grammar_audio.py` — 占位词朗读「读音+首例句」
+  (vocabulary/<word>.mp3 共 309 个), 讲解例句与播放 Mod 同命名
+  (sentence_audio md5(ja).mp3 共 927 条), 0 失败
+- 已复制到 persistentDataPath: 语法路线.xlsx / wcp_grammar.db,
+  导入任一自定义词书槽或外接词库即可开始; 词块单词的例句/发音
+  复用既有 JLPT 数据

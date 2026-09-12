@@ -1,4 +1,4 @@
-// WCP JP Word List — BepInEx 5 插件 (C# 5 语法)  v1.7.1
+// WCP JP Word List — BepInEx 5 插件 (C# 5 语法)  v1.7.2
 //
 // 目的:
 //   A) 日语词书(游戏里就是 自定义词书一~四)与其它词书彻底互不干扰。
@@ -34,6 +34,15 @@
 //      日语，也一律不写；两份记录不一致(通常正在换书)也一律不写。
 //   J) 可移植性: 指纹和语言策略是独立 BookProfile。导入到一至四任意槽都能匹配；未来增加
 //      法语/俄语词书只需增加 Profile 和对应策略，不会令日语插件接管它们。
+//   K) 跨词书启动守卫 (v1.7.2): 状态只在受管日语词书内落盘, 所以「在日语词书里关掉游戏,
+//      之后用别的词书继续那个未完成测试」会读到日语队列。插件落盘时同时记下
+//      「接管了哪些字段」和「接管前的原值」(自己的 JpWL_* 键), 启动时若当前不是本词书,
+//      就把队列还原; 原值不可用(读不到 / 本身就是日语)时清空队列并把本轮测试标记为已完成
+//      —— 绝不能留少于 5 个词的词池给 game 的 GenerateOptions, 那会越界崩。
+//   L) 版本兼容: ① 完全不碰游戏数据库(wcpOnlyWord.db / wcpFullEng.db), 只读游戏已经在用的
+//      ES3 存档; ② 新增逻辑对 MyParameters 一律走反射 (SetParameterField / GetField),
+//      字段改名或消失时只记一条日志, 不抛异常; ③ 自己存的数据只用字符串键, 不依赖任何
+//      游戏内部类型。所以游戏更新后最坏是「本插件这部分失效并记日志」, 不会崩、不会写坏存档。
 //
 // 逆向依据 (Assembly-CSharp, 2026-09-12):
 //   · 战斗/复习四选一 = MultipleChoiceGenerator: 题干 = testWordText,
@@ -42,11 +51,15 @@
 //     但绝不能动 wordXText / matchingWordText。
 //   · 已学词测试(S9) = MultipleChoiceGeneratorS9 + SetInputFieldValueS8:
 //     题干 = 输入框文本, 选项 = GetMeaning_S7(词), 判对用 rightOption_S9 索引。
-//     v1.7.1 补充: 题面右侧的音标/喇叭按钮走的是 wcpFullEng.db 的英语音标与本地
-//     mp3(<题干词>.mp3), 只认英语词。所以测试词池里的词必须是 wcpOnlyWord.db 的
-//     键(pron 表的 word)。词书里的日文词全都没有(汉字键、假名都查不到), 会出现
-//     「superiority + 日语选项」这种英语题干配日语选项的错题。所以词池采样要再加一道
-//     「必须有英语词条」的硬校验, 这是能朗读/查词的前提。
+//     v1.7.1 补充(真因): 题干取 need[0] (ShowTheWord 里 ES3.Load), 选项取
+//     allTestWordsS10_Para[progress] (GenerateOptions). 插件此前只改内存、从不落盘,
+//     而游戏在这两处都会**从 ES3 重新读一遍**。于是「插件已改正的内存值」被存档里
+//     残留的旧队列顶掉: 选项是新算的日语词, 题干却是存档里上一轮(英语书)留下的
+//     superiority —— 就是截图里那个英语题干配日语选项的错题。
+//     修法: ① 插件写队列时同步 ES3.Save, 并记下改动前的存档基线用于换书回填
+//     (SaveField / RestoreSharedFields); ② HealTestList 增加「词池必须全在本书内」
+//     的校验 —— 旧逻辑只看 need 与词池是否错位, 而坏存档里两者「自洽地」都是英语,
+//     永远诊断不出来, 于是坏存档不会自愈。
 //   · 选词界面(截图里那份「已学词汇」)= PageController 渲染 MyParameters.S9CurrentArray_Para,
 //     勾选写入 S9extraStudy_Para(string[])。
 //   · 词书释义字典 MyParameters.SelfBookMeaningDictionary: 汉字词 = 「【假名】中文〈词性〉」,
@@ -65,7 +78,7 @@ using WcpBookProfiles;
 
 namespace JpWordList
 {
-    [BepInPlugin("dev.hanserdesu.jpwordlist", "WCP JP Word List", "1.7.1")]
+    [BepInPlugin("dev.hanserdesu.jpwordlist", "WCP JP Word List", "1.7.2")]
     public class JpWordListPlugin : BaseUnityPlugin
     {
         internal const string ReviewRangeType = "复习范围词";
@@ -106,6 +119,24 @@ namespace JpWordList
         private static readonly HashSet<string> TouchedListFields = new HashSet<string>();
         private static readonly HashSet<string> TouchedArrayFields = new HashSet<string>();
         private static readonly HashSet<string> TouchedIntFields = new HashSet<string>();
+
+        // 插件动过的存档键, 改动前的原始值。落盘会让游戏的 ES3.Load 读到插件值,
+        // 所以换书时不能再靠「从存档重读」回填 —— 必须用这里记下的基线。
+        private static readonly Dictionary<string, List<string>> BaselineLists =
+            new Dictionary<string, List<string>>();
+        private static readonly Dictionary<string, string[]> BaselineArrays =
+            new Dictionary<string, string[]>();
+
+        // 插件自有的存档键(不用游戏字段名, 也不碰游戏数据库):
+        //   JpWL_owned_lists / JpWL_owned_arrays = 当前被插件接管并已落盘的共享字段名
+        //   JpWL_bak_<字段>                      = 该字段被接管前的原始值
+        // 只靠 ES3 的字符串键读写, 不引用任何游戏内部类型, 游戏改版也不会因此失效。
+        private const string OwnedListKey = "JpWL_owned_lists";
+        private const string OwnedArrayKey = "JpWL_owned_arrays";
+        private const string BakPrefix = "JpWL_bak_";
+
+        // 跨词书启动守卫: 每次进游戏只做一次
+        private static bool _crossBookGuardDone;
 
         // 换行 / 释义里转义过的换行 (游戏写的是两个反斜杠加 n)
         private static readonly string NL = ((char)10).ToString();
@@ -263,6 +294,9 @@ namespace JpWordList
         private static void Pre()
         {
             if (!IsEnabled()) return;
+            // 场景补丁比 1 秒轮询更早触发, 顺手把跨词书守卫跑掉(一次性, 见 CrossBookGuard)
+            try { CrossBookGuard(); }
+            catch (Exception e) { Warn("跨词书守卫异常: " + e.Message); }
             try { Enforce(); }
             catch (Exception e) { Warn("prefix 异常: " + e.Message); }
         }
@@ -270,6 +304,8 @@ namespace JpWordList
         private static void Post()
         {
             if (!IsEnabled()) return;
+            try { CrossBookGuard(); }
+            catch (Exception e) { Warn("跨词书守卫异常: " + e.Message); }
             try { Enforce(); }
             catch (Exception e) { Warn("postfix 异常: " + e.Message); }
         }
@@ -321,6 +357,8 @@ namespace JpWordList
             if (!IsEnabled()) return;
             if (Time.unscaledTime < _nextPoll) return;
             _nextPoll = Time.unscaledTime + 1f;
+            try { CrossBookGuard(); }
+            catch (Exception e) { Warn("跨词书守卫异常: " + e.Message); }
             try { Enforce(); }
             catch (Exception e) { Warn("轮询异常: " + e.Message); }
         }
@@ -375,6 +413,17 @@ namespace JpWordList
 
                 SetTestLists(rebuilt);
                 Warn("已学词测试词表为空/过短, 已用本书词重建 " + rebuilt.Count + " 个");
+                return;
+            }
+
+            // 词池里混进了别的词书的词(最常见: 进入测试前存档里残留着上一轮英语书的队列,
+            // 而 need 与它「自洽」, 错位检查看不出问题) -> 整组按本书重建。
+            // 这一步不依赖游戏会不会触发 Enforce, 在出题前把词池钉死。
+            List<string> bookFixed = Filter(cur, 5, true);
+            if (bookFixed != null)
+            {
+                SetTestLists(bookFixed);
+                Warn("测试词池混入书外词, 已按本书重建 " + bookFixed.Count + " 个");
                 return;
             }
 
@@ -1296,37 +1345,177 @@ namespace JpWordList
         {
             if (BookState() != 1) return;
             _managedScopeActive = true;
+            if (!BaselineLists.ContainsKey(key))
+            {
+                BaselineLists[key] = LoadBaselineList(key);
+                PersistBaselineList(key, BaselineLists[key]);
+                MarkOwned(OwnedListKey, key);
+            }
             TouchedListFields.Add(key);
             LogChange(key, list.Count, Sample(list));
+            PersistList(key, list);
         }
 
         private static void SaveField(string key, string[] arr)
         {
             if (BookState() != 1) return;
             _managedScopeActive = true;
+            if (!BaselineArrays.ContainsKey(key))
+            {
+                BaselineArrays[key] = LoadBaselineArray(key);
+                PersistBaselineArray(key, BaselineArrays[key]);
+                MarkOwned(OwnedArrayKey, key);
+            }
             TouchedArrayFields.Add(key);
             LogChange(key, arr.Length, Sample(arr));
+            PersistArray(key, arr);
         }
 
-        // 共享队列原本由游戏保存。插件只改内存，离开受管词书时从该基线回填，
-        // 所以无论目标词书是什么语言，插件都不会把自己的筛选结果带过去。
+        // 记下「这个字段被插件接管了」, 让下次启动(可能已经是别的词书)知道要还原。
+        private static void MarkOwned(string ownedKey, string field)
+        {
+            try
+            {
+                List<string> owned = LoadStringList(ownedKey);
+                if (owned.Contains(field)) return;
+                owned.Add(field);
+                ES3.Save(ownedKey, owned);
+            }
+            catch (Exception e) { WarnOnce("own:" + ownedKey, "写接管记录失败: " + e.Message); }
+        }
+
+        private static void ClearOwned()
+        {
+            try
+            {
+                ES3.Save(OwnedListKey, new List<string>());
+                ES3.Save(OwnedArrayKey, new List<string>());
+            }
+            catch (Exception e) { WarnOnce("own:clear", "清接管记录失败: " + e.Message); }
+        }
+
+        private static List<string> LoadStringList(string key)
+        {
+            try
+            {
+                List<string> v = ES3.Load<List<string>>(key, new List<string>());
+                return (v == null) ? new List<string>() : v;
+            }
+            catch (Exception e)
+            {
+                WarnOnce("ld:" + key, "读取 " + key + " 失败: " + e.Message);
+                return new List<string>();
+            }
+        }
+
+        private static void PersistBaselineList(string key, List<string> value)
+        {
+            try { ES3.Save(BakPrefix + key, new List<string>(value ?? new List<string>())); }
+            catch (Exception e) { WarnOnce("bak:" + key, "写 " + key + " 基线失败: " + e.Message); }
+        }
+
+        private static void PersistBaselineArray(string key, string[] value)
+        {
+            try { ES3.Save(BakPrefix + key, (string[])(value ?? new string[0]).Clone()); }
+            catch (Exception e) { WarnOnce("bak:" + key, "写 " + key + " 基线失败: " + e.Message); }
+        }
+
+        private static List<string> LoadBaselineListFromDisk(string key)
+        {
+            try { return ES3.Load<List<string>>(BakPrefix + key, new List<string>()); }
+            catch (Exception e)
+            {
+                WarnOnce("ldbak:" + key, "读取 " + key + " 基线失败: " + e.Message);
+                return null;
+            }
+        }
+
+        private static string[] LoadBaselineArrayFromDisk(string key)
+        {
+            try { return ES3.Load<string[]>(BakPrefix + key, new string[0]); }
+            catch (Exception e)
+            {
+                WarnOnce("ldbak:" + key, "读取 " + key + " 基线失败: " + e.Message);
+                return null;
+            }
+        }
+
+        private static bool ContainsJapanese(List<string> list)
+        {
+            if (list == null) return false;
+            for (int i = 0; i < list.Count; i++)
+                if (LooksJapanese(list[i])) return true;
+            return false;
+        }
+
+        private static bool ContainsJapanese(string[] arr)
+        {
+            if (arr == null) return false;
+            for (int i = 0; i < arr.Length; i++)
+                if (LooksJapanese(arr[i])) return true;
+            return false;
+        }
+
+        // 改动前的存档值。必须在第一次 Persist 之前取, 取到的才是游戏自己的基线。
+        private static List<string> LoadBaselineList(string key)
+        {
+            try { return ES3.Load<List<string>>(key, new List<string>()); }
+            catch (Exception e)
+            {
+                WarnOnce("base:" + key, "读取 " + key + " 基线失败: " + e.Message);
+                return new List<string>();
+            }
+        }
+
+        private static string[] LoadBaselineArray(string key)
+        {
+            try { return ES3.Load<string[]>(key, new string[0]); }
+            catch (Exception e)
+            {
+                WarnOnce("base:" + key, "读取 " + key + " 基线失败: " + e.Message);
+                return new string[0];
+            }
+        }
+
+        // 真正落盘: 游戏在多个读点会用 ES3.Load 覆盖内存, 不落盘就压不住残留的旧队列。
+        private static void PersistList(string key, List<string> list)
+        {
+            try { ES3.Save(key, new List<string>(list)); }
+            catch (Exception e) { WarnOnce("save:" + key, "写入 " + key + " 失败: " + e.Message); }
+        }
+
+        private static void PersistArray(string key, string[] arr)
+        {
+            try { ES3.Save(key, (string[])arr.Clone()); }
+            catch (Exception e) { WarnOnce("save:" + key, "写入 " + key + " 失败: " + e.Message); }
+        }
+
+        // 插件现在会落盘, 所以不能再靠「从存档重读」回填(读到的会是插件自己的值)。
+        // 用改动前记下的基线把内存和存档一起还原, 这样切到别的词书时, 别的词书看到的是
+        // 游戏原本的队列, 插件也不会把自己的筛选结果带过去。
         private static void RestoreSharedFields()
         {
             foreach (string key in TouchedListFields)
             {
+                List<string> value;
+                if (!BaselineLists.TryGetValue(key, out value) || value == null)
+                    value = new List<string>();
                 try
                 {
-                    List<string> value = ES3.Load<List<string>>(key, new List<string>());
                     SetParameterField(key, new List<string>(value));
+                    ES3.Save(key, new List<string>(value));
                 }
                 catch (Exception e) { Warn("恢复 " + key + " 失败: " + e.Message); }
             }
             foreach (string key in TouchedArrayFields)
             {
+                string[] value;
+                if (!BaselineArrays.TryGetValue(key, out value) || value == null)
+                    value = new string[0];
                 try
                 {
-                    string[] value = ES3.Load<string[]>(key, new string[0]);
                     SetParameterField(key, (string[])value.Clone());
+                    ES3.Save(key, (string[])value.Clone());
                 }
                 catch (Exception e) { Warn("恢复 " + key + " 失败: " + e.Message); }
             }
@@ -1335,7 +1524,101 @@ namespace JpWordList
             TouchedListFields.Clear();
             TouchedArrayFields.Clear();
             TouchedIntFields.Clear();
+            BaselineLists.Clear();
+            BaselineArrays.Clear();
+            ClearOwned();
             Log.LogInfo("JPWordList: 已恢复游戏共享队列基线，离开猫条词书后不保留插件状态");
+        }
+
+        // ---------------- 跨词书启动守卫 ----------------
+
+        // 场景: 在日语词书里测试到一半直接关掉游戏, 之后用**别的词书**继续那个未完成的测试。
+        // 游戏只会照读存档, BookState() 又不是 1, 插件不会介入 -> 别的词书看到日语队列。
+        // 插件落盘时留了「接管记录 + 接管前基线」, 这里在启动时把队列还原成接管前的样子。
+        //
+        // 版本兼容: 只读自己的字符串键, 不碰游戏数据库(wcpOnlyWord.db / wcpFullEng.db),
+        // 也不引用游戏内部类型/方法; 对 MyParameters 字段一律走反射 + try/catch。
+        // 游戏更新改了字段或库, 这里最坏是「还原失败并记一条日志」, 不会崩、不会写坏存档。
+        private static void CrossBookGuard()
+        {
+            if (_crossBookGuardDone) return;
+            if (!IsEnabled()) return;
+            if (!BookReady()) return;            // 还没读档: 现在判断不了当前词书, 等下一轮
+            _crossBookGuardDone = true;
+
+            if (BookState() == 1) return;        // 当前就是日语词书: Enforce 负责, 不动
+
+            List<string> ownedLists = LoadStringList(OwnedListKey);
+            List<string> ownedArrs = LoadStringList(OwnedArrayKey);
+            if (ownedLists.Count == 0 && ownedArrs.Count == 0) return;   // 没接管过, 不动
+
+            bool dirty = false;
+            for (int i = 0; i < ownedLists.Count; i++)
+            {
+                string key = ownedLists[i];
+                List<string> baseVal = LoadBaselineListFromDisk(key);
+                if (baseVal == null || ContainsJapanese(baseVal))
+                {
+                    // 基线读不到, 或基线本身就是日语(接管期间已在日语语系词书): 回填只会
+                    // 把日语队列继续留在别的词书里, 所以清空并结束这个未完成的测试。
+                    RestoreList(key, new List<string>());
+                    dirty = true;
+                }
+                else RestoreList(key, baseVal);
+            }
+            for (int i = 0; i < ownedArrs.Count; i++)
+            {
+                string key = ownedArrs[i];
+                string[] baseVal = LoadBaselineArrayFromDisk(key);
+                if (baseVal == null || ContainsJapanese(baseVal))
+                {
+                    RestoreArray(key, new string[0]);
+                    dirty = true;
+                }
+                else RestoreArray(key, baseVal);
+            }
+
+            if (dirty) MarkNoTestInProgress();
+            ClearOwned();
+            Warn("跨词书守卫: 已还原插件接管前的测试队列" + (dirty ? " (残留日语队列改为清空并结束本轮测试)" : ""));
+        }
+
+        private static void RestoreList(string key, List<string> value)
+        {
+            try
+            {
+                SetParameterField(key, new List<string>(value));
+                ES3.Save(key, new List<string>(value));
+            }
+            catch (Exception e) { Warn("守卫还原 " + key + " 失败: " + e.Message); }
+        }
+
+        private static void RestoreArray(string key, string[] value)
+        {
+            try
+            {
+                SetParameterField(key, (string[])value.Clone());
+                ES3.Save(key, (string[])value.Clone());
+            }
+            catch (Exception e) { Warn("守卫还原 " + key + " 失败: " + e.Message); }
+        }
+
+        // 清空队列后, 还要把「有测试没做完」的状态也清掉, 否则游戏会拿空队列去继续:
+        // MultipleChoiceGeneratorS9.GenerateOptions 在词池 < 5 时会死循环取空表而崩。
+        // 这里复刻游戏自己的「本轮完成」状态(SetS8Data/MultipleChoiceGeneratorS9 都这么写),
+        // 「继续」按钮会自动变灰, 玩家重新开一次测试即可。
+        private static void MarkNoTestInProgress()
+        {
+            try
+            {
+                SetParameterField("S8Progress_Para", 0);
+                ES3.Save("S8Progress_Para", 0);
+                SetParameterField("testingIf_Para", false);
+                ES3.Save("testingIf_Para", false);
+                SetParameterField("testingIf_CompleteIf", true);
+                ES3.Save("testingIf_CompleteIf", true);
+            }
+            catch (Exception e) { Warn("清测试状态失败: " + e.Message); }
         }
 
         private static void SetParameterField(string key, object value)

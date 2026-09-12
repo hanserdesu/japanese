@@ -15,6 +15,7 @@
 // 设计: 只改 TMP 显示文本与那一个方法的读入时机, 不碰任何数据;
 //   反射扫描 + 全局开关, 游戏更新导致类型变化时自动降级不显示。
 using System;
+using System.Collections.Generic;
 using BepInEx;
 using BepInEx.Configuration;
 using BepInEx.Logging;
@@ -152,6 +153,26 @@ namespace WcpBookName
         private const float ScanInterval = 1f;
         private ConfigEntry<bool> _enabled;
         private ConfigEntry<bool> _jpLabels;
+        private ConfigEntry<bool> _singleJp;
+        private readonly Dictionary<TMP_Text, string> _labelBackup =
+            new Dictionary<TMP_Text, string>();
+        private readonly List<Button> _hiddenButtons = new List<Button>();
+        private bool _lastJpBook;
+        private bool _groupLogged;
+
+        // 只有当前在学「自定义词书(日语)」时才做单词旁发音按钮的改造,
+        // 英语词书里 UK/US 是真实存在的区分, 不能动。
+        internal static bool JapaneseBookSelected()
+        {
+            try
+            {
+                var s = MyParameters.ChosenBook_Para;
+                if (string.IsNullOrEmpty(s)) return false;
+                return s.StartsWith("自定义词书", StringComparison.Ordinal)
+                    || s.StartsWith("日语词书", StringComparison.Ordinal);
+            }
+            catch (Exception) { return false; }
+        }
         private float _nextScan;
         private float _diagAt2;
         private int _rewrites;
@@ -163,6 +184,8 @@ namespace WcpBookName
                 "把书单里的「自定义词书N（昵称）」显示成「日语词书N（昵称）」。");
             _jpLabels = Config.Bind("General", "JpSoundLabels", true,
                 "把单词发音按钮的英式/美式标记(UK/US)显示成 JP。");
+            _singleJp = Config.Bind("General", "SingleJpBesideWord", true,
+                "单词旁原本成对的英/美发音按钮只保留一个, 显示为 JP。");
             try
             {
                 new Harmony("dev.hanserdesu.bookname")
@@ -200,6 +223,8 @@ namespace WcpBookName
 
         private void Scan()
         {
+            bool jpBook = JapaneseBookSelected();
+            _lastJpBook = jpBook;
             var all = Resources.FindObjectsOfTypeAll(typeof(TMP_Text));
             for (int i = 0; i < all.Length; i++)
             {
@@ -220,12 +245,143 @@ namespace WcpBookName
                 }
                 // 单词旁的发音按钮: 本游戏词条已全部改用本地日语发音,
                 // 英文的 UK/US 标记没有意义 -> 显示成 JP
-                if (_jpLabels.Value && IsAccentLabel(s) && LooksLikeAccentNode(t))
+                if (_jpLabels.Value && jpBook && IsAccentLabel(s)
+                    && LooksLikeAccentNode(t))
                 {
+                    if (!_labelBackup.ContainsKey(t))
+                        _labelBackup[t] = s;
                     t.text = "JP";
                     Log.LogInfo("Label: " + s + " -> JP");
                 }
             }
+            if (jpBook)
+            {
+                if (_singleJp.Value) EnforceSingleWordJp();
+            }
+            else RestoreWordSide();
+        }
+
+        // 离开日语词书(切到英语词书)时, 把我们改过的东西还原,
+        // 避免影响其它词书里 UK/US 本身的含义。
+        private void RestoreWordSide()
+        {
+            if (_labelBackup.Count > 0)
+            {
+                var keys = new List<TMP_Text>(_labelBackup.Keys);
+                for (int i = 0; i < keys.Count; i++)
+                {
+                    var t = keys[i];
+                    if (t != null && t.text == "JP") t.text = _labelBackup[t];
+                }
+                _labelBackup.Clear();
+            }
+            if (_hiddenButtons.Count > 0)
+            {
+                for (int i = 0; i < _hiddenButtons.Count; i++)
+                {
+                    var b = _hiddenButtons[i];
+                    if (b != null && !b.gameObject.activeSelf)
+                        b.gameObject.SetActive(true);
+                }
+                _hiddenButtons.Clear();
+            }
+        }
+
+        // 单词旁是「英/美」成对的两个发音按钮 (Canvas-scrollMeaningSquare/
+        // all/Voice-UK|Voice-US)。词条已全部改用本地日语发音, 两个按钮放
+        // 同一段音频, 留一个就够了 —— 保留第一个, 隐藏另一个。
+        private void EnforceSingleWordJp()
+        {
+            var all = Resources.FindObjectsOfTypeAll(typeof(TMP_Text));
+            Dictionary<Transform, List<TMP_Text>> groups = null;
+            var order = new List<Transform>();
+            for (int i = 0; i < all.Length; i++)
+            {
+                var t = all[i] as TMP_Text;
+                if (t == null || !IsWordSideAccentNode(t)) continue;
+                if (!IsAccentLabel(t.text) && t.text.Trim() != "JP") continue;
+                var key = t.transform.parent == null
+                    ? null : t.transform.parent.parent;
+                if (key == null) continue;
+                if (groups == null)
+                    groups = new Dictionary<Transform, List<TMP_Text>>();
+                List<TMP_Text> lst;
+                if (!groups.TryGetValue(key, out lst))
+                {
+                    lst = new List<TMP_Text>();
+                    groups[key] = lst;
+                    order.Add(key);
+                }
+                lst.Add(t);
+            }
+            if (groups == null) return;
+            if (!_groupLogged)
+            {
+                _groupLogged = true;
+                for (int g = 0; g < order.Count; g++)
+                {
+                    var lst0 = groups[order[g]];
+                    Log.LogInfo("WordAccent group " + g + " key="
+                        + (order[g] == null ? "<null>" : order[g].name)
+                        + " count=" + lst0.Count);
+                    for (int i = 0; i < lst0.Count; i++)
+                    {
+                        var b0 = FindButtonUp(lst0[i].transform);
+                        Log.LogInfo("   node " + lst0[i].name + " btn="
+                            + (b0 == null ? "<none>" : b0.name)
+                            + " active=" + (b0 != null && b0.gameObject.activeSelf));
+                    }
+                }
+            }
+            for (int g = 0; g < order.Count; g++)
+            {
+                var lst = groups[order[g]];
+                if (lst.Count < 2) continue;
+                // 按层级顺序稳定排序, 保证每次都留下同一个
+                lst.Sort(delegate(TMP_Text a, TMP_Text b)
+                {
+                    return a.transform.GetSiblingIndex()
+                        .CompareTo(b.transform.GetSiblingIndex());
+                });
+                for (int i = 0; i < lst.Count; i++)
+                {
+                    var btn = FindButtonUp(lst[i].transform);
+                    if (btn == null) continue;
+                    bool keep = i == 0;
+                    if (btn.gameObject.activeSelf != keep)
+                    {
+                        btn.gameObject.SetActive(keep);
+                        Log.LogInfo("WordAccent: " + btn.name
+                            + (keep ? " kept" : " hidden"));
+                    }
+                    if (!keep && !_hiddenButtons.Contains(btn))
+                        _hiddenButtons.Add(btn);
+                }
+            }
+        }
+
+        private static Button FindButtonUp(Transform t)
+        {
+            for (int d = 0; d < 4 && t != null; d++)
+            {
+                var b = t.GetComponent<Button>();
+                if (b != null) return b;
+                t = t.parent;
+            }
+            return null;
+        }
+
+        // 只认单词旁那一对: 标签节点名 t-uk / t-us, 父节点 Voice-UK / Voice-US
+        private static bool IsWordSideAccentNode(TMP_Text t)
+        {
+            var p = t.transform.parent;
+            if (p == null) return false;
+            var pn = p.name.ToLowerInvariant();
+            var tn = t.name.ToLowerInvariant();
+            if (!pn.StartsWith("voice", StringComparison.Ordinal)) return false;
+            return pn.EndsWith("uk", StringComparison.Ordinal)
+                || pn.EndsWith("us", StringComparison.Ordinal)
+                || tn == "t-uk" || tn == "t-us";
         }
 
         private static bool IsAccentLabel(string s)

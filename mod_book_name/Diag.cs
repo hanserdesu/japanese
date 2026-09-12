@@ -76,18 +76,48 @@ namespace WcpBookName
             for (int i = 0; i < tmps.Length; i++)
             {
                 var t = tmps[i] as TMP_Text;
-                if (t == null || !IsAccent(t.text)) continue;
-                Line(string.Format("TMP '{0}' active={1} path={2}",
-                    t.text, t.gameObject.activeInHierarchy, PathOf(t.transform)));
+                if (t == null) continue;
+                var tx = (t.text ?? "").Trim();
+                if (!IsAccent(tx) && tx != "JP") continue;
+                Line(string.Format("TMP '{0}' active={1} btnUp={2} btnDown={3} path={4}",
+                    t.text, t.gameObject.activeInHierarchy,
+                    FindBtnUp(t.transform, 6), FindBtnDown(t.transform, 3),
+                    PathOf(t.transform)));
             }
             var txts = Resources.FindObjectsOfTypeAll(typeof(Text));
             for (int i = 0; i < txts.Length; i++)
             {
                 var t = txts[i] as Text;
-                if (t == null || !IsAccent(t.text)) continue;
-                Line(string.Format("TXT '{0}' active={1} path={2}",
-                    t.text, t.gameObject.activeInHierarchy, PathOf(t.transform)));
+                if (t == null) continue;
+                var tx2 = (t.text ?? "").Trim();
+                if (!IsAccent(tx2) && tx2 != "JP") continue;
+                Line(string.Format("TXT '{0}' active={1} btnUp={2} btnDown={3} path={4}",
+                    t.text, t.gameObject.activeInHierarchy,
+                    FindBtnUp(t.transform, 6), FindBtnDown(t.transform, 3),
+                    PathOf(t.transform)));
             }
+        }
+
+        // 从该节点向上/向下找 Button, 报告命名路径, 定位真正的按钮根
+        private static string FindBtnUp(Transform t, int max)
+        {
+            int d = 0;
+            while (t != null && d <= max)
+            {
+                if (t.GetComponent<Button>() != null)
+                    return "self+" + d + ":" + t.name;
+                t = t.parent;
+                d++;
+            }
+            return "<none>";
+        }
+
+        private static string FindBtnDown(Transform t, int max)
+        {
+            if (t == null) return "<none>";
+            var b = t.GetComponentInChildren<Button>(true);
+            if (b == null) return "<none>";
+            return b.name + "|" + PathOf(b.transform);
         }
 
         private static int DumpReadButtons()

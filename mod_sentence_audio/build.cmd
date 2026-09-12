@@ -10,6 +10,7 @@ if not exist "%MGD%\mscorlib.dll" (
 )
 set CSC=C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe
 set REFS=/r:"%GAME%\BepInEx\core\BepInEx.dll" ^
+ /r:"%GAME%\BepInEx\core\0Harmony.dll" ^
  /r:"%MGD%\netstandard.dll" ^
  /r:"%MGD%\mscorlib.dll" ^
  /r:"%MGD%\System.dll" ^

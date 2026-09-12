@@ -461,7 +461,62 @@ namespace SentenceAudioMod
             }
         }
 
+        // 例句按钮上挂着游戏的 SoundTheWordS8: 点一下会去触发单词的英文 TTS
+        // (底部 UK/US 按钮), 于是日语例句和英文单词音叠在一起 —— 就是
+        // 「读例句会勾起下面的 US/UK」「乱读」。除了在 Text 上摘掉它的监听,
+        // 这里再按类型名动态拦一层, 保证它绝不会为我们接管的按钮发声。
+        // 用反射按名字取类型 (不编译期引用游戏类), 游戏更新删掉该类也不影响加载。
+        private void PatchSoundTheWord()
+        {
+            try
+            {
+                var t = AccessTools.TypeByName("SoundTheWordS8");
+                if (t == null)
+                {
+                    Log.LogWarning("SoundTheWordS8 not found; "
+                        + "仅靠监听接管");
+                    return;
+                }
+                var m = AccessTools.Method(t, "OnButton1Click");
+                if (m == null)
+                {
+                    Log.LogWarning("SoundTheWordS8.OnButton1Click not found");
+                    return;
+                }
+                var prefix = AccessTools.Method(
+                    typeof(SentenceAudioPlugin), "SoundTheWordPrefix");
+                new Harmony("dev.hanserdesu.sentaudio")
+                    .Patch(m, new HarmonyMethod(prefix));
+                Log.LogInfo("patched SoundTheWordS8.OnButton1Click");
+            }
+            catch (Exception e)
+            {
+                Log.LogWarning("SoundTheWordS8 patch failed: " + e.Message);
+            }
+        }
+
+        private static bool SoundTheWordPrefix(object __instance)
+        {
+            try
+            {
+                if (__instance == null) return true;
+                var f = __instance.GetType().GetField("button1",
+                    BindingFlags.Public | BindingFlags.NonPublic |
+                    BindingFlags.Instance);
+                if (f == null) return true;
+                var b = f.GetValue(__instance) as Button;
+                if (b != null && b.GetComponent<JpReadTag>() != null)
+                {
+                    Diag("blocked english TTS on " + b.name);
+                    return false;   // 我们接管的例句按钮: 不触发英文发音
+                }
+            }
+            catch (Exception) { }
+            return true;
+        }
+
         internal static void Diag(string msg)
+
         {
             if (Log != null) Log.LogInfo("[SAT] " + msg);
         }

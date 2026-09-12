@@ -28,6 +28,7 @@ namespace WcpBookName
                 Line("=== dump " + DateTime.Now.ToString("HH:mm:ss") + " ===");
                 DumpAccentLabels();
                 DumpJpButtons();
+                DumpToggleButtons();
                 int n = DumpReadButtons();
                 DumpSentenceSources();
                 Line("=== end ===\n");
@@ -156,8 +157,38 @@ namespace WcpBookName
             }
         }
 
-        private static int DumpReadButtons()
+        private static void DumpToggleButtons()
+        {
+            Line("--- toggle buttons (切发音口音/本地音 的开关) ---");
+            var bs = Resources.FindObjectsOfTypeAll(typeof(Button));
+            for (int i = 0; i < bs.Length; i++)
+            {
+                var b = bs[i] as Button;
+                if (b == null) continue;
+                int cnt = b.onClick.GetPersistentEventCount();
+                bool hit = false;
+                var ev = new StringBuilder();
+                for (int e = 0; e < cnt; e++)
+                {
+                    var tgt = b.onClick.GetPersistentTarget(e);
+                    var mth = b.onClick.GetPersistentMethodName(e);
+                    ev.Append(" {").Append(tgt).Append(".").Append(mth).Append("}");
+                    if (mth != null && (mth.IndexOf("Toggle", StringComparison.Ordinal) >= 0
+                        || mth.IndexOf("Switch", StringComparison.Ordinal) >= 0))
+                        hit = true;
+                }
+                if (b.name != null && b.name.IndexOf("Switch", StringComparison.OrdinalIgnoreCase) >= 0)
+                    hit = true;
+                if (!hit) continue;
+                var lbl = b.GetComponentInChildren<TMP_Text>(true);
+                Line(string.Format("BTN '{0}' active={1} label='{2}'{3} path={4}",
+                    b.name, b.gameObject.activeInHierarchy,
+                    lbl == null ? "<null>" : lbl.text, ev.ToString(),
+                    PathOf(b.transform)));
+            }
+        }
 
+        private static int DumpReadButtons()
         {
             Line("--- read buttons ---");
             var t = Type.GetType("ShowReadButtons, Assembly-CSharp");

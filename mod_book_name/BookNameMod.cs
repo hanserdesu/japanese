@@ -16,6 +16,7 @@
 //   反射扫描 + 全局开关, 游戏更新导致类型变化时自动降级不显示。
 using System;
 using System.Collections.Generic;
+using System.Text;
 using BepInEx;
 using BepInEx.Configuration;
 using BepInEx.Logging;
@@ -154,11 +155,14 @@ namespace WcpBookName
         private ConfigEntry<bool> _enabled;
         private ConfigEntry<bool> _jpLabels;
         private ConfigEntry<bool> _singleJp;
+        private ConfigEntry<bool> _hideSwitch;
         private readonly Dictionary<TMP_Text, string> _labelBackup =
             new Dictionary<TMP_Text, string>();
         private readonly List<GameObject> _hiddenNodes = new List<GameObject>();
+        private readonly List<GameObject> _hiddenSwitch = new List<GameObject>();
         private bool _lastJpBook;
         private bool _groupLogged;
+        private float _nextSwitchScan;
 
         // 只有当前在学「自定义词书(日语)」时才做单词旁发音按钮的改造,
         // 英语词书里 UK/US 是真实存在的区分, 不能动。
@@ -186,6 +190,8 @@ namespace WcpBookName
                 "把单词发音按钮的英式/美式标记(UK/US)显示成 JP。");
             _singleJp = Config.Bind("General", "SingleJpBesideWord", true,
                 "单词旁原本成对的英/美发音按钮只保留一个, 显示为 JP。");
+            _hideSwitch = Config.Bind("General", "HideRedundantSwitchButton", true,
+                "日语词书时隐藏例句区右下那个多余的圆形切换按钮。");
             try
             {
                 new Harmony("dev.hanserdesu.bookname")
@@ -257,6 +263,7 @@ namespace WcpBookName
             if (jpBook)
             {
                 if (_singleJp.Value) EnforceSingleWordJp();
+                if (_hideSwitch.Value) HideRedundantSwitchButton();
             }
             else RestoreWordSide();
         }
@@ -284,6 +291,88 @@ namespace WcpBookName
                 }
                 _hiddenNodes.Clear();
             }
+            if (_hiddenSwitch.Count > 0)
+            {
+                for (int i = 0; i < _hiddenSwitch.Count; i++)
+                {
+                    var go = _hiddenSwitch[i];
+                    if (go != null && !go.activeSelf) go.SetActive(true);
+                }
+                _hiddenSwitch.Clear();
+            }
+        }
+
+        // 例句区右下那个圆形「切换」按钮: 英文词书里用来切换 英/美 发音(或
+        // 本地音优先), 日语词书里词条全是本地日语录音, 它既没作用又占位置。
+        // 只隐藏「开关型」按钮(监听方法名是 ToggleSound* / SoundLocal* /
+        // ToggleLocalIf, 或名字里带 SwitchSentence) 且标签已显示成 JP 的那个;
+        // 播放型按钮(底部发音)与发音设置面板一律不动, 切回英语词书即还原。
+        private void HideRedundantSwitchButton()
+        {
+            if (Time.unscaledTime < _nextSwitchScan) return;
+            _nextSwitchScan = Time.unscaledTime + 3f;
+            var all = Resources.FindObjectsOfTypeAll(typeof(Button));
+            for (int i = 0; i < all.Length; i++)
+            {
+                var b = all[i] as Button;
+                if (b == null || !b.gameObject.activeSelf) continue;
+                var nm = b.name ?? string.Empty;
+                if (nm.IndexOf("ReadSentence",
+                        StringComparison.OrdinalIgnoreCase) >= 0) continue;
+                var path = PathOf(b.transform);
+                if (path.IndexOf("wordSoundBut",
+                        StringComparison.OrdinalIgnoreCase) >= 0) continue;
+                if (path.IndexOf("mainMenuButtonBut",
+                        StringComparison.OrdinalIgnoreCase) >= 0) continue;
+                if (!LabelIsJp(b)) continue;
+                if (!IsSwitchLike(b, nm)) continue;
+                b.gameObject.SetActive(false);
+                _hiddenSwitch.Add(b.gameObject);
+                Log.LogInfo("HideSwitch: " + path);
+            }
+        }
+
+        private static bool LabelIsJp(Button b)
+        {
+            var tmps = b.GetComponentsInChildren<TMP_Text>(true);
+            for (int i = 0; i < tmps.Length; i++)
+            {
+                var t = tmps[i];
+                if (t == null) continue;
+                if ((t.text ?? string.Empty).Trim() == "JP") return true;
+            }
+            return false;
+        }
+
+        private static bool IsSwitchLike(Button b, string nm)
+        {
+            if (nm.IndexOf("SwitchSentence",
+                    StringComparison.OrdinalIgnoreCase) >= 0) return true;
+            int n = b.onClick.GetPersistentEventCount();
+            for (int i = 0; i < n; i++)
+            {
+                var m = b.onClick.GetPersistentMethodName(i);
+                if (string.IsNullOrEmpty(m)) continue;
+                if (m.IndexOf("ToggleSound", StringComparison.Ordinal) >= 0)
+                    return true;
+                if (m.IndexOf("SoundLocal", StringComparison.Ordinal) >= 0)
+                    return true;
+                if (m.IndexOf("ToggleLocalIf", StringComparison.Ordinal) >= 0)
+                    return true;
+            }
+            return false;
+        }
+
+        internal static string PathOf(Transform t)
+        {
+            var sb = new StringBuilder();
+            int guard = 0;
+            while (t != null && guard++ < 10)
+            {
+                sb.Insert(0, "/" + t.name);
+                t = t.parent;
+            }
+            return sb.ToString();
         }
 
         // 单词旁是「英/美」成对的两个发音按钮 (Canvas-scrollMeaningSquare/
@@ -336,12 +425,32 @@ namespace WcpBookName
             {
                 var lst = groups[order[g]];
                 if (lst.Count < 2) continue;
-                // 按层级顺序稳定排序, 保证每次都留下同一个
+                // 按「容器节点」的层级顺序稳定排序, 保证每次都留下同一个。
+                // 注意: 标签节点(t-uk/t-us)各自是父节点的独子, 用标签自己的
+                // siblingIndex 比会全部相等(0), 排序结果随机 —— 必须比容器。
                 lst.Sort(delegate(TMP_Text a, TMP_Text b)
                 {
-                    return a.transform.GetSiblingIndex()
-                        .CompareTo(b.transform.GetSiblingIndex());
+                    var pa = a.transform.parent;
+                    var pb = b.transform.parent;
+                    int ia = pa == null ? int.MaxValue : pa.GetSiblingIndex();
+                    int ib = pb == null ? int.MaxValue : pb.GetSiblingIndex();
+                    if (ia != ib) return ia.CompareTo(ib);
+                    return string.CompareOrdinal(
+                        pa == null ? string.Empty : pa.name,
+                        pb == null ? string.Empty : pb.name);
                 });
+                // 安全网: 组内两个标签若挂在同一个父节点上, 隐藏父节点会一次
+                // 关掉两个 —— 这种情况不动它。
+                bool sameParent = false;
+                for (int k = 1; k < lst.Count; k++)
+                {
+                    if (lst[k].transform.parent == lst[0].transform.parent)
+                    {
+                        sameParent = true;
+                        break;
+                    }
+                }
+                if (sameParent) continue;
                 // 这对图标本身不是 Button(纯显示容器), 直接把多余的那个
                 // 容器节点停用即可。保留第一个, 隐藏其余。
                 for (int i = 0; i < lst.Count; i++)

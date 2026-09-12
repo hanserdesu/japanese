@@ -49,6 +49,84 @@ namespace SentenceAudioMod
                 AudioDirName);
             Log.LogInfo(string.Format(
                 "WCP Sentence Audio 1.0.0 loaded, audio dir = {0}", _audioDir));
+            if (File.Exists(Path.Combine(Application.dataPath, "..",
+                    "BepInEx", "selftest.flag")))
+                StartCoroutine(SelfTest());
+        }
+
+        // 一次性自检 (仅当 BepInEx/selftest.flag 存在):
+        // 反射调用词典查询 S17::OnSearchButtonClick("低い"), 验证
+        // 例句填充 -> ja 提取 -> md5 -> 音频文件命中 全链路, 并把面板激活
+        // 以便截图确认按钮外观。
+        private IEnumerator SelfTest()
+        {
+            yield return new WaitForSeconds(20f);
+            Log.LogInfo("SELFTEST start");
+            try
+            {
+                if (_t17 == null || _f17 == null) { Log.LogInfo("SELFTEST: S17 type/field missing"); yield break; }
+                var all = Resources.FindObjectsOfTypeAll(_t17);
+                Log.LogInfo("SELFTEST S17 instances (incl inactive): " + all.Length);
+                object inst = null;
+                foreach (var o in all)
+                {
+                    var c = o as Component;
+                    if (c == null) continue;
+                    Log.LogInfo(string.Format("  S17 '{0}' active={1}", c.name, c.gameObject.activeInHierarchy));
+                    if (inst == null) inst = o;
+                }
+                if (inst == null) { Log.LogInfo("SELFTEST: no S17 instance"); yield break; }
+                var comp = inst as Component;
+                var method = _t17.GetMethod("OnSearchButtonClick",
+                    BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance,
+                    null, new Type[] { typeof(string) }, null);
+                if (method == null)
+                {
+                    foreach (var m in _t17.GetMethods(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance))
+                        if (m.Name == "OnSearchButtonClick")
+                            Log.LogInfo("  OnSearchButtonClick sig: " + m.ToString());
+                    Log.LogInfo("SELFTEST: OnSearchButtonClick(string) not found");
+                    yield break;
+                }
+                var compTr = comp.GetComponent(_t17);
+                method.Invoke(compTr, new object[] { "低い" });
+                Log.LogInfo("SELFTEST: OnSearchButtonClick(低い) invoked");
+                var arr = _f17.GetValue(compTr) as TMP_Text[];
+                if (arr == null) { Log.LogInfo("SELFTEST: exmplesentences null"); yield break; }
+                Log.LogInfo("SELFTEST exmplesentences: " + arr.Length);
+                int hits = 0;
+                for (int i = 0; i < arr.Length; i++)
+                {
+                    var tmp = arr[i];
+                    if (tmp == null) continue;
+                    string ja = ExtractJa(tmp.text);
+                    string file = null;
+                    if (ja != null)
+                    {
+                        string p = Path.Combine(_audioDir, Md5(ja) + ".mp3");
+                        if (File.Exists(p)) { file = p; hits++; }
+                    }
+                    Log.LogInfo(string.Format("  [{0}] ja='{1}' audio={2}",
+                        i, ja == null ? "<none>" : (ja.Length > 40 ? ja.Substring(0, 40) : ja),
+                        file != null ? "OK" : "MISSING"));
+                }
+                Log.LogInfo("SELFTEST audio hits: " + hits);
+                if (!comp.gameObject.activeInHierarchy)
+                {
+                    Log.LogInfo("SELFTEST: activating panel chain");
+                    var t = comp.transform;
+                    while (t != null)
+                    {
+                        if (!t.gameObject.activeSelf) { t.gameObject.SetActive(true); Log.LogInfo("  activated: " + t.name); }
+                        t = t.parent;
+                    }
+                }
+                Log.LogInfo("SELFTEST done");
+            }
+            catch (Exception e)
+            {
+                Log.LogWarning("SELFTEST error: " + e);
+            }
         }
 
         void Update()

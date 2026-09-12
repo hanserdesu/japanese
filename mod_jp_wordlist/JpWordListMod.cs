@@ -1,4 +1,4 @@
-// WCP JP Word List — BepInEx 5 插件 (C# 5 语法)  v1.7.5
+// WCP JP Word List — BepInEx 5 插件 (C# 5 语法)  v1.7.6
 //
 // 目的:
 //   A) 日语词书(游戏里就是 自定义词书一~四)与其它词书彻底互不干扰。
@@ -56,10 +56,18 @@
 //      Scene15_Bat / Scene16_FreeReview / Scene17_SpellingGame 等每个显示单词的场景,
 //      所以「发音前把假名换回汉字形」一处即可覆盖战斗机/水果/拼写等全部小游戏;
 //      再加一道兜底(当前题目的假名读音 -> 当前题目的词)与一行诊断日志便于核对。
-//   L) 版本兼容: ① 完全不碰游戏数据库(wcpOnlyWord.db / wcpFullEng.db), 只读游戏已经在用的
-//      ES3 存档; ② 新增逻辑对 MyParameters 一律走反射 (SetParameterField / GetField),
+//   L) 版本兼容: ① 题库/题干/选项/发音/查词面板这些核心功能从不碰游戏数据库
+//      (wcpOnlyWord.db / wcpFullEng.db) —— 全靠内存反射 + 自己存的字符串键, 只读游戏
+//      已在用的 ES3 存档; ② 新增逻辑对 MyParameters 一律走反射 (SetParameterField / GetField),
 //      字段改名或消失时只记一条日志, 不抛异常; ③ 自己存的数据只用字符串键, 不依赖任何
 //      游戏内部类型。所以游戏更新后最坏是「本插件这部分失效并记日志」, 不会崩、不会写坏存档。
+//   N) 例句库自愈 (v1.7.6): 官方更新会覆盖 StreamingAssets 下的 .db, 把日文词条的
+//      释义(pron)与例句(sentence2)冲掉。词书本体在 LocalLow\WCP\wcp\MyBook.es3 (用户数据,
+//      不在安装目录), 更新不会动它, 所以插件照常工作, 唯一会丢的是「例句/查词释义」。
+//      补丁包已导出到 LocalLow\WCP\wcp\jp_db_payload (更新同样不碰), 插件启动后空闲时
+//      若探针词缺失, 就用它重灌一次: 写前把 .db 备份到 jp_db_payload\backup, 幂等,
+//      全程 try/catch, 失败只记日志(下次启动再试)。这是唯一一处会写游戏数据库的代码,
+//      默认开启 (配置 HealExampleDatabase), 可关; 后台线程执行, 不卡主线程。
 //
 // 逆向依据 (Assembly-CSharp, 2026-09-12):
 //   · 战斗/复习四选一 = MultipleChoiceGenerator: 题干 = testWordText,
@@ -89,13 +97,14 @@ using BepInEx;
 using BepInEx.Configuration;
 using BepInEx.Logging;
 using HarmonyLib;
+using Mono.Data.Sqlite;
 using TMPro;
 using UnityEngine;
 using WcpBookProfiles;
 
 namespace JpWordList
 {
-    [BepInPlugin("dev.hanserdesu.jpwordlist", "WCP JP Word List", "1.7.5")]
+    [BepInPlugin("dev.hanserdesu.jpwordlist", "WCP JP Word List", "1.7.6")]
     public class JpWordListPlugin : BaseUnityPlugin
     {
         internal const string ReviewRangeType = "复习范围词";
@@ -107,6 +116,7 @@ namespace JpWordList
         private static ConfigEntry<bool> _topUp;
         private static ConfigEntry<bool> _guardOtherLists;
         private static ConfigEntry<bool> _kanaStem;
+        private static ConfigEntry<bool> _healDb;
         private static readonly HashSet<string> Warned = new HashSet<string>();
         private static readonly Dictionary<string, string> LastSig = new Dictionary<string, string>();
 
@@ -208,6 +218,8 @@ namespace JpWordList
                 "同时校正 每日/额外 学习复习表、已学词测试表与选词列表, 挡住全局已学词典的跨词书串词。");
             _kanaStem = Config.Bind("General", "KanaQuestionStem", true,
                 "日语词书: 四选一题目显示假名读音, 选项显示「汉字写法 + 中文释义」。");
+            _healDb = Config.Bind("General", "HealExampleDatabase", true,
+                "官方更新覆盖了例句库时, 用 LocalLow 的 jp_db_payload 补丁包自动重灌一次(写前备份, 可关)。");
             PatchAll();
         }
 
@@ -400,6 +412,8 @@ namespace JpWordList
             catch (Exception e) { Warn("跨词书守卫异常: " + e.Message); }
             try { Enforce(); }
             catch (Exception e) { Warn("轮询异常: " + e.Message); }
+            try { TickDbHeal(); }
+            catch (Exception e) { Warn("例句库自愈调度异常: " + e.Message); }
         }
 
         // ---------------- 已学词测试的兜底自愈 ----------------
@@ -1919,6 +1933,227 @@ namespace JpWordList
         {
             return BookState() == 1;
         }
+
+// ---------------- 例句/释义 数据库自愈 (v1.7.6) ----------------
+// 官方更新会覆盖 StreamingAssets 下的 .db, 把日文词条的释义(pron)和例句(sentence2)冲掉。
+// 插件的工作不依赖 DB, 但「例句」只在 sentence2 里, 更新后会丢。启动后若发现探针词缺失,
+// 就从 LocalLow 的补丁包(jp_db_payload)重灌一次; 写前先备份 DB, 全程 try/catch。
+private const string DbPackDir = "jp_db_payload";
+private static readonly string[] DbProbes = new string[] { "歯医者", "続ける", "工業" };
+private static bool _dbHealTried;
+private static float _dbHealAt = -1f;
+
+private static void TickDbHeal()
+{
+    if (_dbHealTried || _healDb == null || !_healDb.Value) return;
+    if (BookState() != 1) return;  // 只在受管日语词书实际载入后检查/写库
+    if (_dbHealAt < 0f) { _dbHealAt = Time.unscaledTime + 8f; return; }   // 首次只排期, 避开加载
+    if (Time.unscaledTime < _dbHealAt) return;
+    string pack = System.IO.Path.Combine(Application.persistentDataPath, DbPackDir);
+    if (!System.IO.Directory.Exists(pack)) { _dbHealTried = true; return; }
+    string full = System.IO.Path.Combine(Application.streamingAssetsPath, "wcpFullEng.db");
+    if (!System.IO.File.Exists(full)) { _dbHealTried = true; return; }
+    string only = System.IO.Path.Combine(Application.streamingAssetsPath, "wcpOnlyWord.db");
+    _dbHealTried = true;
+    try
+    {
+        System.Threading.Thread t = new System.Threading.Thread(
+            new System.Threading.ThreadStart(delegate { RunDbHeal(pack, full, only); }));
+        t.IsBackground = true;
+        t.Start();
+    }
+    catch (Exception e) { Warn("例句库自愈启动异常: " + e.Message); }
+}
+
+private static void RunDbHeal(string pack, string full, string only)
+{
+    try
+    {
+        if (!NeedsDbHeal(full))
+        {
+            InfoOnce("dbheal-skip", "例句库已是补丁状态, 不再重灌");
+            return;
+        }
+        string fullPron = System.IO.Path.Combine(pack, "jp_pron.tsv");
+        string fullSent = System.IO.Path.Combine(pack, "jp_sentences.tsv");
+        string onlyPron = System.IO.Path.Combine(pack, "jp_only_pron.tsv");
+        if (!System.IO.File.Exists(fullPron) || !System.IO.File.Exists(fullSent) ||
+            !System.IO.File.Exists(onlyPron))
+        {
+            throw new System.IO.FileNotFoundException("jp_db_payload 不完整");
+        }
+        string stamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
+        string bakDir = System.IO.Path.Combine(pack, "backup");
+        System.IO.Directory.CreateDirectory(bakDir);
+        System.IO.File.Copy(full, System.IO.Path.Combine(bakDir, "wcpFullEng.db.bak_" + stamp), true);
+        if (System.IO.File.Exists(only))
+        {
+            System.IO.File.Copy(only, System.IO.Path.Combine(bakDir, "wcpOnlyWord.db.bak_" + stamp), true);
+        }
+        int n1 = ApplyDbPack(full, fullPron, fullSent);
+        int n2 = 0;
+        if (System.IO.File.Exists(only))
+        {
+            n2 = ApplyDbPack(only, onlyPron, null);
+        }
+        if (n1 == 0 || NeedsDbHeal(full))
+            throw new InvalidOperationException("补丁回读校验失败");
+        if (Log != null)
+        {
+            Log.LogInfo("JPWordList: 例句库已自动重灌 FullEng.pron+sent=" + n1 +
+                        ", OnlyWord.pron=" + n2 + " (官方更新后恢复)");
+        }
+    }
+    catch (Exception e) { Warn("例句库自愈失败(下次启动再试): " + e.Message); }
+}
+
+// 探针: 三个日文词只要有一个在 DB 里查不到, 就认为更新把补丁冲掉了
+private static bool NeedsDbHeal(string db)
+{
+    using (SqliteConnection con = new SqliteConnection("URI=file:" + db))
+    {
+        con.Open();
+        using (SqliteCommand cmd = con.CreateCommand())
+        {
+            for (int i = 0; i < DbProbes.Length; i++)
+            {
+                cmd.CommandText = "SELECT COUNT(*) FROM pron WHERE word = @w";
+                cmd.Parameters.Clear();
+                cmd.Parameters.Add(new SqliteParameter("@w", DbProbes[i]));
+                object o = cmd.ExecuteScalar();
+                if (o == null || Convert.ToInt64(o) == 0) return true;
+            }
+        }
+        con.Close();
+    }
+    return false;
+}
+
+private static int ApplyDbPack(string db, string pronTsv, string sentTsv)
+{
+    if (!System.IO.File.Exists(pronTsv)) return 0;
+    string[][] pron = ReadTsv(pronTsv, 4);
+    string[][] sent = (sentTsv != null && System.IO.File.Exists(sentTsv))
+        ? ReadTsv(sentTsv, 2) : new string[0][];
+    int n = 0;
+    using (SqliteConnection con = new SqliteConnection("URI=file:" + db))
+    {
+        con.Open();
+        using (SqliteCommand p = con.CreateCommand())
+        {
+            p.CommandText = "PRAGMA busy_timeout=30000";
+            p.ExecuteNonQuery();
+        }
+        using (SqliteTransaction tx = con.BeginTransaction())
+        {
+            DeleteRows(con, tx, "pron", pron);
+            if (sent.Length > 0) DeleteRows(con, tx, "sentence2", sent);
+            using (SqliteCommand ins = con.CreateCommand())
+            {
+                ins.Transaction = tx;
+                ins.CommandText =
+                    "INSERT INTO pron (word, ukPhonic, usPhonic, meaning) VALUES (@w,@u,@s,@m)";
+                for (int i = 0; i < pron.Length; i++)
+                {
+                    ins.Parameters.Clear();
+                    ins.Parameters.Add(new SqliteParameter("@w", pron[i][0]));
+                    ins.Parameters.Add(new SqliteParameter("@u", pron[i][1]));
+                    ins.Parameters.Add(new SqliteParameter("@s", pron[i][2]));
+                    ins.Parameters.Add(new SqliteParameter("@m", pron[i][3]));
+                    n += ins.ExecuteNonQuery();
+                }
+            }
+            if (sent.Length > 0)
+            {
+                using (SqliteCommand ins2 = con.CreateCommand())
+                {
+                    ins2.Transaction = tx;
+                    ins2.CommandText = "INSERT INTO sentence2 (word, sentences) VALUES (@w,@s)";
+                    for (int i = 0; i < sent.Length; i++)
+                    {
+                        ins2.Parameters.Clear();
+                        ins2.Parameters.Add(new SqliteParameter("@w", sent[i][0]));
+                        ins2.Parameters.Add(new SqliteParameter("@s", sent[i][1]));
+                        ins2.ExecuteNonQuery();
+                    }
+                }
+            }
+            tx.Commit();
+        }
+        con.Close();
+    }
+    return n;
+}
+
+// 幂等: 先按词分批删旧行, 避免重复灌
+private static void DeleteRows(SqliteConnection con, SqliteTransaction tx,
+    string table, string[][] rows)
+{
+    if (rows.Length == 0) return;
+    List<string> wl = new List<string>();
+    HashSet<string> seen = new HashSet<string>();
+    for (int i = 0; i < rows.Length; i++)
+    {
+        string w = rows[i][0];
+        if (w != null && w.Length > 0 && seen.Add(w)) wl.Add(w);
+    }
+    for (int i = 0; i < wl.Count; i += 400)
+    {
+        int end = Math.Min(i + 400, wl.Count);
+        System.Text.StringBuilder sb = new System.Text.StringBuilder();
+        sb.Append("DELETE FROM ").Append(table).Append(" WHERE word IN (");
+        using (SqliteCommand cmd = con.CreateCommand())
+        {
+            cmd.Transaction = tx;
+            for (int j = i; j < end; j++)
+            {
+                if (j > i) sb.Append(',');
+                string pn = "@p" + (j - i);
+                sb.Append(pn);
+                cmd.Parameters.Add(new SqliteParameter(pn, wl[j]));
+            }
+            sb.Append(')');
+            cmd.CommandText = sb.ToString();
+            cmd.ExecuteNonQuery();
+        }
+    }
+}
+
+private static string[][] ReadTsv(string path, int cols)
+{
+    string[] lines = System.IO.File.ReadAllLines(path, System.Text.Encoding.UTF8);
+    List<string[]> rows = new List<string[]>(lines.Length);
+    for (int i = 0; i < lines.Length; i++)
+    {
+        if (lines[i].Length == 0) continue;
+        string[] parts = lines[i].Split('\t');
+        string[] vals = new string[cols];
+        for (int c = 0; c < cols; c++)
+            vals[c] = (c < parts.Length) ? Unescape(parts[c]) : "";
+        rows.Add(vals);
+    }
+    return rows.ToArray();
+}
+
+// 反向还原导出时对 \\ / \t / 换行的转义
+private static string Unescape(string s)
+{
+    if (s == null || s.IndexOf('\\') < 0) return s;
+    System.Text.StringBuilder sb = new System.Text.StringBuilder(s.Length);
+    for (int i = 0; i < s.Length; i++)
+    {
+        char c = s[i];
+        if (c == '\\' && i + 1 < s.Length)
+        {
+            char x = s[i + 1];
+            if (x == 'n') { sb.Append('\n'); i++; continue; }
+            if (x == 't') { sb.Append('\t'); i++; continue; }
+            if (x == '\\') { sb.Append('\\'); i++; continue; }
+        }
+        sb.Append(c);
+    }
+    return sb.ToString();
+}
 
         private static bool IsEnabled()
         {

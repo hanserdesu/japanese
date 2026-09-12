@@ -17,6 +17,8 @@ set REFS=/r:"%GAME%\BepInEx\core\BepInEx.dll" ^
  /r:"%MGD%\mscorlib.dll" ^
  /r:"%MGD%\System.dll" ^
  /r:"%MGD%\System.Core.dll" ^
+ /r:"%MGD%\System.Data.dll" ^
+ /r:"%MGD%\Mono.Data.Sqlite.dll" ^
  /r:"%MGD%\UnityEngine.dll" ^
  /r:"%MGD%\UnityEngine.CoreModule.dll" ^
  /r:"%MGD%\UnityEngine.UIModule.dll" ^

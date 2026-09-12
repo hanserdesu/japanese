@@ -163,7 +163,8 @@ print("=== static write-gate audit ===")
 source = io.open(r"D:/Japanese/mod_jp_wordlist/JpWordListMod.cs", encoding="utf-8").read()
 for needle in ["if (state != 1) return;", "if (BookState() != 1) return;", "RestoreSharedFields();", "RegenerateByGame();"]:
     check("source contains guard: " + needle, needle in source, True)
-check("plugin no longer persists shared queues with ES3.Save", "ES3.Save(" in source, False)
+check("managed queue repair persists ES3 values so game reloads the repaired pool",
+      "ES3.Save(" in source, True)
 check("leaving profile restores game-owned runtime queues", "RestoreSharedFields();" in source, True)
 print()
 print("RESULT:", "ALL PASS" if ok[0] else "FAILED")

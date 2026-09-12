@@ -1,4 +1,4 @@
-// WCP JP Word List — BepInEx 5 插件 (C# 5 语法)  v1.3.2
+// WCP JP Word List — BepInEx 5 插件 (C# 5 语法)  v1.3.3
 //
 // 目的:
 //   A) 日语词书(游戏里就是 自定义词书一~四)与其它词书彻底互不干扰。
@@ -16,6 +16,13 @@
 //   F) 读档之前 MyParameters 全是编译期默认值(默认书「四级大纲词汇」), 那时按内存剔词并写回 ES3
 //      会把存档写坏(实测: 默认的 69313 词全词表被当成"别的词书"筛过一遍写回存档)。
 //      所以 BookState() 先用存档里的词书名和内存对比, 确认读过档才动手。
+//   G) 「已学词测试 → 快速测试」不是只换词池:
+//      · 游戏 clickChangeImageSource.StartQuickTest 用**全局**已学词典(别的词书学过的英语词也在里面)
+//        按等级筛选 + lastStudyTime 倒序重采样 allTestWordsS10_Para = TestWordsNum_Para 个。
+//      · 题面显示的词却是 SetInputFieldValueS8.ShowTheWord 里的 S8needToLearnWordList_Para[0],
+//        而这张队列 StartQuickTest 完全不碰, 还是上一轮遗留的内容。
+//      两张表不同源 → 题面出现「superiority + 猪肉/全部/停/破碎」这种英语题干配日语选项, 谁都不可能答对。
+//      所以: 词池一换, 题干队列/剩余/进度必须一起换(SetTestLists / SyncStemQueue), 且要在游戏读 need[0] 之前。
 //
 // 逆向依据 (Assembly-CSharp, 2026-09-12):
 //   · 战斗/复习四选一 = MultipleChoiceGenerator: 题干 = testWordText,
@@ -41,7 +48,7 @@ using UnityEngine;
 
 namespace JpWordList
 {
-    [BepInPlugin("dev.hanserdesu.jpwordlist", "WCP JP Word List", "1.3.2")]
+    [BepInPlugin("dev.hanserdesu.jpwordlist", "WCP JP Word List", "1.3.3")]
     public class JpWordListPlugin : BaseUnityPlugin
     {
         internal const string ReviewRangeType = "复习范围词";
@@ -145,6 +152,12 @@ namespace JpWordList
                 AccessTools.Method(typeof(JpWordListPlugin), "PostMcGenS9"));
             stemCount += PatchOne(harmony, "SetInputFieldValueS8", "ShowTheWord",
                 AccessTools.Method(typeof(JpWordListPlugin), "PostShowTheWord"));
+            // 题面取 need[0], 必须在游戏读它之前把这些表对齐
+            stemCount += PatchPre(harmony, "SetInputFieldValueS8", "ShowTheWord",
+                AccessTools.Method(typeof(JpWordListPlugin), "PreShowTheWord"));
+            // 「快速测试」按钮: 游戏刚用全局已学词典重建了词池, 立刻按本书重采样并同步题干队列
+            stemCount += PatchOne(harmony, "clickChangeImageSource", "StartQuickTest",
+                AccessTools.Method(typeof(JpWordListPlugin), "PostStartQuickTest"));
 
             Log.LogInfo("JPWordList: 补丁完成 scene=" + preCount + " post=" + postCount +
                         " addref=" + refCount + " bookchange=" + bookCount +
@@ -302,31 +315,13 @@ namespace JpWordList
 
             if (cur == null || cur.Count < 5)
             {
-                List<string> rebuilt = RebuildWithFallback(cur, 5, 30, true);
+                int target = MyParameters.TestWordsNum_Para;
+                if (target < 30) target = 30;
+                List<string> rebuilt = RebuildWithFallback(cur, 5, target, true);
                 if (rebuilt == null) return;
 
-                MyParameters.allTestWordsS10_Para = rebuilt;
-                MyParameters.S8TestWordList_Para = new List<string>(rebuilt);
-                MyParameters.S8TestWordList_LearnedTest_left = new List<string>(rebuilt);
-                MyParameters.S8needToLearnWordList_Para = new List<string>(rebuilt);
-                ES3.Save("allTestWordsS10_Para", MyParameters.allTestWordsS10_Para);
-                ES3.Save("S8TestWordList_Para", MyParameters.S8TestWordList_Para);
-                ES3.Save("S8TestWordList_LearnedTest_left", MyParameters.S8TestWordList_LearnedTest_left);
-                ES3.Save("S8needToLearnWordList_Para", MyParameters.S8needToLearnWordList_Para);
-                // 词表是新造的, 「已完成」记录必须一起清掉, 否则进度会指向错位的词
-                if (MyParameters.S8TestWordList_LearnedTest_Finished != null)
-                {
-                    MyParameters.S8TestWordList_LearnedTest_Finished.Clear();
-                    ES3.Save("S8TestWordList_LearnedTest_Finished", MyParameters.S8TestWordList_LearnedTest_Finished);
-                }
-                if (MyParameters.S8HaveLearnedWordList_Para != null)
-                {
-                    MyParameters.S8HaveLearnedWordList_Para.Clear();
-                    ES3.Save("S8HaveLearnedWordList_Para", MyParameters.S8HaveLearnedWordList_Para);
-                }
-                ResetProgress();
+                SetTestLists(rebuilt);
                 Warn("已学词测试词表为空/过短, 已用本书词重建 " + rebuilt.Count + " 个");
-                LogChange("allTestWordsS10_Para", rebuilt.Count, Sample(rebuilt));
                 return;
             }
 
@@ -342,11 +337,138 @@ namespace JpWordList
             List<string> need = MyParameters.S8needToLearnWordList_Para;
             if (need == null || need.Count == 0 || need[0] != cur[progress])
             {
-                List<string> tail = cur.GetRange(progress, cur.Count - progress);
-                MyParameters.S8needToLearnWordList_Para = tail;
-                ES3.Save("S8needToLearnWordList_Para", tail);
-                Warn("题干队列与题目错位, 已按进度重新对齐 " + tail.Count + " 个");
+                Warn("题干队列与题目错位, 已按进度重新对齐 " + (cur.Count - progress) + " 个");
+                SyncStemQueue(progress, cur);
             }
+        }
+
+        // 「已学词测试」的题面 = need[0], 正确答案/选项 = allTestWordsS10_Para[S8Progress_Para]。
+        // 游戏有两个入口会自作主张地重建词池(快速测试按钮 / SetAsLearnedTest 用 left 重建 need),
+        // 只要 need 没跟着换, 题面就会出现别的词书或上一轮遗留的词, 与选项毫无关系。
+        // 这里在游戏读 need[0] 之前把两张表对齐。
+        private static void PreShowTheWord()
+        {
+            if (!IsEnabled()) return;
+            if (MyParameters.S8ThisMode_Para != "已学词测试") return;
+            try { HealTestList(); }
+            catch (Exception e) { Warn("题干前置自愈异常: " + e.Message); }
+        }
+
+        // 「快速测试」按钮按下之后: 词池刚被全局已学词典重建(夹带别的词书的词), 立刻按本书重采样
+        private static void PostStartQuickTest()
+        {
+            if (!IsEnabled()) return;
+            try
+            {
+                if (BookState() != 1) return;       // 只在日语词书下重排, 其它词书保持游戏原样
+                if (MyParameters.S8ThisMode_Para != "已学词测试") return;  // 这个按钮就在「已学词测试 → 快速测试」面板上
+                int target = MyParameters.TestWordsNum_Para;
+                if (target < 5) target = 5;
+                List<string> pool = SampleBookLearned(target);
+                if (pool == null || pool.Count < 5)
+                    pool = RebuildWithFallback(MyParameters.allTestWordsS10_Para, 5, target, true);
+                if (pool == null || pool.Count < 5) return;
+                SetTestLists(pool);
+                Warn("快速测试词池已按本书重采样 " + pool.Count + " 个");
+            }
+            catch (Exception e) { Warn("快速测试重采样异常: " + e.Message); }
+        }
+
+        // 复刻 clickChangeImageSource.GenerateWordList 的「0~5 级筛选 + 最近学习优先」, 但只取本书内已学词
+        private static List<string> SampleBookLearned(int target)
+        {
+            Dictionary<string, WordInfo> learned = MyParameters.HaveLearnedDictionary;
+            List<string> book = MyParameters.ChosenBook_List;
+            if (learned == null || learned.Count == 0 || book == null || book.Count == 0) return null;
+            HashSet<string> bookSet = new HashSet<string>(book);
+            List<string> cand = new List<string>();
+            foreach (KeyValuePair<string, WordInfo> kv in learned)
+            {
+                if (kv.Value == null) continue;
+                if (!bookSet.Contains(kv.Key)) continue;
+                if (!LevelOn(kv.Value.masteryLevel)) continue;
+                cand.Add(kv.Key);
+            }
+            if (cand.Count == 0) return null;
+            cand.Sort(delegate(string a, string b)
+            {
+                WordInfo wa = learned[a];
+                WordInfo wb = learned[b];
+                int ta = (wa == null) ? int.MinValue : wa.lastStudyTime;
+                int tb = (wb == null) ? int.MinValue : wb.lastStudyTime;
+                return tb.CompareTo(ta);
+            });
+            if (target > 0 && cand.Count > target) cand.RemoveRange(target, cand.Count - target);
+            return cand;
+        }
+
+        // 快速测试面板上的 0~5 级筛选开关 (判定与游戏 GenerateWordList 一致)
+        private static bool LevelOn(int level)
+        {
+            switch (level)
+            {
+                case 0: return MyParameters.level0If;
+                case 1: return MyParameters.level1If;
+                case 2: return MyParameters.level2If;
+                case 3: return MyParameters.level3If;
+                case 4: return MyParameters.level4If;
+                case 5: return MyParameters.level5If;
+            }
+            return false;
+        }
+
+        // 整套「已学词测试」状态一次写齐: 词池 / 剩余 / 题干队列 / 本轮记录 / 进度
+        private static void SetTestLists(List<string> pool)
+        {
+            if (pool == null || pool.Count < 1) return;
+            MyParameters.allTestWordsS10_Para = pool;
+            SaveField("allTestWordsS10_Para", pool);
+            MyParameters.S8TestWordList_Para = new List<string>(pool);
+            SaveField("S8TestWordList_Para", MyParameters.S8TestWordList_Para);
+            MyParameters.S8TestWordList_LearnedTest_left = new List<string>(pool);
+            SaveField("S8TestWordList_LearnedTest_left", MyParameters.S8TestWordList_LearnedTest_left);
+            MyParameters.S8needToLearnWordList_Para = new List<string>(pool);
+            SaveField("S8needToLearnWordList_Para", MyParameters.S8needToLearnWordList_Para);
+
+            // 词池是新造的, 「本轮 已完成/状态」记录必须一起清掉, 否则进度会指向错位的词。
+            // 这几张表在学习/复习模式里是共用的, 只在已学词测试下清, 别误伤别的模式。
+            if (MyParameters.S8ThisMode_Para == "已学词测试")
+            {
+                MyParameters.S8TestWordList_LearnedTest_Finished = new List<string>();
+                SaveField("S8TestWordList_LearnedTest_Finished", MyParameters.S8TestWordList_LearnedTest_Finished);
+                MyParameters.S8HaveLearnedWordList_Para = ClearList(MyParameters.S8HaveLearnedWordList_Para);
+                SaveField("S8HaveLearnedWordList_Para", MyParameters.S8HaveLearnedWordList_Para);
+                MyParameters.S8HaveLearnedStatusList_LearnedTest = ClearList(MyParameters.S8HaveLearnedStatusList_LearnedTest);
+                SaveField("S8HaveLearnedStatusList_LearnedTest", MyParameters.S8HaveLearnedStatusList_LearnedTest);
+                MyParameters.S8HaveLearnedStatusList_Para = ClearList(MyParameters.S8HaveLearnedStatusList_Para);
+                SaveField("S8HaveLearnedStatusList_Para", MyParameters.S8HaveLearnedStatusList_Para);
+                MyParameters.S8ForgetThisTimeList_LearnedTest = ClearList(MyParameters.S8ForgetThisTimeList_LearnedTest);
+                SaveField("S8ForgetThisTimeList_LearnedTest", MyParameters.S8ForgetThisTimeList_LearnedTest);
+                MyParameters.S8ForgetThisTimeList_Para = ClearList(MyParameters.S8ForgetThisTimeList_Para);
+                SaveField("S8ForgetThisTimeList_Para", MyParameters.S8ForgetThisTimeList_Para);
+                ResetProgress();
+            }
+        }
+
+        // 题干队列(need)与剩余队列(left)都必须是词池从 progress 起的尾巴: 两张表错位 = 答非所问
+        private static void SyncStemQueue(int progress, List<string> pool)
+        {
+            if (MyParameters.S8ThisMode_Para != "已学词测试") return;
+            if (pool == null || pool.Count == 0) return;
+            if (progress < 0 || progress >= pool.Count) progress = 0;
+            List<string> tail = pool.GetRange(progress, pool.Count - progress);
+            MyParameters.S8needToLearnWordList_Para = tail;
+            SaveField("S8needToLearnWordList_Para", tail);
+            List<string> left = new List<string>(tail);
+            MyParameters.S8TestWordList_LearnedTest_left = left;
+            SaveField("S8TestWordList_LearnedTest_left", left);
+        }
+
+        private static List<string> ClearList(List<string> field)
+        {
+            if (field == null) return new List<string>();
+            field.Clear();
+            return field;
         }
 
         // ---------------- 主逻辑 ----------------
@@ -387,6 +509,8 @@ namespace JpWordList
                     SaveField("S8TestWordList_LearnedTest_Finished", MyParameters.S8TestWordList_LearnedTest_Finished);
                 }
                 ResetProgress();
+                // 词池换了, 题干队列(need[0] 就是题面显示的词)必须一起换, 否则「别的书/上一轮的词 + 本轮的选项」
+                SyncStemQueue(0, testFixed);
             }
             else
             {

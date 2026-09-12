@@ -1,4 +1,4 @@
-// WCP JP Word List — BepInEx 5 插件 (C# 5 语法)  v1.7.0
+// WCP JP Word List — BepInEx 5 插件 (C# 5 语法)  v1.7.1
 //
 // 目的:
 //   A) 日语词书(游戏里就是 自定义词书一~四)与其它词书彻底互不干扰。
@@ -42,6 +42,11 @@
 //     但绝不能动 wordXText / matchingWordText。
 //   · 已学词测试(S9) = MultipleChoiceGeneratorS9 + SetInputFieldValueS8:
 //     题干 = 输入框文本, 选项 = GetMeaning_S7(词), 判对用 rightOption_S9 索引。
+//     v1.7.1 补充: 题面右侧的音标/喇叭按钮走的是 wcpFullEng.db 的英语音标与本地
+//     mp3(<题干词>.mp3), 只认英语词。所以测试词池里的词必须是 wcpOnlyWord.db 的
+//     键(pron 表的 word)。词书里的日文词全都没有(汉字键、假名都查不到), 会出现
+//     「superiority + 日语选项」这种英语题干配日语选项的错题。所以词池采样要再加一道
+//     「必须有英语词条」的硬校验, 这是能朗读/查词的前提。
 //   · 选词界面(截图里那份「已学词汇」)= PageController 渲染 MyParameters.S9CurrentArray_Para,
 //     勾选写入 S9extraStudy_Para(string[])。
 //   · 词书释义字典 MyParameters.SelfBookMeaningDictionary: 汉字词 = 「【假名】中文〈词性〉」,
@@ -60,7 +65,7 @@ using WcpBookProfiles;
 
 namespace JpWordList
 {
-    [BepInPlugin("dev.hanserdesu.jpwordlist", "WCP JP Word List", "1.7.0")]
+    [BepInPlugin("dev.hanserdesu.jpwordlist", "WCP JP Word List", "1.7.1")]
     public class JpWordListPlugin : BaseUnityPlugin
     {
         internal const string ReviewRangeType = "复习范围词";
@@ -327,7 +332,6 @@ namespace JpWordList
         {
             if (!IsEnabled()) return;
             if (BookState() != 1) return;
-            if (MyParameters.S8ThisMode_Para != "已学词测试") return;
             try { HealTestList(); }
             catch (Exception e) { Warn("测试词表自愈异常: " + e.Message); }
         }
@@ -338,7 +342,6 @@ namespace JpWordList
         {
             if (!IsEnabled()) return;
             if (BookState() != 1) return;
-            if (MyParameters.S8ThisMode_Para != "已学词测试") return;
             try { HealTestList(); }
             catch (Exception e) { Warn("S9 前置自愈异常: " + e.Message); }
         }
@@ -360,6 +363,7 @@ namespace JpWordList
 
         private static void HealTestList()
         {
+            if (MyParameters.S8ThisMode_Para != "已学词测试") return;
             List<string> cur = MyParameters.allTestWordsS10_Para;
 
             if (cur == null || cur.Count < 5)
@@ -399,7 +403,6 @@ namespace JpWordList
         {
             if (!IsEnabled()) return;
             if (BookState() != 1) return;
-            if (MyParameters.S8ThisMode_Para != "已学词测试") return;
             try { HealTestList(); }
             catch (Exception e) { Warn("题干前置自愈异常: " + e.Message); }
         }
@@ -466,6 +469,10 @@ namespace JpWordList
             }
             return false;
         }
+
+        // (pron 白名单方案作废: 实测猫条版整本书的词都在 wcpOnlyWord.db 里, 含日文词,
+        //   它分不开「本书词」和「全局已学词典里的英语词」。S9 词池靠 SampleBookLearned
+        //   的「本书 ∩ 已学」过滤就够了。)
 
         // 整套「已学词测试」状态一次写齐: 词池 / 剩余 / 题干队列 / 本轮记录 / 进度
         private static void SetTestLists(List<string> pool)

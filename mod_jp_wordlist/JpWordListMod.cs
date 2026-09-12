@@ -1,22 +1,26 @@
 // WCP JP Word List — BepInEx 5 插件 (C# 5 语法)
 //
-// 目的: 选中「日语词书」(游戏里就是 自定义词书一~四) 时, 战斗与全部小游戏的
-//       词表只从该词书的日语词里取, 不再混入以前学过的英语词。
+// 目的: 让「日语词书」(游戏里就是 自定义词书一~四) 与其它词书彻底互不干扰。
 //
 // 逆向依据 (Assembly-CSharp, 2026-09-12):
-//   战斗 + S3/S15/S17 小游戏共用同一个静态字段 MyParameters.S7TestWordList_Para:
-//     · ChooseWordManager.FightList() 按 复习范围/复习方式 生成词表, 末尾用
-//       AddWordsToSelfChosenList(ref list, 5) 从「全库已学词」补足 —— 这一步不看书,
-//       日语书已学不足时就会被英语词填满。
-//     · 「复习范围词」模式下战斗场景 InitializeManagerS2.Start / WordListManagerS7.Start /
-//       updateNewLearnWord.UpdateThis 只做 ES3.Load("S7TestWordList_Para"), 不会重算。
-//       所以换到日语词书后, 旧词书留下的英语词表会一直沿用 —— 这就是战斗显示英语的原因。
-//     · S3ScoreShow / LifeAndScoreManagerS15 / showWordS17 / RandomButtonInvoker
-//       都从这个字段复制词表, 修好这一处即可覆盖战斗 + 全部小游戏。
+//   1) 战斗 + S3/S15/S17 小游戏共用静态字段 MyParameters.S7TestWordList_Para:
+//        · ChooseWordManager.FightList() 按 复习范围/复习方式 生成, 末尾用
+//          AddWordsToSelfChosenList(ref list, 5) 从「全库已学词」补足 —— 这一步不看书,
+//          日语书已学不足时会被英语词填满。
+//        · 「复习范围词」模式下, 战斗场景 InitializeManagerS2.Start /
+//          WordListManagerS7.Start / updateNewLearnWord.UpdateThis 只做
+//          ES3.Load("S7TestWordList_Para"), 不重算。换书后旧英语词表会一直沿用。
+//        · S3ScoreShow / LifeAndScoreManagerS15 / showWordS17 / RandomButtonInvoker
+//          都从这个字段复制词表, 修好这一处即可覆盖战斗 + 全部小游戏。
+//   2) HaveLearnedDictionary 是**全局**已学词典, 不带词书标记。
+//        「复习范围 = 所有已学」的查询 (GetWordsForReviewTime*/Label*/Syn, 无书过滤)
+//        以及 allTestWordsS10_Para (S9/S10 测试) 都直接查它 ——
+//        所以在日语书里学过的词会漏进英语词书, 反之英语词也会漏进日语书。
+//        本插件按「词是否属于当前词书」把这类词表过滤干净。
 //
-// 设计: 不改游戏逻辑, 只在游戏算完之后把「明显跑偏」的词表重写成该词书的日语词,
-//       并回写 ES3。非日语词书完全不介入; 换回非日语词书时让游戏按当前词书重算,
-//       避免两种词书互相污染。
+// 设计: 不改游戏逻辑, 只在游戏算完之后校正词表并回写 ES3。
+//   · 日语词书: 词表只保留本书日语词, 不足 5 个时从本书补足。
+//   · 其它词书: 从词表里剔除日语词 (含从日语书带过去的), 不足 5 个时用当前词书补足。
 using System;
 using System.Collections.Generic;
 using System.Reflection;
@@ -28,7 +32,7 @@ using UnityEngine;
 
 namespace JpWordList
 {
-    [BepInPlugin("dev.hanserdesu.jpwordlist", "WCP JP Word List", "1.1.0")]
+    [BepInPlugin("dev.hanserdesu.jpwordlist", "WCP JP Word List", "1.2.0")]
     public class JpWordListPlugin : BaseUnityPlugin
     {
         internal const string ReviewRangeType = "复习范围词";
@@ -38,22 +42,24 @@ namespace JpWordList
 
         private static ConfigEntry<bool> _enabled;
         private static ConfigEntry<bool> _topUp;
+        private static ConfigEntry<bool> _guardOtherLists;
         private static readonly HashSet<string> Warned = new HashSet<string>();
 
         private float _nextPoll;
         private string _lastSignature = "";
+        private string _lastStripSignature = "";
 
-        // 场景开始时先把词表摆正, 再让游戏去读 (prefix)
+        // 场景加载时先把词表摆正, 再让游戏去读 (prefix)
         internal static readonly string[] SceneTypes = new string[] {
             "InitializeManagerS2", "WordListManagerS7", "S3ScoreShow",
             "LifeAndScoreManagerS15", "showWordS17", "RandomButtonInvoker",
-            "MultipleChoiceGenerator"
+            "MultipleChoiceGenerator", "MultipleChoiceGeneratorS9", "SetS8Data"
         };
 
         // 游戏算完 / 读完词表之后再校正 (postfix)
         internal static readonly string[] PostTypes = new string[] {
             "ChooseWordManager", "InitializeManagerS2", "updateNewLearnWord",
-            "WordListManagerS7", "ButtonEquivalence", "S7NumberAdd",
+            "WordListManagerS7", "SetS8Data", "ButtonEquivalence", "S7NumberAdd",
             "ColorInputFieldS17", "MultipleChoiceGenerator", "RandomButtonInvoker"
         };
 
@@ -62,6 +68,8 @@ namespace JpWordList
             "setAsNewLearnWord", "setAsNewReviewWord", "SwitchSelfChosenMode",
             "UpdateThis", "ResetTestListQuick", "ResetTestListQuick_FreeChoose",
             "ResetExtraReviewList", "ResetExtraReviewList_FreeChoose",
+            "ResetExtraStudyList", "ResetExtraStudyList_FreeChoose",
+            "ResetDailyStudyList", "ResetDailyReviewList",
             "Get_TodayNewLearnWordForFight", "Get_TodayNewReviewWordForFight",
             "GetNewWord", "InvokeRandomButton", "Randomize"
         };
@@ -73,9 +81,11 @@ namespace JpWordList
             Log = Logger;
             Instance = this;
             _enabled = Config.Bind("General", "Enabled", true,
-                "日语词书时, 战斗与小游戏的词表只从该词书取日语词。");
+                "开启词表校正: 日语词书只出日语词, 其它词书不出日语词。");
             _topUp = Config.Bind("General", "TopUpFromWholeBook", false,
-                "本书已学词不足时是否用词书里其它(未学)的词补满到复习范围词上限。");
+                "日语词书: 本书已学词不足时, 是否用本书其它(未学)词补满到复习范围词上限。");
+            _guardOtherLists = Config.Bind("General", "GuardSharedLists", true,
+                "同时校正 每日/额外 学习复习表与测试表, 挡住全局已学词典带来的跨词书串词。");
             PatchAll();
         }
 
@@ -159,7 +169,6 @@ namespace JpWordList
 
         // ---------------- Harmony 出入口 ----------------
 
-        // 场景开始: 先把 ES3 里的词书/已学词读进来, 再摆正词表
         private static void Pre()
         {
             if (!IsEnabled()) return;
@@ -167,7 +176,6 @@ namespace JpWordList
             catch (Exception e) { Warn("prefix 异常: " + e.Message); }
         }
 
-        // 游戏算完/读完: 直接用内存里的词书数据校正
         private static void Post()
         {
             if (!IsEnabled()) return;
@@ -181,11 +189,11 @@ namespace JpWordList
             if (!IsEnabled()) return;
             try
             {
-                List<string> fixedList = Rebuild(S7TestWordList_Para);
+                List<string> fixedList = Filter(S7TestWordList_Para, TopUpTarget());
                 if (fixedList == null) return;
                 S7TestWordList_Para = fixedList;
                 MyParameters.S7TestWordList_Para = fixedList;
-                SaveList(fixedList, "addwords");
+                SaveField("S7TestWordList_Para", fixedList, "addwords");
             }
             catch (Exception e) { Warn("postfix(ref) 异常: " + e.Message); }
         }
@@ -197,7 +205,11 @@ namespace JpWordList
             try
             {
                 if (JapaneseBookSelected()) Enforce(true);
-                else RegenerateByGame();
+                else
+                {
+                    RegenerateByGame();
+                    Enforce(false);
+                }
             }
             catch (Exception e) { Warn("换书异常: " + e.Message); }
         }
@@ -217,78 +229,112 @@ namespace JpWordList
         internal static void Enforce(bool refreshFromSave)
         {
             if (refreshFromSave) RefreshFromSave();
-            List<string> fixedList = Rebuild(MyParameters.S7TestWordList_Para);
-            if (fixedList == null) return;
-            MyParameters.S7TestWordList_Para = fixedList;
-            SaveList(fixedList, refreshFromSave ? "scene" : "postfix");
+            bool jp = JapaneseBookSelected();
+
+            List<string> fixedMain = Filter(MyParameters.S7TestWordList_Para, TopUpTarget());
+            if (fixedMain != null)
+            {
+                MyParameters.S7TestWordList_Para = fixedMain;
+                SaveField("S7TestWordList_Para", fixedMain, jp ? "jp" : "other");
+            }
+
+            if (!_guardOtherLists.Value) return;
+
+            FixField("allTestWordsS10_Para", ref MyParameters.allTestWordsS10_Para, 5, jp);
+            FixField("S8TestWordList_DailyReview", ref MyParameters.S8TestWordList_DailyReview, 5, jp);
+            FixField("S8TestWordList_DailyReview_left", ref MyParameters.S8TestWordList_DailyReview_left, 5, jp);
+            FixField("S8TestWordList_ExtraReview", ref MyParameters.S8TestWordList_ExtraReview, 5, jp);
+            FixField("S8TestWordList_ExtraReview_left", ref MyParameters.S8TestWordList_ExtraReview_left, 5, jp);
+            FixField("S8TestWordList_DailyStudy", ref MyParameters.S8TestWordList_DailyStudy, 5, jp);
+            FixField("S8TestWordList_DailyStudy_left", ref MyParameters.S8TestWordList_DailyStudy_left, 5, jp);
+            FixField("S8TestWordList_ExtraStudy", ref MyParameters.S8TestWordList_ExtraStudy, 5, jp);
+            FixField("S8TestWordList_ExtraStudy_left", ref MyParameters.S8TestWordList_ExtraStudy_left, 5, jp);
+            FixField("S8TestWordList_LearnedTest_left", ref MyParameters.S8TestWordList_LearnedTest_left, 5, jp);
         }
 
-        // 返回校正后的词表; 无需改动时返回 null
-        private static List<string> Rebuild(List<string> cur)
+        private static void FixField(string key, ref List<string> field, int topUpTo, bool jpBook)
         {
-            if (!JapaneseBookSelected()) return null;
+            List<string> fixedList = Filter(field, topUpTo);
+            if (fixedList == null) return;
+            field = fixedList;
+            SaveField(key, fixedList, jpBook ? "jp" : "other");
+        }
+
+        private static int TopUpTarget()
+        {
+            int cap = MyParameters.S7FightWordMax;
+            if (cap < 5) cap = 5;
+            bool topUp = Instance != null && _topUp.Value;
+            return topUp ? cap : 5;
+        }
+
+        // 返回校正后的词表; 无需改动时返回 null。
+        // 日语词书: 只保留本书的词; 其它词书: 剔除日语词。
+        private static List<string> Filter(List<string> cur, int topUpTo)
+        {
+            if (cur == null || cur.Count == 0) return null;
+            bool jp = JapaneseBookSelected();
 
             List<string> book = MyParameters.ChosenBook_List;
-            if (book == null || book.Count < 5)
+            HashSet<string> bookSet = null;
+            if (jp)
             {
-                WarnOnce("bookEmpty", "词书词表为空或过小, 无法校正");
-                return null;
+                if (book == null || book.Count < 5)
+                {
+                    WarnOnce("bookEmpty", "词书词表为空或过小, 无法校正");
+                    return null;
+                }
+                bookSet = new HashSet<string>(book);
             }
-            HashSet<string> bookSet = new HashSet<string>(book);
-            if (cur == null) cur = new List<string>();
 
             HashSet<string> seen = new HashSet<string>();
             List<string> keep = new List<string>();
-            int hits = 0;
-            int missed = 0;
+            int dropped = 0;
             for (int i = 0; i < cur.Count; i++)
             {
                 string w = cur[i];
-                if (string.IsNullOrEmpty(w)) continue;
-                if (!bookSet.Contains(w)) { missed++; continue; }
-                hits++;
+                if (string.IsNullOrEmpty(w)) { dropped++; continue; }
+                bool ok = jp ? bookSet.Contains(w) : !LooksJapanese(w);
+                if (!ok) { dropped++; continue; }
                 if (seen.Add(w)) keep.Add(w);
             }
+            if (dropped == 0 && keep.Count == cur.Count) return null;
 
-            string type = MyParameters.S7FightWordType;
-            bool reviewRangeMode = string.IsNullOrEmpty(type) || type == ReviewRangeType;
-            bool mixed = missed > 0 && hits > 0;
-            bool broken = hits == 0 || mixed || (reviewRangeMode && cur.Count < 5);
-            if (!broken) return null;
-
-            int cap = MyParameters.S7FightWordMax;
-            if (cap < 5) cap = 5;
-
-            // 1) 本书已学词 (保持字典里的学习顺序)
-            Dictionary<string, WordInfo> learned = MyParameters.HaveLearnedDictionary;
-            if (learned != null)
+            if (topUpTo < 5) topUpTo = 5;
+            if (keep.Count < topUpTo && book != null)
             {
-                foreach (KeyValuePair<string, WordInfo> kv in learned)
-                {
-                    if (keep.Count >= cap) break;
-                    string w = kv.Key;
-                    if (string.IsNullOrEmpty(w)) continue;
-                    if (!bookSet.Contains(w)) continue;
-                    if (seen.Add(w)) keep.Add(w);
-                }
-            }
-
-            // 2) 本书已学不足 5 个时用词书里其它词补足;
-            //    开了 TopUpFromWholeBook 才补满到复习范围词上限
-            bool topUp = Instance != null && _topUp.Value;
-            int want = topUp ? cap : 5;
-            if (keep.Count < want)
-            {
-                for (int i = 0; i < book.Count && keep.Count < want; i++)
+                // 补词只用「当前词书」且必须通过同一个过滤条件
+                for (int i = 0; i < book.Count && keep.Count < topUpTo; i++)
                 {
                     string w = book[i];
                     if (string.IsNullOrEmpty(w)) continue;
+                    bool ok = jp ? bookSet.Contains(w) : !LooksJapanese(w);
+                    if (!ok) continue;
                     if (seen.Add(w)) keep.Add(w);
                 }
             }
+            if (keep.Count < 5 && cur.Count >= 5) return null;  // 保不住就不动, 免得把界面搞空
+            return keep.Count == 0 ? null : keep;
+        }
 
-            if (keep.Count < 5) return null;
-            return keep;
+        // 单词是否像日语 (含假名 / 汉字 / 半角片假名 / 々)
+        internal static bool LooksJapanese(string w)
+        {
+            if (string.IsNullOrEmpty(w)) return false;
+            for (int i = 0; i < w.Length; i++)
+            {
+                char c = w[i];
+                if ((c >= 0x3040 && c <= 0x30FF) ||
+                    (c >= 0x3400 && c <= 0x4DBF) ||
+                    (c >= 0x4E00 && c <= 0x9FFF) ||
+                    (c >= 0xF900 && c <= 0xFAFF) ||
+                    (c >= 0xFF66 && c <= 0xFF9D) ||
+                    c == 0x3005 || c == 0x3006 || c == 0x3007)
+                {
+                    return true;
+                }
+            }
+            return false;
         }
 
         private static void RegenerateByGame()
@@ -321,28 +367,37 @@ namespace JpWordList
             catch (Exception e) { WarnOnce("ld:type", "读取 S7FightWordType 失败: " + e.Message); }
         }
 
-        private static void SaveList(List<string> list, string where)
+        private static void SaveField(string key, List<string> list, string where)
         {
-            try { ES3.Save("S7TestWordList_Para", list); }
-            catch (Exception e) { Warn("写回 S7TestWordList_Para 失败: " + e.Message); }
-            LogChange(list, where);
+            try { ES3.Save(key, list); }
+            catch (Exception e) { Warn("写回 " + key + " 失败: " + e.Message); }
+            LogChange(key, list, where);
         }
 
-        private static void LogChange(List<string> list, string where)
+        private static void LogChange(string key, List<string> list, string where)
         {
             System.Text.StringBuilder sb = new System.Text.StringBuilder();
-            for (int i = 0; i < list.Count && i < 5; i++)
+            for (int i = 0; i < list.Count && i < 4; i++)
             {
                 if (i > 0) sb.Append(", ");
                 sb.Append(list[i]);
             }
-            string sig = where + "|" + list.Count + "|" + sb.ToString();
+            string sig = key + "|" + where + "|" + list.Count + "|" + sb.ToString();
             if (Instance != null)
             {
-                if (Instance._lastSignature == sig) return;
-                Instance._lastSignature = sig;
+                if (key == "S7TestWordList_Para")
+                {
+                    if (Instance._lastSignature == sig) return;
+                    Instance._lastSignature = sig;
+                }
+                else
+                {
+                    if (Instance._lastStripSignature == sig) return;
+                    Instance._lastStripSignature = sig;
+                }
             }
-            Log.LogInfo("JPWordList: 词表 -> " + list.Count + " 个日语词 (示例: " + sb.ToString() + ") @" + where);
+            Log.LogInfo("JPWordList: " + key + " -> " + list.Count + " 词 (示例: "
+                + sb.ToString() + ") @" + where);
         }
 
         internal static bool JapaneseBookSelected()

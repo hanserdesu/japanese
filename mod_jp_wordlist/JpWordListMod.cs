@@ -1,4 +1,4 @@
-// WCP JP Word List — BepInEx 5 插件 (C# 5 语法)  v1.4.0
+// WCP JP Word List — BepInEx 5 插件 (C# 5 语法)  v1.5.0
 //
 // 目的:
 //   A) 日语词书(游戏里就是 自定义词书一~四)与其它词书彻底互不干扰。
@@ -29,6 +29,15 @@
 //      KanaOf/KanjiOption 全部返回 null → 题干照旧显示汉字, 选项照旧带【假名】, 功能等于没生效。
 //      现在释义来源改成三级: 游戏内存字典 → 自己读 MyBook.es3 的 wordDictionaryN → 出题时顺手攒下的词条;
 //      而且题干读音优先直接从**游戏已经渲染出来的选项释义**(它就是「【假名】释义」)里取, 不依赖那张字典。
+//   I) 自定义槽位不再按名字假定是日语书: 「自定义词书一~四」四个槽可以塞英语书,
+//      旧逻辑只看前 30 词里有没有日语词, 判不出来就返回「状态不明 → 一律不动手」,
+//      于是那本书里残留的日语词也不会被清掉。现在按内容判定, 两份记录交叉确认:
+//        · 内存词表(游戏实际拿来过滤的那份)与槽位自己的记录(MyBook.es3 的 SelfBookListN)
+//          都采样判定语言; 一致才下手, 对不上(多半正在换书)仍然不动手。
+//        · MyParameters.SelfBookListN 游戏从不赋值(编译期还是 one/two/three), 不能当数据源。
+//   J) 作用域收紧且保持可移植: 不绑定「自定义词书一~四」中的任何固定槽位。
+//      玩家当前选中的自定义词书，只要内存词表与其 MyBook.es3 槽位记录都确认是日语，
+//      才会写队列/改题面；导入到任一槽均可用。其它内容(英语自定义书、全部原版书)一律不写。
 //
 // 逆向依据 (Assembly-CSharp, 2026-09-12):
 //   · 战斗/复习四选一 = MultipleChoiceGenerator: 题干 = testWordText,
@@ -54,7 +63,7 @@ using UnityEngine;
 
 namespace JpWordList
 {
-    [BepInPlugin("dev.hanserdesu.jpwordlist", "WCP JP Word List", "1.4.0")]
+    [BepInPlugin("dev.hanserdesu.jpwordlist", "WCP JP Word List", "1.5.0")]
     public class JpWordListPlugin : BaseUnityPlugin
     {
         internal const string ReviewRangeType = "复习范围词";
@@ -77,6 +86,15 @@ namespace JpWordList
         private static Dictionary<string, string> _bookDict;
         private static int _bookDictIdx = -1;
         private static readonly Dictionary<string, string> Harvested = new Dictionary<string, string>();
+
+        // 词书语言判定: 采样长度 / 槽位记录缓存(读一次存档不便宜)
+        private const int LanguageSampleSize = 40;
+        private const float SlotLangTtl = 5f;
+        private static int _slotLangIdx = -1;
+        private static float _slotLangAt = -1E9f;
+        private static int _slotLangVal = 0;
+        private static int _stateMem = 0;       // 本次判定用到的两个信号, 只给日志看
+        private static int _stateSlot = 0;
 
         // 换行 / 释义里转义过的换行 (游戏写的是两个反斜杠加 n)
         private static readonly string NL = ((char)10).ToString();
@@ -249,6 +267,7 @@ namespace JpWordList
         private static void PostRef(ref List<string> S7TestWordList_Para)
         {
             if (!IsEnabled()) return;
+            if (BookState() != 1) return;
             try
             {
                 List<string> fixedList = Filter(S7TestWordList_Para, 5, true);
@@ -260,18 +279,15 @@ namespace JpWordList
             catch (Exception e) { Warn("postfix(ref) 异常: " + e.Message); }
         }
 
-        // 词书切换确认之后: 日语词书 -> 摆正; 换回别的词书 -> 让游戏按当前词书重算
+        // 词书切换确认之后: 只有当前选中的内容确认是日语自定义词书才摆正。
+        // 切到其它词书绝不重算/过滤/写回，保证本插件不改变它们的状态。
         private static void PostBookChange()
         {
             if (!IsEnabled()) return;
             try
             {
-                if (JapaneseBookSelected()) Enforce();
-                else
-                {
-                    RegenerateByGame();
-                    Enforce();
-                }
+                _slotLangAt = -1E9f;    // 换书了, 槽位记录重读
+                if (BookState() == 1) Enforce();
             }
             catch (Exception e) { Warn("换书异常: " + e.Message); }
         }
@@ -292,6 +308,7 @@ namespace JpWordList
         private static void PostSetAsLearnedTest()
         {
             if (!IsEnabled()) return;
+            if (BookState() != 1) return;
             if (MyParameters.S8ThisMode_Para != "已学词测试") return;
             try { HealTestList(); }
             catch (Exception e) { Warn("测试词表自愈异常: " + e.Message); }
@@ -302,6 +319,7 @@ namespace JpWordList
         private static void PreMcGenS9()
         {
             if (!IsEnabled()) return;
+            if (BookState() != 1) return;
             if (MyParameters.S8ThisMode_Para != "已学词测试") return;
             try { HealTestList(); }
             catch (Exception e) { Warn("S9 前置自愈异常: " + e.Message); }
@@ -310,12 +328,14 @@ namespace JpWordList
         // 选词界面渲染前 / 词组重建后: 立刻把候选表与已选表摆正
         private static void PreFixSelection()
         {
+            if (BookState() != 1) return;
             try { FixSelectionLists(); }
             catch (Exception e) { Warn("选词表校正异常: " + e.Message); }
         }
 
         private static void PostFixSelection()
         {
+            if (BookState() != 1) return;
             try { FixSelectionLists(); }
             catch (Exception e) { Warn("选词表校正异常: " + e.Message); }
         }
@@ -360,6 +380,7 @@ namespace JpWordList
         private static void PreShowTheWord()
         {
             if (!IsEnabled()) return;
+            if (BookState() != 1) return;
             if (MyParameters.S8ThisMode_Para != "已学词测试") return;
             try { HealTestList(); }
             catch (Exception e) { Warn("题干前置自愈异常: " + e.Message); }
@@ -487,8 +508,8 @@ namespace JpWordList
         internal static void Enforce()
         {
             int state = BookState();
-            if (state == 0) return;                 // 词书状态不明 -> 一律不动
-            bool jp = (state == 1);
+            if (state != 1) return;                 // 不是当前日语自定义词书 -> 一律不动
+            bool jp = true;
 
             // 战斗词表: 至少 5 个, 否则战斗界面没词可用
             int fightMax = MyParameters.S7FightWordMax;
@@ -562,6 +583,7 @@ namespace JpWordList
         internal static void FixSelectionLists()
         {
             if (!IsEnabled()) return;
+            if (BookState() != 1) return;
             if (_guardOtherLists == null || !_guardOtherLists.Value) return;
             FixArray("S9CurrentArray_Para", ref MyParameters.S9CurrentArray_Para, 1, true);
             string[] extra = FilterDropArray(MyParameters.S9extraStudy_Para);
@@ -778,7 +800,8 @@ namespace JpWordList
             return jp ? (bookSet != null && bookSet.Contains(w)) : !LooksJapanese(w);
         }
 
-        // 词书状态: 0 = 不明(不要动), 1 = 日语词书, 2 = 其它词书
+        // 词书状态: 1 = 当前选中的日语自定义词书(插件可工作); 0 = 其它任何情况(一律不动)。
+        // 这不是槽位绑定: 自定义词书一~四任一槽都可以，只看当前选中词书的实际内容。
         internal static int BookState()
         {
             int state = BookStateRaw();
@@ -788,25 +811,83 @@ namespace JpWordList
 
         private static int BookStateRaw()
         {
+            _stateMem = 0;
+            _stateSlot = 0;
             if (!BookReady()) return 0;      // 还没读档 -> 一律不动
             string name = MyParameters.ChosenBook_Para;
             if (string.IsNullOrEmpty(name)) return 0;
             List<string> book = MyParameters.ChosenBook_List;
             if (book == null || book.Count < 5) return 0;
-            if (JapaneseBookSelected())
+
+            // 只接管当前选中的自定义槽。原版书以及任何英语自定义书都返回 0，绝不写队列。
+            int idx = SelfBookIndexOf(name);
+            if (idx <= 0) return 0;
+            _stateMem = LangOfList(book);       // 游戏实际拿来过滤的那份词表
+            _stateSlot = SlotLang(idx);         // 这个槽自己在 MyBook.es3 里记的那份
+            if (_stateMem != 1) return 0;       // 当前书不是日语内容
+            if (_stateSlot == 2) return 0;      // 槽位记录与内存冲突，通常正在换书，安全地不动
+            return 1;                           // 槽位记录为 1 或暂时读不到时，以已加载的内存词表为准
+        }
+
+        // 采样判一份词表是哪个语种: 1 = 日语书, 2 = 其它书, 0 = 分不清(混合/太短)
+        private static int LangOfList(List<string> list)
+        {
+            if (list == null || list.Count == 0) return 0;
+            int n = (list.Count < LanguageSampleSize) ? list.Count : LanguageSampleSize;
+            int jp = 0;
+            for (int i = 0; i < n; i++)
             {
-                // 词表还没切过来(还是上一本书的)时不动, 免得按错误的词书剔除
-                for (int i = 0; i < book.Count && i < 30; i++)
+                if (LooksJapanese(list[i])) jp++;
+            }
+            return LangOfCounts(jp, n);
+        }
+
+        private static int LangOfCounts(int jp, int n)
+        {
+            if (n <= 0) return 0;
+            if (jp == 0) return 2;              // 一个日语词都没有 -> 其它词书
+            if (jp * 2 >= n) return 1;          // 过半是日语 -> 日语书(容忍少量外来词)
+            return 0;                           // 混着的 -> 拿不准, 不动手
+        }
+
+        // 自定义槽位(1~4)自己记的那份词表: MyBook.es3 的 SelfBookListN(游戏就是这么读的)。
+        // 「按槽记录」—— 判定某个槽里装的是哪国书, 看的是这个槽自己的内容, 不是槽名的字面。
+        private static int SlotLang(int idx)
+        {
+            if (idx <= 0) return 0;
+            float now = Time.realtimeSinceStartup;
+            if (idx == _slotLangIdx && now - _slotLangAt < SlotLangTtl) return _slotLangVal;
+            _slotLangIdx = idx;
+            _slotLangAt = now;
+            _slotLangVal = 0;
+            try
+            {
+                string path = System.IO.Path.Combine(Application.persistentDataPath, "MyBook.es3");
+                List<string> slot = new List<string>();
+                try
                 {
-                    if (LooksJapanese(book[i])) return 1;
+                    string[] arr = ES3.Load<string[]>("SelfBookList" + idx, path);
+                    if (arr != null && arr.Length > 0) slot.AddRange(arr);
                 }
-                return 0;
+                catch (Exception) { }
+                if (slot.Count < 5)
+                {
+                    // 有的存档只写了释义字典, 用它的键顶上
+                    try
+                    {
+                        Dictionary<string, string> d = ES3.Load<Dictionary<string, string>>("wordDictionary" + idx, path);
+                        if (d != null && d.Count > 0)
+                        {
+                            slot.Clear();
+                            foreach (KeyValuePair<string, string> kv in d) slot.Add(kv.Key);
+                        }
+                    }
+                    catch (Exception) { }
+                }
+                if (slot.Count >= 5) _slotLangVal = LangOfList(slot);
             }
-            for (int i = 0; i < book.Count && i < 30; i++)
-            {
-                if (!LooksJapanese(book[i])) return 2;
-            }
-            return 0;
+            catch (Exception e) { WarnOnce("slotlang:" + idx, "读取槽位 " + idx + " 词表失败: " + e.Message); }
+            return _slotLangVal;
         }
 
         // 状态变了才打一行: 方便从日志判断「为什么这次没动手」(0=不明/1=日语/2=其它)
@@ -814,13 +895,13 @@ namespace JpWordList
         {
             List<string> book = MyParameters.ChosenBook_List;
             int n = (book == null) ? -1 : book.Count;
-            string head = (book != null && book.Count > 0) ? (LooksJapanese(book[0]) ? "jp" : "en") : "?";
-            string sig = state + "|" + MyParameters.ChosenBook_Para + "|" + n + "|" + head;
+            string sig = state + "|" + MyParameters.ChosenBook_Para + "|" + n + "|" + _stateMem + "|" + _stateSlot;
             string prev;
             if (LastSig.TryGetValue("bookstate", out prev) && prev == sig) return;
             LastSig["bookstate"] = sig;
             Log.LogInfo("JPWordList: 词书状态=" + state + " 内存书名=" + MyParameters.ChosenBook_Para +
-                        " 内存词表=" + n + "条(" + head + ") 存档书名=" + (DiskBookName() ?? "<读不到>"));
+                        " 内存词表=" + n + "条(内存判定=" + _stateMem + " 槽位记录=" + _stateSlot +
+                        ") 存档书名=" + (DiskBookName() ?? "<读不到>"));
         }
 
         // 单词是否像日语 (含假名 / 汉字 / 半角片假名 / 々)
@@ -863,7 +944,7 @@ namespace JpWordList
         {
             if (!IsEnabled()) return false;
             if (_kanaStem == null || !_kanaStem.Value) return false;
-            return JapaneseBookSelected();
+            return BookState() == 1;     // 按内容判定: 自定义槽里装的是英语书时不改写题干/选项
         }
 
         // 是否处于「测试」式问答 (学习界面不改写, 免得影响背单词)

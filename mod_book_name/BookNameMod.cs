@@ -1,19 +1,19 @@
 // WCP Book Name — BepInEx 5 插件
-// 功能: 书单里把「自定义词书一（猫条）」显示成「日语词书一（猫条）」。
+// 功能: 书单里把当前使用、且内容为日语的自定义词书显示成「日语词库(猫条版)」。
 //
 // 关键约束 (逆向自 Assembly-CSharp.dll, 2026-09-12):
-//   1. 前缀「自定义词书一」是硬编码字面量, 只出现在两处显示赋值:
+//   1. 前缀「自定义词书一~四」是硬编码字面量, 只出现在两处显示赋值:
 //        AddElementsToScrollView.AddNewElements()  (每日学习书单, 点击按下标)
 //        WordChooseButtonS10                         (选书按钮标签)
 //      括号里的昵称来自 SaveFile.es3 的 SelfBookName1..4 —— 玩家能改的只有这段。
 //   2. WordChooseButtonS10.SonBookChoose(int) 会**读回按钮标签文字**,
 //      取「（」之前那一段当作书名 (tem_ChosenBook -> ChosenBook_Para)。
 //      所以改显示必须同时兜住这个回读, 否则选书会失效。
-//   因此本插件: 平时把标签显示成「日语词书N（昵称）」, 在该方法执行前后
+//   因此本插件: 平时把识别为日语的自定义词书显示成「日语词库(猫条版)」, 在该方法执行前后
 //   临时换回/换回显示, 保证游戏读到的仍是「自定义词书N」。
 //
-// 设计: 只改 TMP 显示文本与那一个方法的读入时机, 不碰任何数据;
-//   反射扫描 + 全局开关, 游戏更新导致类型变化时自动降级不显示。
+// 设计: 只改识别为日语的自定义词书的 TMP 显示文本与那一个方法的读入时机, 不碰任何数据;
+//   日语音频界面改造也只在玩家实际使用该词书时启用。识别完全按内容，不绑定槽位。
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -34,31 +34,32 @@ namespace WcpBookName
             "自定义词书一", "自定义词书二", "自定义词书三", "自定义词书四"
         };
 
-        internal static readonly string[] Cosmetic =
-        {
-            "日语词书一", "日语词书二", "日语词书三", "日语词书四"
-        };
+        internal const string Cosmetic = "日语词库(猫条版)";
+        private const string LegacyCosmetic = "日语词书一";
 
-        internal static string ToCosmetic(string s)
+        internal static int SlotOfCanonicalText(string s)
         {
+            if (string.IsNullOrEmpty(s)) return -1;
             for (int i = 0; i < Canon.Length; i++)
-                s = s.Replace(Canon[i], Cosmetic[i]);
-            return s;
+                if (s.StartsWith(Canon[i], StringComparison.Ordinal)) return i;
+            return -1;
         }
 
-        internal static string ToCanonical(string s)
+        internal static string ToCanonical(string s, int slot)
         {
-            for (int i = 0; i < Cosmetic.Length; i++)
-                s = s.Replace(Cosmetic[i], Canon[i]);
+            if (string.IsNullOrEmpty(s)) return s;
+            if (s.StartsWith(Cosmetic, StringComparison.Ordinal) ||
+                s.StartsWith(LegacyCosmetic, StringComparison.Ordinal))
+            {
+                if (slot >= 0 && slot < Canon.Length) return Canon[slot];
+            }
             return s;
         }
 
-        // 「自定义词书N…」= 选书按钮标签(游戏会回读), 未打上补丁时不动它
+        // 「自定义词书N…」= 选书按钮标签(游戏会回读), 未打上补丁时不动它。
         internal static bool LooksLikeSlotLabel(string s)
         {
-            for (int i = 0; i < Canon.Length; i++)
-                if (s.StartsWith(Canon[i], StringComparison.Ordinal)) return true;
-            return false;
+            return SlotOfCanonicalText(s) >= 0;
         }
     }
 
@@ -87,7 +88,9 @@ namespace WcpBookName
                 if (label == null) return;
                 var s = label.text;
                 if (string.IsNullOrEmpty(s)) return;
-                var n = toCanonical ? Names.ToCanonical(s) : Names.ToCosmetic(s);
+                var n = toCanonical
+                    ? Names.ToCanonical(s, num)
+                    : BookNamePlugin.ToCosmeticIfManaged(s);
                 if (string.IsNullOrEmpty(n) || n == s) return;
                 label.text = n;
             }
@@ -99,7 +102,7 @@ namespace WcpBookName
         }
     }
 
-    [BepInPlugin("dev.hanserdesu.bookname", "WCP Book Name", "1.0.0")]
+    [BepInPlugin("dev.hanserdesu.bookname", "WCP Book Name", "1.1.0")]
     public class BookNamePlugin : BaseUnityPlugin
     {
         internal static ManualLogSource Log;
@@ -167,22 +170,88 @@ namespace WcpBookName
             new Dictionary<TMP_Text, string>();
         private readonly List<GameObject> _hiddenNodes = new List<GameObject>();
         private readonly List<GameObject> _hiddenSwitch = new List<GameObject>();
+        private readonly float[] _slotLangAt = new float[4];
+        private readonly int[] _slotLang = new int[4]; // 0=未知, 1=日语, 2=其它
         private bool _lastJpBook;
         private bool _groupLogged;
         private float _nextSwitchScan;
 
-        // 只有当前在学「自定义词书(日语)」时才做单词旁发音按钮的改造,
-        // 英语词书里 UK/US 是真实存在的区分, 不能动。
+        // 只有当前在学「实际内容为日语的自定义词书」时才改造单词旁发音按钮。
+        // 槽位不固定；英语自定义书和全部原版书里 UK/US 都保持游戏原样。
         internal static bool JapaneseBookSelected()
         {
             try
             {
                 var s = MyParameters.ChosenBook_Para;
                 if (string.IsNullOrEmpty(s)) return false;
-                return s.StartsWith("自定义词书", StringComparison.Ordinal)
-                    || s.StartsWith("日语词书", StringComparison.Ordinal);
+                int slot = Names.SlotOfCanonicalText(s);
+                if (slot < 0 && !s.StartsWith(Names.Cosmetic, StringComparison.Ordinal))
+                    return false;
+                var list = MyParameters.ChosenBook_List;
+                if (list == null || list.Count < 5) return false;
+                int n = list.Count < 40 ? list.Count : 40;
+                int jp = 0;
+                for (int i = 0; i < n; i++)
+                {
+                    if (LooksJapanese(list[i])) jp++;
+                }
+                return jp * 2 >= n;
             }
             catch (Exception) { return false; }
+        }
+
+        private static bool LooksJapanese(string word)
+        {
+            if (string.IsNullOrEmpty(word)) return false;
+            for (int i = 0; i < word.Length; i++)
+            {
+                char c = word[i];
+                if ((c >= 0x3040 && c <= 0x30FF) ||
+                    (c >= 0x3400 && c <= 0x4DBF) ||
+                    (c >= 0x4E00 && c <= 0x9FFF) ||
+                    (c >= 0xF900 && c <= 0xFAFF) ||
+                    (c >= 0xFF66 && c <= 0xFF9D) ||
+                    c == 0x3005 || c == 0x3006 || c == 0x3007)
+                    return true;
+            }
+            return false;
+        }
+
+        // 书名单独显示时没有 ChosenBook_List 可用，因此从 MyBook.es3 读这个槽自己的词表判定。
+        // 这是内容识别，不关心用户把词书导到了第几格；5 秒缓存避免每帧读存档。
+        internal static string ToCosmeticIfManaged(string label)
+        {
+            var plugin = Instance;
+            if (plugin == null) return label;
+            int slot = Names.SlotOfCanonicalText(label);
+            if (slot < 0 || !plugin.SlotIsJapanese(slot)) return label;
+            return Names.Cosmetic;
+        }
+
+        private bool SlotIsJapanese(int slot)
+        {
+            if (slot < 0 || slot >= _slotLang.Length) return false;
+            float now = Time.realtimeSinceStartup;
+            if (_slotLangAt[slot] > -1E8f && now - _slotLangAt[slot] < 5f)
+                return _slotLang[slot] == 1;
+            _slotLangAt[slot] = now;
+            _slotLang[slot] = 0;
+            try
+            {
+                string path = System.IO.Path.Combine(Application.persistentDataPath, "MyBook.es3");
+                string[] words = ES3.Load<string[]>("SelfBookList" + (slot + 1), path);
+                if (words == null || words.Length < 5) return false;
+                int n = words.Length < 40 ? words.Length : 40;
+                int jp = 0;
+                for (int i = 0; i < n; i++)
+                    if (LooksJapanese(words[i])) jp++;
+                _slotLang[slot] = (jp * 2 >= n) ? 1 : (jp == 0 ? 2 : 0);
+            }
+            catch (Exception e)
+            {
+                if (Log != null) Log.LogWarning("BookName: 读取槽位 " + (slot + 1) + " 词表失败: " + e.Message);
+            }
+            return _slotLang[slot] == 1;
         }
         private float _nextScan;
         private float _diagAt2;
@@ -192,8 +261,9 @@ namespace WcpBookName
         {
             Log = Logger;
             Instance = this;
+            for (int i = 0; i < _slotLangAt.Length; i++) _slotLangAt[i] = -1E9f;
             _enabled = Config.Bind("General", "Enabled", true,
-                "把书单里的「自定义词书N（昵称）」显示成「日语词书N（昵称）」。");
+                "把内容为日语的自定义词书显示成「日语词库(猫条版)」；不绑定固定槽位。");
             _jpLabels = Config.Bind("General", "JpSoundLabels", true,
                 "把单词发音按钮的英式/美式标记(UK/US)显示成 JP。");
             _singleJp = Config.Bind("General", "SingleJpBesideWord", true,
@@ -249,7 +319,7 @@ namespace WcpBookName
                 if (s.IndexOf("自定义词书", StringComparison.Ordinal) >= 0)
                 {
                     if (!_patched && Names.LooksLikeSlotLabel(s)) continue;
-                    var n = Names.ToCosmetic(s);
+                    var n = ToCosmeticIfManaged(s);
                     if (n == s) continue;
                     t.text = n;
                     _rewrites++;

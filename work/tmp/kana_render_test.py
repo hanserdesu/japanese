@@ -127,8 +127,12 @@ for w in words:
             # requirement: options show the kanji spelling + Chinese meaning
             if w not in opt:
                 missing_kanji.append((w, entry, opt))
-            # requirement: the kana stem must not be answerable by string matching
-            if kana in opt:
+            # invariant: the rewrite must not invent content -- it is exactly rest, or word + " " + rest
+            rest = strip_reading(entry)
+            if opt not in (rest, w + " " + rest):
+                fail.append((w, entry, opt, "invented content"))
+            # invariant: the option must not open with the kana reading (that would give the answer away)
+            if opt.startswith(kana):
                 leak.append((w, entry, opt))
         else:
             # no reading in the data -> stem stays as the kanji word (nothing we can do)

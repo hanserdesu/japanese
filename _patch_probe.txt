@@ -1,6 +1,0 @@
-line one
-    if (x.IndexOf("a",
-        StringComparison.Ordinal) >= 0) continue;
-line two
-line three
-line four

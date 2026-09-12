@@ -29,6 +29,7 @@ namespace WcpBookName
                 DumpAccentLabels();
                 DumpJpButtons();
                 DumpToggleButtons();
+                DumpWordSideIcons();
                 int n = DumpReadButtons();
                 DumpSentenceSources();
                 Line("=== end ===\n");
@@ -154,6 +155,42 @@ namespace WcpBookName
                     b.name, b.gameObject.activeSelf,
                     b.gameObject.activeInHierarchy, ev.ToString(), cs.ToString(),
                     PathOf(b.transform)));
+            }
+        }
+
+        // 单词旁那对「英/美」图标: 打印每个标签节点的容器、同级序号与激活
+        // 状态, 用来确认「两个 JP 同时显示」到底是哪两个节点。
+        private static void DumpWordSideIcons()
+        {
+            Line("--- word side icons (单词旁) ---");
+            var tmps = Resources.FindObjectsOfTypeAll(typeof(TMP_Text));
+            for (int i = 0; i < tmps.Length; i++)
+            {
+                var t = tmps[i] as TMP_Text;
+                if (t == null) continue;
+                var tx = (t.text ?? "").Trim();
+                if (!IsAccent(tx) && tx != "JP") continue;
+                var tr = t.transform;
+                bool near = false;
+                for (int d = 0; d < 6 && tr != null; d++)
+                {
+                    if (tr.name.IndexOf("scrollMeaningSquare",
+                            StringComparison.OrdinalIgnoreCase) >= 0)
+                    { near = true; break; }
+                    tr = tr.parent;
+                }
+                if (!near) continue;
+                var par = t.transform.parent;
+                var gpar = par == null ? null : par.parent;
+                Line(string.Format(
+                    "ICON '{0}' text='{1}' selfActive={2} inHier={3} parent='{4}' parentActive={5} parentSibling={6} grandparent='{7}' grandSibling={8}",
+                    t.name, t.text, t.gameObject.activeSelf,
+                    t.gameObject.activeInHierarchy,
+                    par == null ? "<null>" : par.name,
+                    par != null && par.gameObject.activeSelf,
+                    par == null ? -1 : par.GetSiblingIndex(),
+                    gpar == null ? "<null>" : gpar.name,
+                    gpar == null ? -1 : gpar.GetSiblingIndex()));
             }
         }
 

@@ -326,6 +326,11 @@ namespace WcpBookName
                         StringComparison.OrdinalIgnoreCase) >= 0) continue;
                 if (!LabelIsJp(b)) continue;
                 if (!IsSwitchLike(b, nm)) continue;
+                if (_hiddenSwitch.Contains(b.gameObject))
+                {
+                    b.gameObject.SetActive(false);
+                    continue;
+                }
                 b.gameObject.SetActive(false);
                 _hiddenSwitch.Add(b.gameObject);
                 Log.LogInfo("HideSwitch: " + path);
@@ -346,7 +351,7 @@ namespace WcpBookName
 
         private static bool IsSwitchLike(Button b, string nm)
         {
-            if (nm.IndexOf("SwitchSentence",
+            if (nm.IndexOf("Switch",
                     StringComparison.OrdinalIgnoreCase) >= 0) return true;
             int n = b.onClick.GetPersistentEventCount();
             for (int i = 0; i < n; i++)

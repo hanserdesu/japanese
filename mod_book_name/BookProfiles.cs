@@ -35,18 +35,12 @@ namespace WcpBookProfiles
     {
         internal const string Japanese = "ja";
 
-        // 猫条版 JLPT 四册。指纹基于排序后的完整词形集合，导入到任意槽位均相同。
+        // 猫条版 JLPT 合并单册。指纹基于排序后的完整词形集合，导入到任意槽位均相同。
         // 新语言词书只需在此添加新的 BookProfile；现有日语逻辑只接管 Language=ja。
         internal static readonly BookProfile[] All = new BookProfile[]
         {
-            new BookProfile("catbar-jlpt-n5n4", Japanese, "日语词库(猫条版)", 1293,
-                "10950ce79c5ddec598fa834b85f71ec0f87ae395bba16f0217f4d673f763832e"),
-            new BookProfile("catbar-jlpt-n3", Japanese, "日语词库(猫条版)", 1784,
-                "44f7d7ad1386dc0ca9c2662219a4de6cdc8564522eb381541e3c76df3b28419e"),
-            new BookProfile("catbar-jlpt-n2", Japanese, "日语词库(猫条版)", 1791,
-                "39787a3b46b9d00016be4401af30ad199bfc1bf13d724eda2e4f27bdc62d322a"),
-            new BookProfile("catbar-jlpt-n1", Japanese, "日语词库(猫条版)", 3463,
-                "702617886ef278c79c3f8b1c78e06021b4aa51e4d863d81d6757b9bf1dc5a568")
+            new BookProfile("catbar-jlpt-complete", Japanese, "日语词库(猫条版)", 7922,
+                "6d7a51c0c5d30dd63d8a6e3412bce1cf2419554fb8487cf5c8a205e43ac41663")
         };
 
         internal static BookProfile Match(IList<string> words)

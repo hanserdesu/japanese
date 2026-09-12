@@ -1,4 +1,4 @@
-// WCP JP Word List — BepInEx 5 插件 (C# 5 语法)  v1.6.0
+// WCP JP Word List — BepInEx 5 插件 (C# 5 语法)  v1.7.0
 //
 // 目的:
 //   A) 日语词书(游戏里就是 自定义词书一~四)与其它词书彻底互不干扰。
@@ -60,7 +60,7 @@ using WcpBookProfiles;
 
 namespace JpWordList
 {
-    [BepInPlugin("dev.hanserdesu.jpwordlist", "WCP JP Word List", "1.6.0")]
+    [BepInPlugin("dev.hanserdesu.jpwordlist", "WCP JP Word List", "1.7.0")]
     public class JpWordListPlugin : BaseUnityPlugin
     {
         internal const string ReviewRangeType = "复习范围词";
@@ -638,10 +638,12 @@ namespace JpWordList
 
         private static void ResetProgress()
         {
+            if (BookState() != 1) return;
+            _managedScopeActive = true;
+            TouchedIntFields.Add("S8Progress_Para");
+            TouchedIntFields.Add("S8LookBack_Para");
             MyParameters.S8Progress_Para = 0;
             MyParameters.S8LookBack_Para = 0;
-            ES3.Save("S8Progress_Para", 0);
-            ES3.Save("S8LookBack_Para", 0);
         }
 
         private static int LoadInt(string key, int fallback)
@@ -1285,16 +1287,56 @@ namespace JpWordList
 
         private static void SaveField(string key, List<string> list)
         {
-            try { ES3.Save(key, list); }
-            catch (Exception e) { Warn("写回 " + key + " 失败: " + e.Message); }
+            if (BookState() != 1) return;
+            _managedScopeActive = true;
+            TouchedListFields.Add(key);
             LogChange(key, list.Count, Sample(list));
         }
 
         private static void SaveField(string key, string[] arr)
         {
-            try { ES3.Save(key, arr); }
-            catch (Exception e) { Warn("写回 " + key + " 失败: " + e.Message); }
+            if (BookState() != 1) return;
+            _managedScopeActive = true;
+            TouchedArrayFields.Add(key);
             LogChange(key, arr.Length, Sample(arr));
+        }
+
+        // 共享队列原本由游戏保存。插件只改内存，离开受管词书时从该基线回填，
+        // 所以无论目标词书是什么语言，插件都不会把自己的筛选结果带过去。
+        private static void RestoreSharedFields()
+        {
+            foreach (string key in TouchedListFields)
+            {
+                try
+                {
+                    List<string> value = ES3.Load<List<string>>(key, new List<string>());
+                    SetParameterField(key, new List<string>(value));
+                }
+                catch (Exception e) { Warn("恢复 " + key + " 失败: " + e.Message); }
+            }
+            foreach (string key in TouchedArrayFields)
+            {
+                try
+                {
+                    string[] value = ES3.Load<string[]>(key, new string[0]);
+                    SetParameterField(key, (string[])value.Clone());
+                }
+                catch (Exception e) { Warn("恢复 " + key + " 失败: " + e.Message); }
+            }
+            foreach (string key in TouchedIntFields)
+                SetParameterField(key, LoadInt(key, 0));
+            TouchedListFields.Clear();
+            TouchedArrayFields.Clear();
+            TouchedIntFields.Clear();
+            Log.LogInfo("JPWordList: 已恢复游戏共享队列基线，离开猫条词书后不保留插件状态");
+        }
+
+        private static void SetParameterField(string key, object value)
+        {
+            FieldInfo field = typeof(MyParameters).GetField(key,
+                BindingFlags.Public | BindingFlags.Static);
+            if (field != null) field.SetValue(null, value);
+            else WarnOnce("restore:" + key, "找不到 MyParameters." + key + "，无法恢复该共享字段");
         }
 
         private static string Sample(List<string> list)

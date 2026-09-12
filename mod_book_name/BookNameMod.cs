@@ -103,7 +103,7 @@ namespace WcpBookName
         }
     }
 
-    [BepInPlugin("dev.hanserdesu.bookname", "WCP Book Name", "1.2.0")]
+    [BepInPlugin("dev.hanserdesu.bookname", "WCP Book Name", "1.3.0")]
     public class BookNamePlugin : BaseUnityPlugin
     {
         internal static ManualLogSource Log;

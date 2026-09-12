@@ -27,6 +27,10 @@ set REFS=/r:"%GAME%\BepInEx\core\BepInEx.dll" ^
  /out:"%~dp0JpWordListMod.dll" "%~dp0JpWordListMod.cs" "%~dp0..\mod_book_name\BookProfiles.cs"
 if errorlevel 1 (echo BUILD FAILED & exit /b 1)
 echo BUILD OK
+if "%WCP_NO_DEPLOY%"=="1" (
+  echo DEPLOY SKIPPED ^(WCP_NO_DEPLOY=1^)
+  exit /b 0
+)
 copy /y "%~dp0JpWordListMod.dll" "%GAME%\BepInEx\plugins\JpWordListMod.dll" >nul
 if errorlevel 1 (
   echo DEPLOY FAILED - game is probably running ^(dll locked^)

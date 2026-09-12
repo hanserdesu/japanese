@@ -1,4 +1,4 @@
-// WCP JP Word List — BepInEx 5 插件 (C# 5 语法)  v1.3.3
+// WCP JP Word List — BepInEx 5 插件 (C# 5 语法)  v1.4.0
 //
 // 目的:
 //   A) 日语词书(游戏里就是 自定义词书一~四)与其它词书彻底互不干扰。
@@ -23,6 +23,12 @@
 //        而这张队列 StartQuickTest 完全不碰, 还是上一轮遗留的内容。
 //      两张表不同源 → 题面出现「superiority + 猪肉/全部/停/破碎」这种英语题干配日语选项, 谁都不可能答对。
 //      所以: 词池一换, 题干队列/剩余/进度必须一起换(SetTestLists / SyncStemQueue), 且要在游戏读 need[0] 之前。
+//   H) 假名题干 / 汉字选项原先依赖 MyParameters.SelfBookMeaningDictionary, 而这张表只有
+//      SelfBookMeaningConnectIf 为真时游戏才从 MyBook.es3 载入(GetSelfBookMeaningAfterSet/SelfBookDictionaryGet)。
+//      实测该开关是 false(存档里没这个键), 日志里也没有「【自定义书籍字典加载】」, 于是内存字典是空的,
+//      KanaOf/KanjiOption 全部返回 null → 题干照旧显示汉字, 选项照旧带【假名】, 功能等于没生效。
+//      现在释义来源改成三级: 游戏内存字典 → 自己读 MyBook.es3 的 wordDictionaryN → 出题时顺手攒下的词条;
+//      而且题干读音优先直接从**游戏已经渲染出来的选项释义**(它就是「【假名】释义」)里取, 不依赖那张字典。
 //
 // 逆向依据 (Assembly-CSharp, 2026-09-12):
 //   · 战斗/复习四选一 = MultipleChoiceGenerator: 题干 = testWordText,
@@ -48,7 +54,7 @@ using UnityEngine;
 
 namespace JpWordList
 {
-    [BepInPlugin("dev.hanserdesu.jpwordlist", "WCP JP Word List", "1.3.3")]
+    [BepInPlugin("dev.hanserdesu.jpwordlist", "WCP JP Word List", "1.4.0")]
     public class JpWordListPlugin : BaseUnityPlugin
     {
         internal const string ReviewRangeType = "复习范围词";
@@ -66,6 +72,11 @@ namespace JpWordList
         // 存档里的词书名缓存(判断游戏是否已经读档)
         private static string _diskBook;
         private static float _diskBookAt = -1E9f;
+
+        // 本书释义字典(MyBook.es3 wordDictionaryN)缓存 + 出题时攒下的词条缓存
+        private static Dictionary<string, string> _bookDict;
+        private static int _bookDictIdx = -1;
+        private static readonly Dictionary<string, string> Harvested = new Dictionary<string, string>();
 
         // 换行 / 释义里转义过的换行 (游戏写的是两个反斜杠加 n)
         private static readonly string NL = ((char)10).ToString();
@@ -888,9 +899,6 @@ namespace JpWordList
             try
             {
                 string word = CurrentFightWord();
-                string kana = KanaOf(word);
-                if (kana != null && __instance.testWordText != null) __instance.testWordText.text = kana;
-
                 TextMeshProUGUI[] opts = new TextMeshProUGUI[] {
                     __instance.option1Text, __instance.option2Text,
                     __instance.option3Text, __instance.option4Text };
@@ -900,6 +908,19 @@ namespace JpWordList
                 TextMeshProUGUI[] words = new TextMeshProUGUI[] {
                     __instance.word1Text, __instance.word2Text,
                     __instance.word3Text, __instance.word4Text };
+
+                // 趁释义原文还在, 先取正确答案的假名读音, 并把见到的词条攒下来
+                string kana = null;
+                for (int i = 0; i < opts.Length; i++)
+                {
+                    if (opts[i] == null) continue;
+                    string w = (words[i] != null) ? words[i].text : null;
+                    Harvest(w, opts[i].text);
+                    if (kana == null && !string.IsNullOrEmpty(word) && w == word)
+                        kana = ReadingOf(CleanEntry(opts[i].text));
+                }
+                if (kana == null) kana = KanaOf(word);      // 兜底: 释义没带【假名】时查本书字典
+
                 for (int i = 0; i < opts.Length; i++)
                 {
                     if (opts[i] == null) continue;
@@ -908,6 +929,7 @@ namespace JpWordList
                     opts[i].text = txt;
                     if (optsSM[i] != null) optsSM[i].text = txt;
                 }
+                if (kana != null && __instance.testWordText != null) __instance.testWordText.text = kana;
             }
             catch (Exception e) { Warn("题干改写(战斗)异常: " + e.Message); }
         }
@@ -922,15 +944,24 @@ namespace JpWordList
                 string[] optWords = new string[] {
                     MyParameters.S9Option1_Para, MyParameters.S9Option2_Para,
                     MyParameters.S9Option3_Para, MyParameters.S9Option4_Para };
+
+                string kana = null;
                 if (__instance.optionText != null)
                 {
+                    for (int i = 0; i < __instance.optionText.Length && i < optWords.Length; i++)
+                    {
+                        if (__instance.optionText[i] == null) continue;
+                        Harvest(optWords[i], __instance.optionText[i].text);
+                        if (kana == null && !string.IsNullOrEmpty(word) && optWords[i] == word)
+                            kana = ReadingOf(CleanEntry(__instance.optionText[i].text));
+                    }
                     for (int i = 0; i < __instance.optionText.Length && i < optWords.Length; i++)
                     {
                         if (__instance.optionText[i] == null) continue;
                         __instance.optionText[i].text = KanjiOption(optWords[i], __instance.optionText[i].text);
                     }
                 }
-                string kana = KanaOf(word);
+                if (kana == null) kana = KanaOf(word);
                 if (kana != null) SetStemText(word, kana);
             }
             catch (Exception e) { Warn("题干改写(S9)异常: " + e.Message); }
@@ -974,8 +1005,13 @@ namespace JpWordList
         // 词条里取假名读音; 汉字词才有「【假名】」, 取不到返回 null
         internal static string KanaOf(string word)
         {
-            string entry = EntryOf(word);
-            if (entry == null) return null;
+            return ReadingOf(EntryOf(word));
+        }
+
+        // 从「【假名】中文释义〈词性〉」里取假名; 没有【】或括号里不是假名则返回 null
+        private static string ReadingOf(string entry)
+        {
+            if (string.IsNullOrEmpty(entry)) return null;
             int a = entry.IndexOf('【');
             if (a < 0) return null;
             int b = entry.IndexOf('】', a + 1);
@@ -986,31 +1022,110 @@ namespace JpWordList
             return kana;
         }
 
-        // 选项 = 「汉字写法 + 中文释义(去掉【假名】)」; 假名词或查不到时原样返回
+        // 去掉词条里的「【假名】」; 没有【】或去掉后为空则返回 null
+        private static string StripReading(string entry)
+        {
+            if (string.IsNullOrEmpty(entry)) return null;
+            int a = entry.IndexOf('【');
+            if (a < 0) return null;
+            int b = entry.IndexOf('】', a + 1);
+            if (b < 0) return null;
+            string rest = (entry.Substring(0, a) + entry.Substring(b + 1)).Trim();
+            return (rest.Length == 0) ? null : rest;
+        }
+
+        // 选项 = 「汉字写法 + 中文释义(去掉【假名】)」; 假名词或查不到时原样返回。
+        // 优先用游戏已经渲染出来的释义文本(它本身就是「【假名】释义」), 不依赖内存字典是否被填过。
         internal static string KanjiOption(string word, string orig)
         {
             if (string.IsNullOrEmpty(word) || string.IsNullOrEmpty(orig)) return orig;
-            string entry = EntryOf(word);
-            if (entry == null) return orig;
-            int a = entry.IndexOf('【');
-            if (a < 0) return orig;
-            int b = entry.IndexOf('】', a + 1);
-            if (b < 0) return orig;
-            string rest = (entry.Substring(0, a) + entry.Substring(b + 1)).Trim();
-            if (rest.Length == 0) return orig;
+            string rest = StripReading(CleanEntry(orig));
+            if (rest == null)
+            {
+                string entry = EntryOf(word);
+                if (entry == null) return orig;
+                rest = StripReading(entry);
+                if (rest == null) return orig;
+            }
+            // 释义里已经带了这个词的汉字写法(例如「全部；所有〈名〉」)就不必再接一遍
+            if (rest.StartsWith(word, StringComparison.Ordinal)) return rest;
             return word + " " + rest;
         }
 
+        // 释义来源(按可靠性): 游戏内存字典 -> 自己读的 MyBook.es3 wordDictionaryN -> 出题时攒下的词条。
+        // 不能只认 MyParameters.SelfBookMeaningDictionary: 实测 SelfBookMeaningConnectIf 为 false 时它是空的。
         private static string EntryOf(string word)
         {
             if (string.IsNullOrEmpty(word)) return null;
-            Dictionary<string, string> d = MyParameters.SelfBookMeaningDictionary;
+            string v = Lookup(MyParameters.SelfBookMeaningDictionary, word);
+            if (v == null) v = Lookup(BookDict(), word);
+            if (v == null) v = Lookup(Harvested, word);
+            if (v == null) return null;
+            return CleanEntry(v);
+        }
+
+        private static string Lookup(Dictionary<string, string> d, string word)
+        {
             if (d == null || d.Count == 0) return null;
             string v;
-            if (d.TryGetValue(word, out v) && !string.IsNullOrEmpty(v)) return CleanEntry(v);
+            if (d.TryGetValue(word, out v) && !string.IsNullOrEmpty(v)) return v;
             string low = word.ToLower();
-            if (low != word && d.TryGetValue(low, out v) && !string.IsNullOrEmpty(v)) return CleanEntry(v);
+            if (low != word && d.TryGetValue(low, out v) && !string.IsNullOrEmpty(v)) return v;
             return null;
+        }
+
+        // 出题/学习界面渲染出来的释义就是「【假名】释义」, 见到就记下来, 之后题干要假名时直接查
+        private static void Harvest(string word, string meaning)
+        {
+            if (string.IsNullOrEmpty(word) || string.IsNullOrEmpty(meaning)) return;
+            if (meaning.IndexOf('【') < 0) return;
+            string cur;
+            if (Harvested.TryGetValue(word, out cur) && !string.IsNullOrEmpty(cur)) return;
+            Harvested[word] = CleanEntry(meaning);
+        }
+
+        // 当前自定义词书序号(自定义词书一~四 / 日语词书一~四, 允许带昵称后缀); 认不出返回 0
+        private static int SelfBookIndexOf(string name)
+        {
+            if (string.IsNullOrEmpty(name)) return 0;
+            if (!name.StartsWith("自定义词书", StringComparison.Ordinal) &&
+                !name.StartsWith("日语词书", StringComparison.Ordinal)) return 0;
+            for (int i = 0; i < name.Length; i++)
+            {
+                char c = name[i];
+                if (c == '一') return 1;
+                if (c == '二') return 2;
+                if (c == '三') return 3;
+                if (c == '四') return 4;
+                if (c >= '1' && c <= '4') return c - '0';
+            }
+            return 0;
+        }
+
+        // MyBook.es3 里那份本书释义字典。游戏只在 SelfBookMeaningConnectIf 为真时才读它,
+        // 那开关实测是关的, 所以这里自己读一份(按词书序号缓存, 换书才重读)。
+        private static Dictionary<string, string> BookDict()
+        {
+            int idx = SelfBookIndexOf(MyParameters.ChosenBook_Para);
+            if (idx <= 0) return null;
+            if (_bookDictIdx == idx) return _bookDict;
+            _bookDictIdx = idx;
+            _bookDict = null;
+            try
+            {
+                string path = System.IO.Path.Combine(Application.persistentDataPath, "MyBook.es3");
+                _bookDict = ES3.Load<Dictionary<string, string>>("wordDictionary" + idx, path);
+                if (_bookDict != null && Log != null)
+                {
+                    Log.LogInfo("JPWordList: 本书释义字典 wordDictionary" + idx + " 载入 " +
+                                _bookDict.Count + " 条 (题干假名 / 汉字选项用)");
+                }
+            }
+            catch (Exception e)
+            {
+                WarnOnce("bookdict" + idx, "读取 MyBook.es3 wordDictionary" + idx + " 失败: " + e.Message);
+            }
+            return _bookDict;
         }
 
         private static string CleanEntry(string v)

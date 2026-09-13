@@ -118,6 +118,10 @@ namespace WcpBookName
         internal void ForceJpLabels(Component c)
         {
             if (c == null) return;
+            // Harmony 补丁在 Enabled=false 时仍会被游戏调用。若不在这里再次
+            // 检查配置，运行中关闭插件后新的界面仍会被写成 JP。
+            if (_enabled == null || !_enabled.Value ||
+                _jpLabels == null || !_jpLabels.Value) return;
             if (!JapaneseBookSelected()) return;
             var texts = c.GetComponentsInChildren<TMP_Text>(true);
             for (int i = 0; i < texts.Length; i++)
@@ -278,7 +282,13 @@ namespace WcpBookName
 
         void Update()
         {
-            if (!_enabled.Value) return;
+            if (!_enabled.Value)
+            {
+                // 配置可以在运行中改动。撤销只涉及本插件记账过的 UI，不能让
+                // 已关闭的插件把 JP 标签或隐藏节点带到其它词书。
+                RestoreWordSide();
+                return;
+            }
             if (Time.unscaledTime < _nextScan) return;
             _nextScan = Time.unscaledTime + ScanInterval;
             // 诊断: 只要 BepInEx/diag.on 存在, 每 12s 导一次现场
@@ -332,7 +342,10 @@ namespace WcpBookName
             if (jpBook)
             {
                 if (_singleJp.Value) EnforceSingleWordJp();
+                else RestoreHiddenNodes();
                 if (_hideSwitch.Value) HideRedundantSwitchButton();
+                else RestoreHiddenSwitch();
+                if (!_jpLabels.Value) RestoreLabels();
             }
             else RestoreWordSide();
         }
@@ -340,6 +353,13 @@ namespace WcpBookName
         // 离开日语词书(切到英语词书)时, 把我们改过的东西还原,
         // 避免影响其它词书里 UK/US 本身的含义。
         private void RestoreWordSide()
+        {
+            RestoreLabels();
+            RestoreHiddenNodes();
+            RestoreHiddenSwitch();
+        }
+
+        private void RestoreLabels()
         {
             if (_labelBackup.Count > 0)
             {
@@ -351,6 +371,10 @@ namespace WcpBookName
                 }
                 _labelBackup.Clear();
             }
+        }
+
+        private void RestoreHiddenNodes()
+        {
             if (_hiddenNodes.Count > 0)
             {
                 for (int i = 0; i < _hiddenNodes.Count; i++)
@@ -360,6 +384,10 @@ namespace WcpBookName
                 }
                 _hiddenNodes.Clear();
             }
+        }
+
+        private void RestoreHiddenSwitch()
+        {
             if (_hiddenSwitch.Count > 0)
             {
                 for (int i = 0; i < _hiddenSwitch.Count; i++)

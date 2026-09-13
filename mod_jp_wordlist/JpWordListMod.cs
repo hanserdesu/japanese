@@ -168,6 +168,9 @@ namespace JpWordList
 
         // 跨词书启动守卫: 每次进游戏只做一次
         private static bool _crossBookGuardDone;
+        // Enabled 配置可在游戏中修改。关闭后仍需撤销此前由插件落盘的共享队列，
+        // 否则切到其它词书的那个瞬间可能读到日语残留。
+        private static bool _disabledCleanupDone;
 
         // 发音修正: 本地单词音频按「汉字形」命名(全部.mp3/歯医者.mp3), 而题干会被改写成假名
         // (ぜんぶ/しかいしゃ)。VocabularyAudioPlayer 用的是 text1.text, 查 <假名>.mp3 必然落空
@@ -398,7 +401,11 @@ namespace JpWordList
         // 离开时先恢复进入本词书前由游戏保存的共享队列，再让游戏按当前词书重算。
         private static void PostBookChange()
         {
-            if (!IsEnabled()) return;
+            if (!IsEnabled())
+            {
+                CleanupDisabledState();
+                return;
+            }
             try
             {
                 _slotProfileAt = -1E9f; // 换书了, 槽位记录重读
@@ -423,7 +430,12 @@ namespace JpWordList
         // 兜底轮询: 覆盖没有补丁可打的读取点 (选词界面/重排/换标签)
         private void Update()
         {
-            if (!IsEnabled()) return;
+            if (!IsEnabled())
+            {
+                CleanupDisabledState();
+                return;
+            }
+            _disabledCleanupDone = false;
             if (Time.unscaledTime < _nextPoll) return;
             _nextPoll = Time.unscaledTime + 1f;
             try { CrossBookGuard(); }
@@ -1975,6 +1987,26 @@ namespace JpWordList
             bool ended = RestoreSharedFields();
             Warn("跨词书守卫: 已还原插件接管前的测试队列" +
                  (ended ? " (残留日语队列改为清空并结束本轮测试)" : ""));
+        }
+
+        // 配置关闭不等于已经还原存档；Harmony 补丁会停用，但游戏仍可能在
+        // 同一帧切换词书。因此这里不依赖 IsEnabled，只处理插件自己的接管记录。
+        private static void CleanupDisabledState()
+        {
+            if (_disabledCleanupDone) return;
+            if (!BookReady()) return;
+            try
+            {
+                List<string> ownedLists = LoadStringList(OwnedListKey);
+                List<string> ownedArrs = LoadStringList(OwnedArrayKey);
+                if (ownedLists.Count > 0 || ownedArrs.Count > 0)
+                    RestoreSharedFields();
+                _disabledCleanupDone = true;
+            }
+            catch (Exception e)
+            {
+                Warn("禁用后还原共享队列失败: " + e.Message);
+            }
         }
 
         private static void RestoreList(string key, List<string> value)

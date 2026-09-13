@@ -28,6 +28,7 @@ namespace SentenceAudioMod
     public class SentenceAudioPlugin : BaseUnityPlugin
     {
         internal static ManualLogSource Log;
+        private static SentenceAudioPlugin Instance;
         private const float ScanInterval = 0.3f;
         private const string AudioDirName = "sentence_audio";
 
@@ -96,6 +97,7 @@ namespace SentenceAudioMod
         void Awake()
         {
             Log = Logger;
+            Instance = this;
             PatchSoundTheWord();
             try
             {
@@ -290,7 +292,13 @@ namespace SentenceAudioMod
 
         void Update()
         {
-            if (_enabled != null && !_enabled.Value) return;
+            if (_enabled != null && !_enabled.Value)
+            {
+                // 运行中关闭配置也必须立即撤销自己的监听、标签和动态按钮；
+                // 否则切到其它词书后会留下日语 UI 状态。
+                RestoreOtherBookUi();
+                return;
+            }
             if (Time.unscaledTime < _nextScan) return;
             _nextScan = Time.unscaledTime + ScanInterval;
             try { ScanAll(); }
@@ -331,6 +339,17 @@ namespace SentenceAudioMod
                 }
             }
             catch (Exception e) { Log.LogError("diag failed: " + e); }
+        }
+
+        void OnDisable()
+        {
+            RestoreOtherBookUi();
+        }
+
+        void OnDestroy()
+        {
+            RestoreOtherBookUi();
+            if (Instance == this) Instance = null;
         }
 
         private void ScanAll()
@@ -475,6 +494,17 @@ namespace SentenceAudioMod
             }
         }
 
+        // Harmony 前缀的最后一道作用域检查。JpReadTag 在 Destroy 后会等到帧末
+        // 才真正消失，所以不能只看标签；切书或关闭插件后的这一帧也不应拦截其它书的 TTS。
+        private bool IsActivelyTakingOver(Button button)
+        {
+            if (button == null || _enabled == null || !_enabled.Value) return false;
+            if (!ManagedJapaneseBookSelected()) return false;
+            ReadBtnState state;
+            return _readStates.TryGetValue(button, out state) &&
+                state != null && state.actionAttached;
+        }
+
         // 该序号按钮当前应播放的本地日语 mp3。
         // 依次尝试当前界面的例句来源, 用「能命中本地音频」来判定正确来源,
         // 换词时每次都会重算, 不会沿用上一个词的映射。
@@ -584,7 +614,10 @@ namespace SentenceAudioMod
                     BindingFlags.Instance);
                 if (f == null) return true;
                 var b = f.GetValue(__instance) as Button;
-                if (b != null && b.GetComponent<JpReadTag>() != null)
+                var plugin = Instance;
+                if (plugin != null && b != null &&
+                    plugin.IsActivelyTakingOver(b) &&
+                    b.GetComponent<JpReadTag>() != null)
                 {
                     Diag("blocked english TTS on " + b.name);
                     return false;   // 我们接管的例句按钮: 不触发英文发音

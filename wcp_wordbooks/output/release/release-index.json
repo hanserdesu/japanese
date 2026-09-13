@@ -1,10 +1,10 @@
 {
-  "main_release": "wcp-jp-v1.0.0",
+  "main_release": "wcp-jp-v1.1.0",
   "resource_release": "wcp-jp-resources-v1.0.0",
   "core_installer": {
-    "name": "WCP日语词书一键安装包-wcp-jp-v1.0.0.zip",
-    "size": 11602950,
-    "sha256": "4e4f824e45d4130b30688f95eb9dc30db7151eae5b8964a8a45135ed7076fc28"
+    "name": "WCP日语词书一键安装包-wcp-jp-v1.1.0.zip",
+    "size": 12246696,
+    "sha256": "d76fb5d6ba73858188f1e7dedea1d78cef8e992faa7bab6b2553cfdf4f4e9783"
   },
   "resource_manifest": "release-manifest.json"
 }

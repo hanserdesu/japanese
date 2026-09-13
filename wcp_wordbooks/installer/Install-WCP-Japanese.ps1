@@ -80,15 +80,46 @@ if ($candidates.Count -gt 1 -and -not ($candidates -contains $logPath)) {
 }
 
 $bepRoot = Join-Path $game 'BepInEx'
-if (-not (Test-Path -LiteralPath (Join-Path $bepRoot 'core\BepInEx.dll'))) {
-    Write-Host "找到游戏目录但没有 BepInEx 5：$game" -ForegroundColor Red
-    Fail '请先安装 BepInEx 5，再重新运行本安装器。'
-}
-
 $payload = Join-Path $PSScriptRoot 'payload'
 $plugins = Join-Path $payload 'plugins'
 $data = Join-Path $env:USERPROFILE 'AppData\LocalLow\WCP\wcp'
 New-Item -ItemType Directory -Force -Path $data | Out-Null
+$stamp = Get-Date -Format 'yyyyMMdd_HHmmss'
+$backup = Join-Path $data "jpmod_backups\$stamp"
+New-Item -ItemType Directory -Force -Path $backup | Out-Null
+
+$bepPayload = Join-Path $payload 'bepinex'
+$bepCore = Join-Path $bepRoot 'core\BepInEx.dll'
+$bepRootFiles = @('.doorstop_version', 'BepInEx-changelog.txt', 'doorstop_config.ini', 'winhttp.dll')
+$needBepFramework = -not (Test-Path -LiteralPath $bepCore)
+$needBepBootstrap = @($bepRootFiles | Where-Object { -not (Test-Path -LiteralPath (Join-Path $game $_)) }).Count -gt 0
+if ($needBepFramework -or $needBepBootstrap) {
+    if (-not (Test-Path -LiteralPath (Join-Path $bepPayload 'BepInEx\core\BepInEx.dll'))) {
+        Fail '安装包缺少内置 BepInEx 运行环境。'
+    }
+    if (Test-Path -LiteralPath $bepRoot) {
+        Copy-Item -LiteralPath $bepRoot -Destination (Join-Path $backup 'BepInEx-before-install') -Recurse -Force
+    }
+    foreach ($name in $bepRootFiles) {
+        $existing = Join-Path $game $name
+        if (Test-Path -LiteralPath $existing) {
+            Copy-Item -LiteralPath $existing -Destination (Join-Path $backup $name) -Force
+        }
+    }
+    foreach ($name in $bepRootFiles) {
+        $src = Join-Path $bepPayload "root\$name"
+        if (-not (Test-Path -LiteralPath $src)) { Fail "安装包缺少 BepInEx 启动文件：$name" }
+        Copy-Item -LiteralPath $src -Destination (Join-Path $game $name) -Force
+    }
+    if ($needBepFramework) {
+        New-Item -ItemType Directory -Force -Path $bepRoot | Out-Null
+        Copy-Item -Path (Join-Path $bepPayload 'BepInEx\*') -Destination $bepRoot -Recurse -Force
+        Write-Host '已安装内置 BepInEx 5 运行环境。'
+    } else {
+        Write-Host '已补齐 BepInEx 启动文件，保留现有 BepInEx 核心。'
+    }
+}
+
 $releaseManifestPath = Join-Path $PSScriptRoot 'release-manifest.json'
 if (-not (Test-Path -LiteralPath $releaseManifestPath)) { Fail '安装包缺少 release-manifest.json。' }
 $release = Get-Content -LiteralPath $releaseManifestPath -Raw -Encoding UTF8 | ConvertFrom-Json
@@ -148,10 +179,6 @@ Write-Host '正在解压单词音频...'
 Expand-Archive -LiteralPath $wordZip -DestinationPath (Join-Path $audioStage 'vocabulary') -Force
 Write-Host '正在解压例句音频...'
 Expand-Archive -LiteralPath $sentenceZip -DestinationPath (Join-Path $audioStage 'sentence_audio') -Force
-$stamp = Get-Date -Format 'yyyyMMdd_HHmmss'
-$backup = Join-Path $data "jpmod_backups\$stamp"
-New-Item -ItemType Directory -Force -Path $backup | Out-Null
-
 foreach ($name in @('MyBook.es3', 'SaveFile.es3')) {
     $src = Join-Path $data $name
     if (Test-Path -LiteralPath $src) { Copy-Item -LiteralPath $src -Destination (Join-Path $backup $name) }

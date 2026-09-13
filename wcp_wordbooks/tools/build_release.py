@@ -22,7 +22,7 @@ ROOT = Path(__file__).resolve().parent.parent
 OUT = ROOT / 'output'
 PKG = OUT / 'installer_pkg' / 'WCP日语词书安装包'
 RELEASE = OUT / 'release'
-MAIN_TAG = 'wcp-jp-v1.0.0'
+MAIN_TAG = 'wcp-jp-v1.1.0'
 RESOURCE_TAG = 'wcp-jp-resources-v1.0.0'
 
 
@@ -59,8 +59,14 @@ def main():
     RELEASE.mkdir(parents=True, exist_ok=True)
     word_zip = RELEASE / 'wcp-japanese-audio-words.zip'
     sentence_zip = RELEASE / 'wcp-japanese-audio-sentences.zip'
-    zip_tree(words, word_zip)
-    zip_tree(sentences, sentence_zip)
+    if '--reuse-audio' not in sys.argv or not word_zip.exists():
+        zip_tree(words, word_zip)
+    else:
+        print(f'reuse {word_zip.name}')
+    if '--reuse-audio' not in sys.argv or not sentence_zip.exists():
+        zip_tree(sentences, sentence_zip)
+    else:
+        print(f'reuse {sentence_zip.name}')
 
     base = f'https://github.com/hanserdesu/japanese/releases/download/{RESOURCE_TAG}'
     assets = []

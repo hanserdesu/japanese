@@ -13,6 +13,8 @@
 用法: python tools/build_installer_payload.py [--skip-audio]
 """
 import json
+import os
+import re
 import shutil
 import sqlite3
 import sys
@@ -39,6 +41,79 @@ PLUGIN_FILES = {
     'BookNameMod.dll': ROOT.parent / 'mod_book_name' / 'BookNameMod.dll',
     'SentenceAudioMod.dll': ROOT.parent / 'mod_sentence_audio' / 'SentenceAudioMod.dll',
 }
+
+BEPINEX_ROOT_FILES = ['.doorstop_version', 'BepInEx-changelog.txt',
+                      'doorstop_config.ini', 'winhttp.dll']
+
+
+def find_game_dir():
+    """Find the local WCP install used to collect the exact BepInEx runtime."""
+    candidates = []
+    explicit = os.environ.get('WCP_GAME_DIR')
+    if explicit:
+        candidates.append(Path(explicit))
+    try:
+        import winreg
+        for hive, key in ((winreg.HKEY_CURRENT_USER, r'Software\Valve\Steam'),
+                          (winreg.HKEY_LOCAL_MACHINE, r'SOFTWARE\WOW6432Node\Valve\Steam'),
+                          (winreg.HKEY_LOCAL_MACHINE, r'SOFTWARE\Valve\Steam')):
+            try:
+                with winreg.OpenKey(hive, key) as handle:
+                    for name in ('SteamPath', 'InstallPath'):
+                        try:
+                            candidates.append(Path(winreg.QueryValueEx(handle, name)[0]))
+                        except OSError:
+                            pass
+            except OSError:
+                pass
+    except ImportError:
+        pass
+    libraries = []
+    for root in candidates:
+        if root not in libraries:
+            libraries.append(root)
+        vdf = root / 'steamapps' / 'libraryfolders.vdf'
+        if vdf.exists():
+            raw = vdf.read_text(encoding='utf-8', errors='ignore')
+            for match in re.finditer(r'"path"\s*"([^"]+)"', raw):
+                path = Path(match.group(1).replace('\\\\', '\\'))
+                if path not in libraries:
+                    libraries.append(path)
+    for library in libraries:
+        game = library / 'steamapps' / 'common' / 'WCP-WordGirlgriend'
+        if (game / 'wcp_Data' / 'Managed' / 'Assembly-CSharp.dll').exists():
+            return game
+    return None
+
+
+def collect_bepinex_runtime():
+    """Copy clean loader/runtime files, excluding logs, cache, and user plugins."""
+    source_text = os.environ.get('WCP_BEPINEX_SOURCE')
+    game = Path(source_text) if source_text else find_game_dir()
+    if game is None:
+        raise FileNotFoundError('cannot find WCP game directory for BepInEx collection')
+    source = game / 'BepInEx'
+    if not (source / 'core' / 'BepInEx.dll').exists():
+        raise FileNotFoundError(f'BepInEx 5 runtime not found: {source}')
+    target = PAYLOAD / 'bepinex'
+    root_target = target / 'root'
+    core_target = target / 'BepInEx' / 'core'
+    config_target = target / 'BepInEx' / 'config'
+    root_target.mkdir(parents=True)
+    core_target.mkdir(parents=True)
+    config_target.mkdir(parents=True)
+    for name in BEPINEX_ROOT_FILES:
+        src = game / name
+        if not src.exists():
+            raise FileNotFoundError(f'BepInEx bootstrap file not found: {src}')
+        shutil.copy2(src, root_target / name)
+    for src in (source / 'core').iterdir():
+        if src.is_file():
+            shutil.copy2(src, core_target / src.name)
+    default_cfg = source / 'config' / 'BepInEx.cfg'
+    if default_cfg.exists():
+        shutil.copy2(default_cfg, config_target / default_cfg.name)
+    print(f'bepinex runtime: {source} -> {target}')
 
 
 def build_combined_book_payload():
@@ -151,6 +226,7 @@ def main():
     (PAYLOAD / 'plugins').mkdir()
     (PAYLOAD / 'jp_db_payload').mkdir()
     (PAYLOAD / 'audio').mkdir()
+    collect_bepinex_runtime()
 
     words, route = collect_words()
     build_additions(words, route)
@@ -202,6 +278,7 @@ def main():
         'stages': 5,
         'route_rows': len(route),
         'skip_audio': skip_audio,
+        'bundled_bepinex': True,
         'plugins': sorted(PLUGIN_FILES),
         'auto_import': True,
         'size_mb': round(total / 1e6, 1),

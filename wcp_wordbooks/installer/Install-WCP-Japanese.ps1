@@ -171,7 +171,7 @@ public sealed class WcpJapaneseZipSession
                     string parent = Path.GetDirectoryName(target);
                     if (!String.IsNullOrEmpty(parent)) Directory.CreateDirectory(parent);
                     using (Stream input = entry.Open())
-                    using (FileStream output = new FileStream(target, FileMode.Create, FileAccess.Write, FileShare.None))
+                    using (FileStream output = new FileStream(ExtendedPathIfNeeded(target), FileMode.Create, FileAccess.Write, FileShare.None))
                     {
                         input.CopyTo(output);
                     }
@@ -187,6 +187,25 @@ public sealed class WcpJapaneseZipSession
         }
     }
 
+    private static string ExtendedPathIfNeeded(string path)
+    {
+        string name = Path.GetFileName(path);
+        if (string.IsNullOrEmpty(name)) return path;
+        string stem = name;
+        int dot = name.IndexOf('.');
+        if (dot >= 0) stem = name.Substring(0, dot);
+        string upper = stem.ToUpperInvariant();
+        if (upper == "AUX" || upper == "CON" || upper == "PRN" || upper == "NUL")
+            return @"\\?\" + path;
+        if ((upper.StartsWith("COM") || upper.StartsWith("LPT")) && upper.Length > 3)
+        {
+            int n;
+            if (int.TryParse(upper.Substring(3), out n) && n >= 1 && n <= 9)
+                return @"\\?\" + path;
+        }
+        return path;
+    }
+
     private void SetError(string text)
     {
         lock (ErrorLock) { if (ErrorText == null) ErrorText = text; }
@@ -198,6 +217,431 @@ public sealed class WcpJapaneseZipSession
     } else {
         Add-Type -TypeDefinition $zipSource -Language CSharp -ReferencedAssemblies $zipReferences -ErrorAction Stop
     }
+}
+
+
+function Ensure-Es3Helper {
+    if ('WcpEs3Helper' -as [type]) { return }
+    $es3Source = @'
+using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.IO;
+using System.Text;
+
+public static class WcpEs3Helper
+{
+    public static Dictionary<string, object> ParseJson(string json)
+    {
+        int idx = 0;
+        return ParseObject(json, ref idx);
+    }
+
+    private static void SkipWhite(string s, ref int i)
+    {
+        while (i < s.Length && (s[i] == ' ' || s[i] == '\t' || s[i] == '\r' || s[i] == '\n')) i++;
+    }
+
+    private static object ParseValue(string s, ref int i)
+    {
+        SkipWhite(s, ref i);
+        if (i >= s.Length) return null;
+        char c = s[i];
+        if (c == '{') return ParseObject(s, ref i);
+        if (c == '[') return ParseArray(s, ref i);
+        if (c == '"') return ParseString(s, ref i);
+        if (c == 't') { i += 4; return true; }
+        if (c == 'f') { i += 5; return false; }
+        if (c == 'n') { i += 4; return null; }
+        return ParseNumber(s, ref i);
+    }
+
+    public static Dictionary<string, object> ParseObject(string s, ref int i)
+    {
+        var dict = new Dictionary<string, object>(StringComparer.Ordinal);
+        if (i >= s.Length || s[i] != '{') return dict;
+        i++;
+        while (i < s.Length)
+        {
+            SkipWhite(s, ref i);
+            if (i >= s.Length || s[i] == '}') { if (i < s.Length) i++; break; }
+            string key = ParseString(s, ref i);
+            SkipWhite(s, ref i);
+            if (i < s.Length && s[i] == ':') i++;
+            object val = ParseValue(s, ref i);
+            dict[key] = val;
+            SkipWhite(s, ref i);
+            if (i < s.Length && s[i] == ',') i++;
+            else if (i < s.Length && s[i] == '}') { i++; break; }
+        }
+        return dict;
+    }
+
+    public static List<object> ParseArray(string s, ref int i)
+    {
+        var list = new List<object>();
+        if (i >= s.Length || s[i] != '[') return list;
+        i++;
+        while (i < s.Length)
+        {
+            SkipWhite(s, ref i);
+            if (i >= s.Length || s[i] == ']') { if (i < s.Length) i++; break; }
+            object val = ParseValue(s, ref i);
+            list.Add(val);
+            SkipWhite(s, ref i);
+            if (i < s.Length && s[i] == ',') i++;
+            else if (i < s.Length && s[i] == ']') { i++; break; }
+        }
+        return list;
+    }
+
+    public static string ParseString(string s, ref int i)
+    {
+        SkipWhite(s, ref i);
+        if (i >= s.Length || s[i] != '"') return "";
+        i++;
+        int start = i;
+        StringBuilder sb = null;
+        while (i < s.Length)
+        {
+            char c = s[i++];
+            if (c == '"')
+            {
+                if (sb == null) return s.Substring(start, i - 1 - start);
+                return sb.ToString();
+            }
+            if (c == '\\')
+            {
+                if (sb == null)
+                {
+                    sb = new StringBuilder(64);
+                    sb.Append(s, start, i - 1 - start);
+                }
+                if (i >= s.Length) break;
+                char esc = s[i++];
+                if (esc == '"') sb.Append('"');
+                else if (esc == '\\') sb.Append('\\');
+                else if (esc == '/') sb.Append('/');
+                else if (esc == 'b') sb.Append('\b');
+                else if (esc == 'f') sb.Append('\f');
+                else if (esc == 'n') sb.Append('\n');
+                else if (esc == 'r') sb.Append('\r');
+                else if (esc == 't') sb.Append('\t');
+                else if (esc == 'u' && i + 4 <= s.Length)
+                {
+                    string hex = s.Substring(i, 4);
+                    i += 4;
+                    sb.Append((char)Convert.ToInt32(hex, 16));
+                }
+            }
+            else if (sb != null)
+            {
+                sb.Append(c);
+            }
+        }
+        return sb != null ? sb.ToString() : "";
+    }
+
+    private static object ParseNumber(string s, ref int i)
+    {
+        int start = i;
+        if (i < s.Length && s[i] == '-') i++;
+        while (i < s.Length && (char.IsDigit(s[i]) || s[i] == '.' || s[i] == 'e' || s[i] == 'E' || s[i] == '+' || s[i] == '-')) i++;
+        string num = s.Substring(start, i - start);
+        long l;
+        if (long.TryParse(num, out l)) return l;
+        double d;
+        if (double.TryParse(num, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out d)) return d;
+        return num;
+    }
+
+    public static void Serialize(object obj, StringBuilder sb, int indent)
+    {
+        if (obj == null) { sb.Append("null"); return; }
+        if (obj is string)
+        {
+            sb.Append('"');
+            foreach (char c in (string)obj)
+            {
+                if (c == '"') sb.Append("\\\"");
+                else if (c == '\\') sb.Append("\\\\");
+                else if (c == '\b') sb.Append("\\b");
+                else if (c == '\f') sb.Append("\\f");
+                else if (c == '\n') sb.Append("\\n");
+                else if (c == '\r') sb.Append("\\r");
+                else if (c == '\t') sb.Append("\\t");
+                else if (c < 32) sb.AppendFormat("\\u{0:x4}", (int)c);
+                else sb.Append(c);
+            }
+            sb.Append('"');
+            return;
+        }
+        if (obj is bool) { sb.Append((bool)obj ? "true" : "false"); return; }
+        if (obj is IDictionary)
+        {
+            var dict = (IDictionary)obj;
+            if (dict.Count == 0) { sb.Append("{}"); return; }
+            sb.Append("{\r\n");
+            int count = 0;
+            string pad = new string('\t', indent + 1);
+            foreach (DictionaryEntry kv in dict)
+            {
+                if (count++ > 0) sb.Append(",\r\n");
+                sb.Append(pad);
+                Serialize(kv.Key.ToString(), sb, indent + 1);
+                sb.Append(" : ");
+                Serialize(kv.Value, sb, indent + 1);
+            }
+            sb.Append("\r\n" + new string('\t', indent) + "}");
+            return;
+        }
+        if (obj is IEnumerable && !(obj is string))
+        {
+            var list = (IEnumerable)obj;
+            sb.Append("[");
+            int count = 0;
+            foreach (var item in list)
+            {
+                if (count++ > 0) sb.Append(", ");
+                Serialize(item, sb, indent);
+            }
+            sb.Append("]");
+            return;
+        }
+        if (obj is double || obj is float)
+        {
+            sb.Append(Convert.ToString(obj, System.Globalization.CultureInfo.InvariantCulture));
+            return;
+        }
+        sb.Append(obj.ToString());
+    }
+
+    public static bool IsSaveCorrupted(string savePath)
+    {
+        if (!File.Exists(savePath)) return false;
+        try
+        {
+            string text = File.ReadAllText(savePath, Encoding.UTF8);
+            var doc = ParseJson(text);
+            if (doc.Count == 0) return true;
+            int typeMissing = 0;
+            foreach (var kv in doc)
+            {
+                var child = kv.Value as Dictionary<string, object>;
+                if (child != null && !child.ContainsKey("__type")) typeMissing++;
+            }
+            if (typeMissing > 5) return true;
+            if (doc.Count < 120 && doc.ContainsKey("Initial_PlotDone"))
+            {
+                var child = doc["Initial_PlotDone"] as Dictionary<string, object>;
+                if (child != null && child.ContainsKey("value"))
+                {
+                    object val = child["value"];
+                    long plotVal = (val is long) ? (long)val : 0;
+                    if (plotVal <= 1) return true;
+                }
+            }
+            return false;
+        }
+        catch { return true; }
+    }
+
+    public static string FindBestSaveBackup(string dataDir)
+    {
+        var candidates = new List<string>();
+        string jpmodDir = Path.Combine(dataDir, "jpmod_backups");
+        if (Directory.Exists(jpmodDir))
+        {
+            foreach (string sub in Directory.GetDirectories(jpmodDir))
+            {
+                string f = Path.Combine(sub, "SaveFile.es3");
+                if (File.Exists(f)) candidates.Add(f);
+            }
+        }
+        foreach (string f in Directory.GetFiles(dataDir, "SaveFile_Copy*.es3"))
+            candidates.Add(f);
+        foreach (string f in Directory.GetFiles(dataDir, "SaveFile.es3.bak_*"))
+            candidates.Add(f);
+
+        candidates.Sort((a, b) => File.GetLastWriteTime(b).CompareTo(File.GetLastWriteTime(a)));
+
+        foreach (string c in candidates)
+        {
+            try
+            {
+                string text = File.ReadAllText(c, Encoding.UTF8);
+                var doc = ParseJson(text);
+                if (doc.Count < 150) continue;
+                if (!doc.ContainsKey("Initial_PlotDone")) continue;
+                var child = doc["Initial_PlotDone"] as Dictionary<string, object>;
+                if (child == null || !child.ContainsKey("__type") || !child.ContainsKey("value")) continue;
+                long plotVal = (child["value"] is long) ? (long)child["value"] : 0;
+                if (plotVal >= 3) return c;
+            }
+            catch { }
+        }
+        return null;
+    }
+
+    public static bool TryRepairSaveFile(string savePath, string dataDir, out string restoredFrom)
+    {
+        restoredFrom = null;
+        if (!IsSaveCorrupted(savePath)) return false;
+        string best = FindBestSaveBackup(dataDir);
+        if (string.IsNullOrEmpty(best)) return false;
+        try { File.Copy(savePath, savePath + ".corrupt_before_repair.bak", true); } catch { }
+        File.Copy(best, savePath, true);
+        restoredFrom = best;
+        return true;
+    }
+
+    public static bool TryRepairMyBook(string myBookPath, string dataDir, out string restoredFrom)
+    {
+        restoredFrom = null;
+        if (!File.Exists(myBookPath)) return false;
+        try
+        {
+            string text = File.ReadAllText(myBookPath, Encoding.UTF8);
+            var doc = ParseJson(text);
+            bool needRepair = false;
+            foreach (var kv in doc)
+            {
+                var child = kv.Value as Dictionary<string, object>;
+                if (child != null && !child.ContainsKey("__type")) { needRepair = true; break; }
+            }
+            if (!needRepair) return false;
+            string jpmodDir = Path.Combine(dataDir, "jpmod_backups");
+            if (Directory.Exists(jpmodDir))
+            {
+                var subs = new List<string>(Directory.GetDirectories(jpmodDir));
+                subs.Sort((a, b) => Directory.GetLastWriteTime(b).CompareTo(Directory.GetLastWriteTime(a)));
+                foreach (string sub in subs)
+                {
+                    string f = Path.Combine(sub, "MyBook.es3");
+                    if (File.Exists(f))
+                    {
+                        var bDoc = ParseJson(File.ReadAllText(f, Encoding.UTF8));
+                        bool bGood = true;
+                        foreach (var kv in bDoc) {
+                            var child = kv.Value as Dictionary<string, object>;
+                            if (child != null && !child.ContainsKey("__type")) { bGood = false; break; }
+                        }
+                        if (bGood && bDoc.Count > 0) {
+                            File.Copy(f, myBookPath, true);
+                            restoredFrom = f;
+                            return true;
+                        }
+                    }
+                }
+            }
+            string arrType = "System.String[],mscorlib";
+            string dictType = "System.Collections.Generic.Dictionary`2[[System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089],[System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]],mscorlib";
+            for (int i = 1; i <= 4; i++)
+            {
+                string lk = "SelfBookList" + i;
+                string dk = "wordDictionary" + i;
+                if (doc.ContainsKey(lk)) {
+                    var child = doc[lk] as Dictionary<string, object>;
+                    if (child != null && !child.ContainsKey("__type")) child["__type"] = arrType;
+                }
+                if (doc.ContainsKey(dk)) {
+                    var child = doc[dk] as Dictionary<string, object>;
+                    if (child != null && !child.ContainsKey("__type")) child["__type"] = dictType;
+                }
+            }
+            var sb = new StringBuilder();
+            Serialize(doc, sb, 0);
+            File.WriteAllText(myBookPath, sb.ToString(), new UTF8Encoding(false));
+            restoredFrom = "in-place repaired";
+            return true;
+        }
+        catch { return false; }
+    }
+
+    public static int InstallBookAndSave(string myBookPath, string savePath, string catbarPayloadPath, int slotOverride = 0)
+    {
+        string payloadJson = File.ReadAllText(catbarPayloadPath, Encoding.UTF8);
+        var payload = ParseJson(payloadJson);
+        var words = payload["words"] as List<object>;
+        var meanings = payload["meanings"] as Dictionary<string, object>;
+
+        string myBookJson = File.ReadAllText(myBookPath, Encoding.UTF8);
+        var myBook = ParseJson(myBookJson);
+
+        int targetSlot = slotOverride;
+        if (targetSlot <= 0 || targetSlot > 4)
+        {
+            for (int i = 1; i <= 4; i++) {
+                string key = "SelfBookList" + i;
+                if (myBook.ContainsKey(key)) {
+                    var entry = myBook[key] as Dictionary<string, object>;
+                    if (entry != null && entry.ContainsKey("value")) {
+                        var list = entry["value"] as List<object>;
+                        if (list != null && list.Count == words.Count) { targetSlot = i; break; }
+                    }
+                }
+            }
+            if (targetSlot == 0) {
+                for (int i = 1; i <= 4; i++) {
+                    string key = "SelfBookList" + i;
+                    if (myBook.ContainsKey(key)) {
+                        var entry = myBook[key] as Dictionary<string, object>;
+                        if (entry != null && entry.ContainsKey("value")) {
+                            var list = entry["value"] as List<object>;
+                            if (list == null || list.Count == 0) { targetSlot = i; break; }
+                        }
+                    } else { targetSlot = i; break; }
+                }
+            }
+            if (targetSlot == 0) targetSlot = 1;
+        }
+
+        string arrType = "System.String[],mscorlib";
+        string dictType = "System.Collections.Generic.Dictionary`2[[System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089],[System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]],mscorlib";
+
+        myBook["SelfBookList" + targetSlot] = new Dictionary<string, object>(StringComparer.Ordinal) {
+            { "__type", arrType },
+            { "value", words }
+        };
+        myBook["wordDictionary" + targetSlot] = new Dictionary<string, object>(StringComparer.Ordinal) {
+            { "__type", dictType },
+            { "value", meanings }
+        };
+
+        var sbMb = new StringBuilder();
+        Serialize(myBook, sbMb, 0);
+        File.WriteAllText(myBookPath, sbMb.ToString(), new UTF8Encoding(false));
+
+        if (File.Exists(savePath))
+        {
+            string saveJson = File.ReadAllText(savePath, Encoding.UTF8);
+            var save = ParseJson(saveJson);
+            string[] slotKanji = new string[] { "", "一", "二", "三", "四" };
+            string canonical = "自定义词书" + (targetSlot >= 1 && targetSlot <= 4 ? slotKanji[targetSlot] : "一");
+            string listType = "System.Collections.Generic.List`1[[System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]],mscorlib";
+
+            save["ChosenBook_Para"] = new Dictionary<string, object>(StringComparer.Ordinal) {
+                { "__type", "string" },
+                { "value", canonical }
+            };
+            save["ChosenBook_List"] = new Dictionary<string, object>(StringComparer.Ordinal) {
+                { "__type", listType },
+                { "value", words }
+            };
+            save["SelfBookName" + targetSlot] = new Dictionary<string, object>(StringComparer.Ordinal) {
+                { "__type", "string" },
+                { "value", "日语词库(猫条版)" }
+            };
+
+            var sbSave = new StringBuilder();
+            Serialize(save, sbSave, 0);
+            File.WriteAllText(savePath, sbSave.ToString(), new UTF8Encoding(false));
+        }
+        return targetSlot;
+    }
+}
+'@
+    Add-Type -TypeDefinition $es3Source -Language CSharp -ErrorAction Stop
 }
 
 function Expand-ZipWithProgress([string]$zipPath, [string]$destination, [string]$displayName) {
@@ -225,6 +669,46 @@ function Expand-ZipWithProgress([string]$zipPath, [string]$destination, [string]
     $finalStatus = "100%  文件 $totalFiles / $totalFiles  $([Math]::Round($totalBytes / 1MB, 1)) / $([Math]::Round($totalBytes / 1MB, 1)) MB"
     Write-Progress -Activity "解压 $displayName" -Status $finalStatus -PercentComplete 100
     Write-Progress -Activity "解压 $displayName" -Completed
+}
+
+function Copy-TreeNet([string]$sourceDir, [string]$targetDir, [string]$displayName) {
+    # PowerShell Copy-Item rejects Windows reserved device names (aux.mp3,
+    # nul.mp3, ...). The audio packages legitimately contain such word audio,
+    # so this copy uses plain .NET file APIs, which handle those names fine.
+    New-Item -ItemType Directory -Force -Path $targetDir | Out-Null
+    $count = 0
+    foreach ($src in [IO.Directory]::EnumerateFiles($sourceDir, '*', [IO.SearchOption]::AllDirectories)) {
+        $rel = $src.Substring($sourceDir.Length).TrimStart('\', '/')
+        $dst = [IO.Path]::Combine($targetDir, $rel)
+        $dstParent = [IO.Path]::GetDirectoryName($dst)
+        if (-not [IO.Directory]::Exists($dstParent)) { [IO.Directory]::CreateDirectory($dstParent) | Out-Null }
+        [IO.File]::Copy((Get-ExtendedPath $src), (Get-ExtendedPath $dst), $true)
+        $count++
+        if (($count % 2000) -eq 0) { Write-Host ("  copied {0} {1} files..." -f $count, $displayName) }
+    }
+    Write-Host ("{0} copy done, {1} files." -f $displayName, $count)
+}
+
+function Get-ExtendedPath([string]$path) {
+    $name = [IO.Path]::GetFileName($path)
+    if ([string]::IsNullOrEmpty($name)) { return $path }
+    $dot = $name.IndexOf('.')
+    $stem = if ($dot -ge 0) { $name.Substring(0, $dot) } else { $name }
+    $u = $stem.ToUpperInvariant()
+    if ($u -eq 'AUX' -or $u -eq 'CON' -or $u -eq 'PRN' -or $u -eq 'NUL') { return ('\\?\' + $path) }
+    if (($u.StartsWith('COM') -or $u.StartsWith('LPT')) -and $u.Length -gt 3) {
+        $n = 0
+        if ([int]::TryParse($u.Substring(3), [ref]$n) -and $n -ge 1 -and $n -le 9) { return ('\\?\' + $path) }
+    }
+    return $path
+}
+
+function Remove-TreeNet([string]$path) {
+    try {
+        [IO.Directory]::Delete($path, $true)
+    } catch {
+        Remove-Item -LiteralPath $path -Recurse -Force -ErrorAction SilentlyContinue
+    }
 }
 
 Write-Step '开始安装 WCP 日语词书。'
@@ -461,75 +945,38 @@ Get-ChildItem -LiteralPath (Join-Path $payload 'jp_db_payload') -File | ForEach-
 }
 New-Item -ItemType Directory -Force -Path (Join-Path $env:USERPROFILE 'AppData\LocalLow\WCP\vocabulary') | Out-Null
 New-Item -ItemType Directory -Force -Path (Join-Path $data 'sentence_audio') | Out-Null
-Copy-Item -Path (Join-Path $audioStage 'vocabulary\*') -Destination (Join-Path $env:USERPROFILE 'AppData\LocalLow\WCP\vocabulary') -Recurse -Force
-Copy-Item -Path (Join-Path $audioStage 'sentence_audio\*') -Destination (Join-Path $data 'sentence_audio') -Recurse -Force
+Copy-TreeNet (Join-Path $audioStage 'vocabulary') (Join-Path $env:USERPROFILE 'AppData\LocalLow\WCP\vocabulary') 'words'
+Copy-TreeNet (Join-Path $audioStage 'sentence_audio') (Join-Path $data 'sentence_audio') 'sentences'
 try {
-    Remove-Item -LiteralPath $audioStage -Recurse -Force -ErrorAction Stop
+    Remove-TreeNet $audioStage
     Write-Host '音频临时目录已清理。' -ForegroundColor DarkGray
 } catch {
     Write-Host "音频临时目录未能自动清理：$audioStage；不影响安装结果。" -ForegroundColor DarkYellow
 }
 
-function Set-WrappedValue($doc, [string]$key, $value, [string]$typeName) {
-    $prop = $doc.PSObject.Properties[$key]
-    if ($prop) {
-        if ($prop.Value -and $prop.Value.PSObject.Properties['value']) { $prop.Value.value = $value }
-        else { $prop.Value = [pscustomobject]@{ __type = $typeName; value = $value } }
-    } else {
-        $doc | Add-Member -NotePropertyName $key -NotePropertyValue ([pscustomobject]@{ __type = $typeName; value = $value })
-    }
-}
-
 $bookPayloadPath = Join-Path $payload 'catbar_book.json'
 if (-not (Test-Path -LiteralPath $bookPayloadPath)) { Fail '安装包缺少 catbar_book.json。' }
-$bookPayload = Get-Content -LiteralPath $bookPayloadPath -Raw -Encoding UTF8 | ConvertFrom-Json
-Write-Step '正在写入日语词书并设置当前选中词书。'
-$words = @($bookPayload.words | ForEach-Object { [string]$_ })
-$meanings = [ordered]@{}
-foreach ($p in $bookPayload.meanings.PSObject.Properties) { $meanings[$p.Name] = [string]$p.Value }
+
+Ensure-Es3Helper
 
 $myBookPath = Join-Path $data 'MyBook.es3'
 $savePath = Join-Path $data 'SaveFile.es3'
-if (Test-Path -LiteralPath $myBookPath) {
-    $myBook = Get-Content -LiteralPath $myBookPath -Raw -Encoding UTF8 | ConvertFrom-Json
-    $targetSlot = 0
-    for ($i = 1; $i -le 4; $i++) {
-        $p = $myBook.PSObject.Properties["SelfBookList$i"]
-        $v = if ($p -and $p.Value.PSObject.Properties['value']) { @($p.Value.value) } else { @() }
-        if ($v.Count -eq $words.Count) { $targetSlot = $i; break }
-    }
-    if ($targetSlot -eq 0) {
-        for ($i = 1; $i -le 4; $i++) {
-            $p = $myBook.PSObject.Properties["SelfBookList$i"]
-            $v = if ($p -and $p.Value.PSObject.Properties['value']) { @($p.Value.value) } else { @() }
-            if ($v.Count -eq 0) { $targetSlot = $i; break }
-        }
-    }
-    if ($targetSlot -eq 0) {
-        $choice = Read-Host '四个自定义槽都已占用，请输入要替换的槽位 1-4（默认 1）'
-        $targetSlot = if ($choice -match '^[1-4]$') { [int]$choice } else { 1 }
-    }
-    $arrType = 'System.String[],mscorlib'
-    $dictType = 'System.Collections.Generic.Dictionary`2[[System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089],[System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]],mscorlib'
-    Set-WrappedValue $myBook "SelfBookList$targetSlot" $words $arrType
-    Set-WrappedValue $myBook "wordDictionary$targetSlot" $meanings $dictType
-    $json = $myBook | ConvertTo-Json -Depth 100
-    [IO.File]::WriteAllText($myBookPath, $json, (New-Object Text.UTF8Encoding($false)))
-    Write-Host "已写入日语词书槽位 $targetSlot（$($words.Count) 词）。"
 
-    if (Test-Path -LiteralPath $savePath) {
-        $save = Get-Content -LiteralPath $savePath -Raw -Encoding UTF8 | ConvertFrom-Json
-        $canonical = @('','自定义词书一','自定义词书二','自定义词书三','自定义词书四')[$targetSlot]
-        Set-WrappedValue $save 'ChosenBook_Para' $canonical 'string'
-        $listType = 'System.Collections.Generic.List`1[[System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]],mscorlib'
-        Set-WrappedValue $save 'ChosenBook_List' $words $listType
-        Set-WrappedValue $save "SelfBookName$targetSlot" '日语词库(猫条版)' 'string'
-        $saveJson = $save | ConvertTo-Json -Depth 100
-        [IO.File]::WriteAllText($savePath, $saveJson, (New-Object Text.UTF8Encoding($false)))
-        Write-Host '已将当前选中词书切换为日语词库(猫条版)。'
-    } else {
-        Write-Host '没有找到 SaveFile.es3，已安装词书；首次进入游戏后请在自定义词书中选择它。' -ForegroundColor Yellow
-    }
+# 1. 自动检测并修复历史受损存档（针对旧版脚本序列化导致丢失 __type 或开局剧情重置的问题）
+$repairedSave = ''
+if ([WcpEs3Helper]::TryRepairSaveFile($savePath, $data, [ref]$repairedSave)) {
+    Write-Host "检测到历史存档受损（元数据丢失/开局剧情重置），已自动从完整备份成功恢复：$repairedSave" -ForegroundColor Green
+}
+$repairedMb = ''
+if ([WcpEs3Helper]::TryRepairMyBook($myBookPath, $data, [ref]$repairedMb)) {
+    Write-Host "检测到 MyBook.es3 元数据受损，已自动恢复：$repairedMb" -ForegroundColor Green
+}
+
+# 2. 安全写入日语词书与当前选中词书（完整保留全部存档元数据与 __type）
+Write-Step '正在写入日语词书并设置当前选中词书。'
+if (Test-Path -LiteralPath $myBookPath) {
+    $targetSlot = [WcpEs3Helper]::InstallBookAndSave($myBookPath, $savePath, $bookPayloadPath, 0)
+    Write-Host "已写入日语词书槽位 $targetSlot，已安全保留全部存档元数据并选中该词书。"
 } else {
     Write-Host '没有找到 MyBook.es3，已安装插件和导入文件；请先启动游戏完成一次初始化，再重新运行安装器自动导入。' -ForegroundColor Yellow
 }

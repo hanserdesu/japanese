@@ -1,14 +1,10 @@
 # -*- coding: utf-8 -*-
 """构建可移植安装包 (WCP日语词书安装包/):
 
-  一键安装日语词书.cmd    ← 自动定位 Steam 游戏目录并安装
-  payload/additions.db    pron/help/sentence2/bookslot 增量数据 (SQL 安装时合并)
-  payload/books/          persistentDataPath 词书文件 (xlsx + db)
-  payload/audio/words.zip        单词发音 mp3 (~350MB)
-  payload/audio/sentences.zip    例句发音 mp3 (~1.4GB)
-  payload/plugins/*.dll          BepInEx 插件
-  payload/catbar_book.json       可移植合并词书, 安装时自动写入一个自定义槽
-  payload/manifest.json
+  01_双击运行我.cmd       ← 唯一需要双击的入口，自动选择兼容运行环境
+  使用说明.txt             ← 普通用户说明
+  support/                 ← 安装脚本与所有运行资源，无需手动打开
+  support/payload/         ← 词书、BepInEx、插件和数据库资源
 
 用法: python tools/build_installer_payload.py [--skip-audio]
 """
@@ -27,7 +23,8 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / 'tools'))
 OUT = ROOT / 'output'
 PKG = OUT / 'installer_pkg' / 'WCP日语词书安装包'
-PAYLOAD = PKG / 'payload'
+SUPPORT = PKG / 'support'
+PAYLOAD = SUPPORT / 'payload'
 PDA = Path.home() / 'AppData' / 'LocalLow' / 'WCP'
 
 BOOK_FILES = ['JLPT_N5N4_初级.xlsx', 'JLPT_N3.xlsx', 'JLPT_N2.xlsx',
@@ -217,6 +214,20 @@ def zip_dir(src: Path, dst: Path):
     print(f'{dst.name}: {len(files)} 文件, {dst.stat().st_size / 1e6:.0f}MB')
 
 
+def copy_windows_script(src: Path, dst: Path):
+    """Copy user-facing scripts with Windows-safe encoding and line endings."""
+    raw = src.read_bytes()
+    if raw.startswith(b'\xef\xbb\xbf'):
+        raw = raw[3:]
+    text = raw.decode('utf-8').replace('\r\n', '\n').replace('\r', '\n')
+    normalized = text.replace('\n', '\r\n').encode('utf-8')
+    # Windows PowerShell 5.1 treats UTF-8 without a BOM as the ANSI code page.
+    # A BOM makes Chinese messages and parser behavior deterministic.
+    if src.suffix.lower() == '.ps1':
+        normalized = b'\xef\xbb\xbf' + normalized
+    dst.write_bytes(normalized)
+
+
 def main():
     skip_audio = '--skip-audio' in sys.argv
     if PKG.exists():
@@ -257,12 +268,28 @@ def main():
     else:
         print(f'!! 缺少可移植合并词书: {combined}')
 
-    for name in ('一键安装日语词书.cmd', '保持窗口-运行安装.ps1',
-                 'Install-WCP-Japanese.ps1', '说明-给群友.txt'):
+    entry = ROOT / 'installer' / '一键安装日语词书.cmd'
+    if not entry.exists():
+        raise FileNotFoundError(f'missing installer entry: {entry}')
+    # cmd.exe requires CRLF. Normalize during every build so a Unix checkout
+    # cannot produce a Windows installer that flashes and exits immediately.
+    copy_windows_script(entry, PKG / '01_双击运行我.cmd')
+
+    readme = ROOT / 'installer' / '说明-给群友.txt'
+    if not readme.exists():
+        raise FileNotFoundError(f'missing installer readme: {readme}')
+    shutil.copy2(readme, PKG / '使用说明.txt')
+
+    for name in ('保持窗口-运行安装.ps1', 'Install-WCP-Japanese.ps1',
+                 '检查系统兼容性.ps1', '兼容模式-说明.cmd'):
         src = ROOT / 'installer' / name
         if not src.exists():
-            raise FileNotFoundError(f'missing installer file: {src}')
-        shutil.copy2(src, PKG / name)
+            raise FileNotFoundError(f'missing installer support file: {src}')
+        dst = SUPPORT / name
+        if src.suffix.lower() in ('.cmd', '.ps1'):
+            copy_windows_script(src, dst)
+        else:
+            shutil.copy2(src, dst)
 
     if not skip_audio:
         t0 = time.time()

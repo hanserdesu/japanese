@@ -10,11 +10,13 @@
 
 只需要下载主 Release 里的一个安装包：
 
-[下载 WCP 日语词书一键安装包 v1.1.1](https://github.com/hanserdesu/japanese/releases/tag/wcp-jp-v1.1.1)
+[下载 WCP 日语词书一键安装包 v1.1.2](https://github.com/hanserdesu/japanese/releases/tag/wcp-jp-v1.1.2)
 
 不要单独下载资源 Release。安装器会自动从 GitHub 下载单词音频和例句音频，并检查文件是否完整。
 
 ### 安装包会做什么？
+
+解压后只需双击最外层的 `01_双击运行我.cmd`，不需要进入 `support` 文件夹。启动器会优先使用系统 Windows PowerShell，找不到时自动改用 PowerShell 7；不满足运行条件时会显示原因并保持窗口。
 
 双击安装器后，它会自动：
 

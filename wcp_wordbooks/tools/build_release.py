@@ -22,7 +22,7 @@ ROOT = Path(__file__).resolve().parent.parent
 OUT = ROOT / 'output'
 PKG = OUT / 'installer_pkg' / 'WCP日语词书安装包'
 RELEASE = OUT / 'release'
-MAIN_TAG = 'wcp-jp-v1.1.1'
+MAIN_TAG = 'wcp-jp-v1.1.2'
 RESOURCE_TAG = 'wcp-jp-resources-v1.0.0'
 
 
@@ -82,7 +82,7 @@ def main():
     manifest = RELEASE / 'release-manifest.json'
     manifest.write_text(json.dumps(release_manifest, ensure_ascii=False, indent=2) + '\n',
                         encoding='utf-8')
-    shutil.copy2(manifest, PKG / 'release-manifest.json')
+    shutil.copy2(manifest, PKG / 'support' / 'release-manifest.json')
 
     core_zip = RELEASE / f'WCP日语词书一键安装包-{MAIN_TAG}.zip'
     if core_zip.exists():

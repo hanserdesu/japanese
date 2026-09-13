@@ -1,4 +1,4 @@
-$ErrorActionPreference = 'Stop'
+﻿$ErrorActionPreference = 'Stop'
 
 function Write-Step([string]$message) {
     Write-Host "[$(Get-Date -Format 'HH:mm:ss')] $message" -ForegroundColor Cyan
@@ -160,7 +160,9 @@ function Download-VerifiedAsset($asset) {
         $downloaded = $false
         foreach ($baseUrl in $baseUrls) {
             try {
-                Invoke-WebRequest -UseBasicParsing -Uri ("$baseUrl/$($asset.name)") -OutFile $tmp
+                $request = @{ Uri = "$baseUrl/$($asset.name)"; OutFile = $tmp }
+                if ($PSVersionTable.PSVersion.Major -lt 6) { $request.UseBasicParsing = $true }
+                Invoke-WebRequest @request
                 if ((Get-Item -LiteralPath $tmp).Length -eq [int64]$asset.size -and
                     (Get-FileHash -LiteralPath $tmp -Algorithm SHA256).Hash.ToLower() -eq $asset.sha256.ToLower()) {
                     Move-Item -LiteralPath $tmp -Destination $target -Force

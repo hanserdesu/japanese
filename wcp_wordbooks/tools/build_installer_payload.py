@@ -257,8 +257,8 @@ def main():
     else:
         print(f'!! 缺少可移植合并词书: {combined}')
 
-    for name in ('一键安装日语词书.cmd', 'Install-WCP-Japanese.ps1',
-                 '说明-给群友.txt'):
+    for name in ('一键安装日语词书.cmd', '保持窗口-运行安装.ps1',
+                 'Install-WCP-Japanese.ps1', '说明-给群友.txt'):
         src = ROOT / 'installer' / name
         if not src.exists():
             raise FileNotFoundError(f'missing installer file: {src}')

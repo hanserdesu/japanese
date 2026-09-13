@@ -10,7 +10,7 @@
 
 只需要下载主 Release 里的一个安装包：
 
-[下载 WCP 日语词书一键安装包 v1.1.0](https://github.com/hanserdesu/japanese/releases/tag/wcp-jp-v1.1.0)
+[下载 WCP 日语词书一键安装包 v1.1.1](https://github.com/hanserdesu/japanese/releases/tag/wcp-jp-v1.1.1)
 
 不要单独下载资源 Release。安装器会自动从 GitHub 下载单词音频和例句音频，并检查文件是否完整。
 
@@ -25,7 +25,7 @@
 5. 把完整 JLPT N5～N1 日语词书写入一个自定义词书槽，并自动切换到日语词库。
 6. 下载并安装单词音频和例句音频。
 
-安装完成后重新启动游戏即可。
+安装完成后重新启动游戏即可。安装窗口会一直保留，请点击右上角 X 关闭；按 Enter 不会关闭窗口。
 
 ### 安装前需要什么？
 

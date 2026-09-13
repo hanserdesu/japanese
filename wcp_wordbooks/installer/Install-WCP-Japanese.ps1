@@ -54,6 +54,166 @@ function Download-WithProgress([string]$uri, [string]$destination, [string]$disp
     }
 }
 
+function Ensure-ZipExtractor {
+    if ('WcpJapaneseZipExtractor' -as [type]) { return }
+    Add-Type -AssemblyName System.IO.Compression -ErrorAction Stop
+    Add-Type -AssemblyName System.IO.Compression.FileSystem -ErrorAction Stop
+    $zipReferences = @('System.dll', 'System.Core.dll',
+        'System.IO.Compression.dll', 'System.IO.Compression.FileSystem.dll')
+    $zipSource = @'
+using System;
+using System.IO;
+using System.IO.Compression;
+using System.Threading;
+using System.Threading.Tasks;
+
+public static class WcpJapaneseZipExtractor
+{
+    public static int TotalFiles;
+    public static long TotalBytes;
+    public static int CompletedFiles;
+    public static long CompletedBytes;
+
+    private static readonly object ErrorLock = new object();
+    private static string ErrorText;
+
+    public static Task Start(string zipPath, string destination, int workerCount)
+    {
+        return Task.Factory.StartNew(
+            () => Extract(zipPath, destination, workerCount),
+            CancellationToken.None,
+            TaskCreationOptions.LongRunning,
+            TaskScheduler.Default);
+    }
+
+    public static string GetError()
+    {
+        lock (ErrorLock) { return ErrorText; }
+    }
+
+    private static void Extract(string zipPath, string destination, int workerCount)
+    {
+        CompletedFiles = 0;
+        CompletedBytes = 0;
+        ErrorText = null;
+        string root = Path.GetFullPath(destination);
+        if (!root.EndsWith(Path.DirectorySeparatorChar.ToString(), StringComparison.Ordinal))
+            root += Path.DirectorySeparatorChar;
+
+        string[] names;
+        using (ZipArchive archive = ZipFile.OpenRead(zipPath))
+        {
+            int nameCount = 0;
+            foreach (ZipArchiveEntry entry in archive.Entries)
+            {
+                if (!String.IsNullOrEmpty(entry.Name)) nameCount++;
+            }
+            names = new string[nameCount];
+            int nameIndex = 0;
+            foreach (ZipArchiveEntry entry in archive.Entries)
+            {
+                if (!String.IsNullOrEmpty(entry.Name)) names[nameIndex++] = entry.FullName;
+            }
+            TotalFiles = names.Length;
+            long total = 0;
+            foreach (ZipArchiveEntry entry in archive.Entries)
+            {
+                if (!String.IsNullOrEmpty(entry.Name)) total += entry.Length;
+            }
+            TotalBytes = total;
+        }
+
+        int workers = Math.Max(1, Math.Min(workerCount, Math.Max(1, names.Length)));
+        Task[] tasks = new Task[workers];
+        for (int worker = 0; worker < workers; worker++)
+        {
+            int workerIndex = worker;
+            tasks[worker] = Task.Factory.StartNew(
+                () => ExtractWorker(zipPath, root, names, workerIndex, workers),
+                CancellationToken.None,
+                TaskCreationOptions.LongRunning,
+                TaskScheduler.Default);
+        }
+        try
+        {
+            Task.WaitAll(tasks);
+        }
+        catch (Exception ex)
+        {
+            SetError(ex.ToString());
+            throw;
+        }
+    }
+
+    private static void ExtractWorker(string zipPath, string root, string[] names,
+                                      int workerIndex, int workerCount)
+    {
+        try
+        {
+            using (ZipArchive archive = ZipFile.OpenRead(zipPath))
+            {
+                for (int i = workerIndex; i < names.Length; i += workerCount)
+                {
+                    ZipArchiveEntry entry = archive.GetEntry(names[i]);
+                    if (entry == null) throw new InvalidDataException("ZIP entry disappeared: " + names[i]);
+                    string relative = entry.FullName.Replace('/', Path.DirectorySeparatorChar);
+                    string target = Path.GetFullPath(Path.Combine(root, relative));
+                    if (!target.StartsWith(root, StringComparison.OrdinalIgnoreCase))
+                        throw new InvalidDataException("Unsafe ZIP path: " + entry.FullName);
+                    string parent = Path.GetDirectoryName(target);
+                    if (!String.IsNullOrEmpty(parent)) Directory.CreateDirectory(parent);
+                    using (Stream input = entry.Open())
+                    using (FileStream output = new FileStream(target, FileMode.Create, FileAccess.Write, FileShare.None))
+                    {
+                        input.CopyTo(output);
+                    }
+                    Interlocked.Increment(ref CompletedFiles);
+                    Interlocked.Add(ref CompletedBytes, entry.Length);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            SetError(ex.ToString());
+            throw;
+        }
+    }
+
+    private static void SetError(string text)
+    {
+        lock (ErrorLock) { if (ErrorText == null) ErrorText = text; }
+    }
+}
+'@
+    if ($PSVersionTable.PSEdition -eq 'Core') {
+        Add-Type -TypeDefinition $zipSource -Language CSharp -ErrorAction Stop
+    } else {
+        Add-Type -TypeDefinition $zipSource -Language CSharp -ReferencedAssemblies $zipReferences -ErrorAction Stop
+    }
+}
+
+function Expand-ZipWithProgress([string]$zipPath, [string]$destination, [string]$displayName) {
+    Ensure-ZipExtractor
+    $workers = [Math]::Max(2, [Math]::Min(4, [Environment]::ProcessorCount))
+    $task = [WcpJapaneseZipExtractor]::Start($zipPath, $destination, $workers)
+    $totalFiles = [WcpJapaneseZipExtractor]::TotalFiles
+    $totalBytes = [WcpJapaneseZipExtractor]::TotalBytes
+    $watch = [Diagnostics.Stopwatch]::StartNew()
+    while (-not $task.IsCompleted) {
+        $doneFiles = [WcpJapaneseZipExtractor]::CompletedFiles
+        $doneBytes = [WcpJapaneseZipExtractor]::CompletedBytes
+        $percent = if ($totalFiles -gt 0) { [Math]::Min(100, [int](($doneFiles * 100) / $totalFiles)) } else { 100 }
+        $speed = if ($watch.Elapsed.TotalSeconds -gt 0) { $doneBytes / 1MB / $watch.Elapsed.TotalSeconds } else { 0 }
+        $status = "$percent%  文件 $doneFiles / $totalFiles  $([Math]::Round($doneBytes / 1MB, 1)) / $([Math]::Round($totalBytes / 1MB, 1)) MB  $([Math]::Round($speed, 2)) MB/s  并行线程 $workers"
+        Write-Progress -Activity "解压 $displayName" -Status $status -PercentComplete $percent
+        Start-Sleep -Milliseconds 250
+    }
+    $task.GetAwaiter().GetResult()
+    $finalStatus = "100%  文件 $([WcpJapaneseZipExtractor]::CompletedFiles) / $totalFiles  $([Math]::Round([WcpJapaneseZipExtractor]::CompletedBytes / 1MB, 1)) / $([Math]::Round($totalBytes / 1MB, 1)) MB"
+    Write-Progress -Activity "解压 $displayName" -Status $finalStatus -PercentComplete 100
+    Write-Progress -Activity "解压 $displayName" -Completed
+}
+
 Write-Step '开始安装 WCP 日语词书。'
 
 function Add-Candidate([System.Collections.Generic.List[string]]$list, [string]$path) {
@@ -257,9 +417,9 @@ New-Item -ItemType Directory -Force -Path $audioStage | Out-Null
 New-Item -ItemType Directory -Force -Path (Join-Path $audioStage 'vocabulary') | Out-Null
 New-Item -ItemType Directory -Force -Path (Join-Path $audioStage 'sentence_audio') | Out-Null
 Write-Host '正在解压单词音频...'
-Expand-Archive -LiteralPath $wordZip -DestinationPath (Join-Path $audioStage 'vocabulary') -Force
+Expand-ZipWithProgress $wordZip (Join-Path $audioStage 'vocabulary') '单词音频'
 Write-Host '正在解压例句音频...'
-Expand-Archive -LiteralPath $sentenceZip -DestinationPath (Join-Path $audioStage 'sentence_audio') -Force
+Expand-ZipWithProgress $sentenceZip (Join-Path $audioStage 'sentence_audio') '例句音频'
 Write-Step '音频解压完成，正在安装插件和词书文件。'
 foreach ($name in @('MyBook.es3', 'SaveFile.es3')) {
     $src = Join-Path $data $name

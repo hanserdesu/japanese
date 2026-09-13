@@ -1,10 +1,10 @@
 {
-  "main_release": "wcp-jp-v1.1.6",
+  "main_release": "wcp-jp-v1.1.7",
   "resource_release": "wcp-jp-resources-v1.0.0",
   "core_installer": {
-    "name": "WCP-Japanese-OneClick-Installer-wcp-jp-v1.1.6.zip",
-    "size": 12251134,
-    "sha256": "0159291302fb9a3bf9ba272ee0d3d7e53caf525f8229005220e5610c4e2dbe03"
+    "name": "WCP-Japanese-OneClick-Installer-wcp-jp-v1.1.7.zip",
+    "size": 12252768,
+    "sha256": "c85dcb02506d11e3ebd40798adc702bf4503dd0fd1056f1615ff16ef252e9be5"
   },
   "resource_manifest": "release-manifest.json"
 }

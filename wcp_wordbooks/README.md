@@ -10,7 +10,7 @@
 
 只需要下载主 Release 里的一个安装包：
 
-[下载 WCP 日语词书一键安装包 v1.1.0](https://github.com/hanserdesu/japanese/releases/tag/wcp-jp-v1.1.0)
+[下载 WCP 日语词书一键安装包 v1.1.1](https://github.com/hanserdesu/japanese/releases/tag/wcp-jp-v1.1.1)
 
 不要单独下载资源 Release。安装器会自动从 GitHub 下载单词音频和例句音频，并检查文件是否完整。
 

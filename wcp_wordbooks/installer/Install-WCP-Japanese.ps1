@@ -1,9 +1,14 @@
 $ErrorActionPreference = 'Stop'
 
-function Fail([string]$message) {
-    Write-Host "错误: $message" -ForegroundColor Red
-    exit 1
+function Write-Step([string]$message) {
+    Write-Host "[$(Get-Date -Format 'HH:mm:ss')] $message" -ForegroundColor Cyan
 }
+
+function Fail([string]$message) {
+    throw "错误: $message"
+}
+
+Write-Step '开始安装 WCP 日语词书。'
 
 function Add-Candidate([System.Collections.Generic.List[string]]$list, [string]$path) {
     if ([string]::IsNullOrWhiteSpace($path)) { return }
@@ -64,6 +69,7 @@ if (Get-Process -Name 'wcp' -ErrorAction SilentlyContinue) {
     Fail '检测到万词破正在运行，请完全退出游戏后再安装。'
 }
 
+Write-Step '正在搜索 Steam 游戏目录。'
 $candidates = @(Get-GameCandidates)
 if ($candidates.Count -eq 0) {
     Fail '没有找到有效的万词破安装目录。请确认 Steam 已安装游戏，或设置 WCP_GAME_DIR 后重试。'
@@ -78,6 +84,8 @@ if ($candidates.Count -gt 1 -and -not ($candidates -contains $logPath)) {
     $choice = Read-Host '请输入要安装的序号（默认 1）'
     if ($choice -match '^[1-9][0-9]*$' -and [int]$choice -le $candidates.Count) { $game = $candidates[[int]$choice - 1] }
 }
+
+Write-Step "已找到游戏目录：$game"
 
 $bepRoot = Join-Path $game 'BepInEx'
 $payload = Join-Path $PSScriptRoot 'payload'
@@ -119,6 +127,8 @@ if ($needBepFramework -or $needBepBootstrap) {
         Write-Host '已补齐 BepInEx 启动文件，保留现有 BepInEx 核心。'
     }
 }
+
+Write-Step '运行环境检查完成，正在读取资源清单。'
 
 $releaseManifestPath = Join-Path $PSScriptRoot 'release-manifest.json'
 if (-not (Test-Path -LiteralPath $releaseManifestPath)) { Fail '安装包缺少 release-manifest.json。' }
@@ -170,6 +180,7 @@ $sentenceAsset = $release.assets | Where-Object { $_.kind -eq 'sentence_audio' }
 if (-not $wordAsset -or -not $sentenceAsset) { Fail 'Release 清单没有完整的单词和例句音频资源。' }
 $wordZip = Download-VerifiedAsset $wordAsset
 $sentenceZip = Download-VerifiedAsset $sentenceAsset
+Write-Step '音频资源下载并校验完成，正在解压。'
 $audioStage = Join-Path $data 'jpmod_audio_stage'
 if (Test-Path -LiteralPath $audioStage) { Remove-Item -LiteralPath $audioStage -Recurse -Force }
 New-Item -ItemType Directory -Force -Path $audioStage | Out-Null
@@ -179,6 +190,7 @@ Write-Host '正在解压单词音频...'
 Expand-Archive -LiteralPath $wordZip -DestinationPath (Join-Path $audioStage 'vocabulary') -Force
 Write-Host '正在解压例句音频...'
 Expand-Archive -LiteralPath $sentenceZip -DestinationPath (Join-Path $audioStage 'sentence_audio') -Force
+Write-Step '音频解压完成，正在安装插件和词书文件。'
 foreach ($name in @('MyBook.es3', 'SaveFile.es3')) {
     $src = Join-Path $data $name
     if (Test-Path -LiteralPath $src) { Copy-Item -LiteralPath $src -Destination (Join-Path $backup $name) }
@@ -222,6 +234,7 @@ function Set-WrappedValue($doc, [string]$key, $value, [string]$typeName) {
 $bookPayloadPath = Join-Path $payload 'catbar_book.json'
 if (-not (Test-Path -LiteralPath $bookPayloadPath)) { Fail '安装包缺少 catbar_book.json。' }
 $bookPayload = Get-Content -LiteralPath $bookPayloadPath -Raw -Encoding UTF8 | ConvertFrom-Json
+Write-Step '正在写入日语词书并设置当前选中词书。'
 $words = @($bookPayload.words | ForEach-Object { [string]$_ })
 $meanings = [ordered]@{}
 foreach ($p in $bookPayload.meanings.PSObject.Properties) { $meanings[$p.Name] = [string]$p.Value }
@@ -277,4 +290,4 @@ $marker = [ordered]@{ installed = (Get-Date).ToString('s'); game = $game; backup
 Write-Host "游戏目录: $game"
 Write-Host "备份目录: $backup"
 Write-Host '安装成功。'
-exit 0
+Write-Step '全部安装步骤已完成。'

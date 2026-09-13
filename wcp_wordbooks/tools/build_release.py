@@ -84,7 +84,9 @@ def main():
                         encoding='utf-8')
     shutil.copy2(manifest, PKG / 'support' / 'release-manifest.json')
 
-    core_zip = RELEASE / f'WCP日语词书一键安装包-{MAIN_TAG}.zip'
+    # GitHub release uploads can mangle non-ASCII asset names. Keep the
+    # downloadable filename ASCII; the archive itself remains Chinese-first.
+    core_zip = RELEASE / f'WCP-Japanese-OneClick-Installer-{MAIN_TAG}.zip'
     if core_zip.exists():
         core_zip.unlink()
     with zipfile.ZipFile(core_zip, 'w', zipfile.ZIP_DEFLATED, allowZip64=True) as z:

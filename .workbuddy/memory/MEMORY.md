@@ -23,6 +23,41 @@
   接手任何工作前先读它。例句生产契约在 `work/AGENT_SPEC.md` +
   `work/PATCH_SPEC.md`。
 
+## 架构基线（2026-09-14 实测，做任何重构前先读）
+
+- **统一接入架构设计在** `D:/Japanese/ARCHITECTURE-UNIFIED.md`（Host / Pack /
+  Strategy 三层，状态：设计稿未实施）。审计证据在 `wcp_wordbooks/AUDIT-2026-09-14.md`。
+- **复刻成本是 fork 不是复用**（实测 diff）：词表插件复用率 11%、例句 21%、
+  **书名插件 96%**。四语言 × 3 = 12 个 DLL ≈ 11,700 行，真实独立逻辑 <1,500 行。
+- **五处共享资源**：`BepInEx/plugins/`、`LocalLow/WCP/vocabulary/`、
+  `LocalLow/WCP/wcp/sentence_audio/`、`LocalLow/WCP/wcp/*.xlsx`、
+  `StreamingAssets/wcpFullEng.db`。仅 `<lang>_db_payload/` 已按语言命名空间化。
+- **单词音频策略三语言互不一致**（JA 用游戏 `vocabulary/`、FR 私有、RU 私有+回退）
+  → 这是"未解耦"的硬证据。例句音频全共享，隔离靠提取器谓词互斥（逻辑巧合）。
+- **`wcpFullEng.db` 是单文件单主键（`word`）**，多语言同写会跨语言覆盖
+  （法语 1,638/8,116 与英语同形）。按语言分表不可行 → 正解是宿主自服务。
+- **槽位硬上限 4**（`_slotProfiles[4]` + 硬编码「自定义词书一~四」）。
+  每语言合并成一本书占一槽 → **最多 4 语言共存**。
+  `日语词库(猫条版).xlsx` 7,922 词 = 1 本书 = 1 槽 = 1 指纹；
+  `JLPT_N1..N5N4/IT用语` 是合并前源片段，不单独占槽。
+- **`BookProfiles.cs` 副本已漂移**：JA 单份共享（`build.cmd` 引
+  `..\mod_book_name\BookProfiles.cs`），FR/RU 各 3 份。
+- **运行态是全局单例**（`allTestWordsS10_Para` / `S8needToLearnWordList_Para` /
+  `exmplesentences`）→ 多语言只能资源共存、运行态串行；
+  接管-还原协议（JP 的 v1.7.2/1.7.3）要提升为宿主级，ES3 键加 `<lang>_` 前缀。
+- **跨语言复刻契约在 `D:/Japanese/IMPLEMENTATION.md`**（2026-09-14 重写过）。
+  三条容易漏的：① 例句音频文件名 = `md5(ExtractJa 剥离结果)`，`ExtractJa` 有 8 步语义
+  （含 `\n` 截断、**取最后一个 `（` 切尾**、必须含假名/汉字码点）；② `vocabulary/` 与
+  `sentence_audio/` 是**多语言共享**目录，`<lang>_word_audio/`、`<lang>_db_payload/`、
+  `<lang>mod_backups/` 是**每语言私有**；③ 拉丁语系与英语同形词多（法语 1,638/8,116），
+  共享 `vocabulary/` 会让英/日词书串音 → 必须私有化 + 拦截 `PlayWordAudio`。
+- ⚠️ **已知缺陷（未修）：日语侧 386 条例句音频「按钮在但点不响」**。
+  根因：中文译文含全角括号 → `ExtractJa` 取最后一个 `（` 切尾 → 剥离结果 ≠ 原文 →
+  md5 不匹配（mp3 文件其实存在）。386 条 = 译文含全角括号的全部集合。
+  修复方向：例句契约加硬规则「**译文不得含全角括号/换行**」（法语侧已加），
+  再重算这批例句的音频文件名。三处现有检查都不覆盖这条（gen_pipeline 只拦假名、
+  verify_all 只数条数、音频生成只报写盘成功）。
+
 ## 目录约定
 
 - 主战场：`D:/Japanese/wcp_wordbooks/`

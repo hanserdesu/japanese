@@ -1,4 +1,4 @@
-﻿﻿﻿$ErrorActionPreference = 'Stop'
+﻿$ErrorActionPreference = 'Stop'
 
 function Write-Step([string]$message) {
     Write-Host "[$(Get-Date -Format 'HH:mm:ss')] $message" -ForegroundColor Cyan

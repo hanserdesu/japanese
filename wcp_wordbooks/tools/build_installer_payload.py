@@ -218,7 +218,10 @@ def zip_dir(src: Path, dst: Path):
 def copy_windows_script(src: Path, dst: Path):
     """Copy user-facing scripts with Windows-safe encoding and line endings."""
     raw = src.read_bytes()
-    if raw.startswith(b'\xef\xbb\xbf'):
+    # Some editors/merges stack multiple BOMs; PowerShell 5.1 only strips the
+    # first one and the leftovers glue onto the first token (e.g.
+    # "' $ErrorActionPreference' is not recognized"). Strip all of them.
+    while raw.startswith(b'\xef\xbb\xbf'):
         raw = raw[3:]
     text = raw.decode('utf-8').replace('\r\n', '\n').replace('\r', '\n')
     normalized = text.replace('\n', '\r\n').encode('utf-8')

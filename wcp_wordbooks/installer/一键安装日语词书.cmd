@@ -11,7 +11,7 @@ set "ROOT=%~dp0"
 set "SUPPORT=%ROOT%support"
 if not exist "%SUPPORT%\保持窗口-运行安装.ps1" set "SUPPORT=%ROOT%"
 set "STARTUP_LOG=%ROOT%安装器启动日志.txt"
-> "%STARTUP_LOG%" echo [%date% %time%] 已启动安装器。
+echo [%date% %time%] 已启动安装器。>>"%STARTUP_LOG%"
 
 echo ========================================
 echo   WCP 日语词书一键安装
@@ -31,19 +31,19 @@ call :TestPowerShell "%PS_EXE%"
 if not errorlevel 1 goto RunPowerShell7
 
 :CompatibilityHelp
->> "%STARTUP_LOG%" echo [%date% %time%] 没有找到可用的 PowerShell 运行环境。
+echo [%date% %time%] 没有找到可用的 PowerShell 运行环境。>>"%STARTUP_LOG%"
 call "%SUPPORT%\兼容模式-说明.cmd"
 exit /b %ERRORLEVEL%
 
 :RunWindowsPowerShell
 echo 已选择：系统 Windows PowerShell（兼容模式）。
->> "%STARTUP_LOG%" echo [%date% %time%] 已选择 Windows PowerShell：%PS_EXE%
+echo [%date% %time%] 已选择 Windows PowerShell：%PS_EXE%>>"%STARTUP_LOG%"
 "%PS_EXE%" -NoLogo -NoProfile -ExecutionPolicy Bypass -NoExit -File "%SUPPORT%\保持窗口-运行安装.ps1" -HostLabel "Windows PowerShell"
 exit /b %ERRORLEVEL%
 
 :RunPowerShell7
 echo 已选择：PowerShell 7（兼容模式）。
->> "%STARTUP_LOG%" echo [%date% %time%] 已选择 PowerShell 7。
+echo [%date% %time%] 已选择 PowerShell 7。>>"%STARTUP_LOG%"
 "%PS_EXE%" -NoLogo -NoProfile -ExecutionPolicy Bypass -NoExit -File "%SUPPORT%\保持窗口-运行安装.ps1" -HostLabel "PowerShell 7"
 exit /b %ERRORLEVEL%
 

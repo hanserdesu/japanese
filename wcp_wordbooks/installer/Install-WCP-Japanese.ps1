@@ -8,6 +8,52 @@ function Fail([string]$message) {
     throw "错误: $message"
 }
 
+function Download-WithProgress([string]$uri, [string]$destination, [string]$displayName, [int64]$expectedSize) {
+    $request = $null
+    $response = $null
+    $inputStream = $null
+    $outputStream = $null
+    try {
+        $request = [Net.WebRequest]::Create($uri)
+        $request.Method = 'GET'
+        $request.Timeout = 60000
+        $request.ReadWriteTimeout = 60000
+        $request.Proxy = [Net.WebRequest]::DefaultWebProxy
+        if ($request.Proxy) { $request.Proxy.Credentials = [Net.CredentialCache]::DefaultCredentials }
+        $response = $request.GetResponse()
+        $total = [int64]$response.ContentLength
+        if ($total -le 0) { $total = $expectedSize }
+        $inputStream = $response.GetResponseStream()
+        $outputStream = [IO.File]::Open($destination, [IO.FileMode]::Create, [IO.FileAccess]::Write, [IO.FileShare]::None)
+        $buffer = New-Object byte[] (1024 * 1024)
+        $downloaded = [int64]0
+        $watch = [Diagnostics.Stopwatch]::StartNew()
+        $lastUpdate = [datetime]::MinValue
+        while (($read = $inputStream.Read($buffer, 0, $buffer.Length)) -gt 0) {
+            $outputStream.Write($buffer, 0, $read)
+            $downloaded += $read
+            $now = Get-Date
+            if (($now - $lastUpdate).TotalMilliseconds -ge 250 -or ($total -gt 0 -and $downloaded -ge $total)) {
+                $lastUpdate = $now
+                $percent = if ($total -gt 0) { [Math]::Min(100, [int](($downloaded * 100) / $total)) } else { 0 }
+                $speed = if ($watch.Elapsed.TotalSeconds -gt 0) { $downloaded / 1MB / $watch.Elapsed.TotalSeconds } else { 0 }
+                $status = if ($total -gt 0) {
+                    "$percent%  $([Math]::Round($downloaded / 1MB, 1)) / $([Math]::Round($total / 1MB, 1)) MB  $([Math]::Round($speed, 2)) MB/s"
+                } else {
+                    "$([Math]::Round($downloaded / 1MB, 1)) MB  $([Math]::Round($speed, 2)) MB/s"
+                }
+                Write-Progress -Activity "下载 $displayName" -Status $status -PercentComplete $percent
+            }
+        }
+        $outputStream.Flush()
+        Write-Progress -Activity "下载 $displayName" -Completed
+    } finally {
+        if ($outputStream) { $outputStream.Dispose() }
+        if ($inputStream) { $inputStream.Dispose() }
+        if ($response) { $response.Dispose() }
+    }
+}
+
 Write-Step '开始安装 WCP 日语词书。'
 
 function Add-Candidate([System.Collections.Generic.List[string]]$list, [string]$path) {
@@ -160,9 +206,7 @@ function Download-VerifiedAsset($asset) {
         $downloaded = $false
         foreach ($baseUrl in $baseUrls) {
             try {
-                $request = @{ Uri = "$baseUrl/$($asset.name)"; OutFile = $tmp }
-                if ($PSVersionTable.PSVersion.Major -lt 6) { $request.UseBasicParsing = $true }
-                Invoke-WebRequest @request
+                Download-WithProgress ("$baseUrl/$($asset.name)") $tmp $asset.name ([int64]$asset.size)
                 if ((Get-Item -LiteralPath $tmp).Length -eq [int64]$asset.size -and
                     (Get-FileHash -LiteralPath $tmp -Algorithm SHA256).Hash.ToLower() -eq $asset.sha256.ToLower()) {
                     Move-Item -LiteralPath $tmp -Destination $target -Force

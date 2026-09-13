@@ -243,8 +243,16 @@ if (-not $wordAsset -or -not $sentenceAsset) { Fail 'Release 清单没有完整�
 $wordZip = Download-VerifiedAsset $wordAsset
 $sentenceZip = Download-VerifiedAsset $sentenceAsset
 Write-Step '音频资源下载并校验完成，正在解压。'
-$audioStage = Join-Path $data 'jpmod_audio_stage'
-if (Test-Path -LiteralPath $audioStage) { Remove-Item -LiteralPath $audioStage -Recurse -Force }
+$stagePattern = 'jpmod_audio_stage*'
+foreach ($staleStage in @(Get-ChildItem -LiteralPath $data -Directory -Filter $stagePattern -ErrorAction SilentlyContinue)) {
+    try {
+        Remove-Item -LiteralPath $staleStage.FullName -Recurse -Force -ErrorAction Stop
+        Write-Host "已清理上次安装遗留的临时目录：$($staleStage.Name)" -ForegroundColor DarkGray
+    } catch {
+        Write-Host "无法清理旧临时目录：$($staleStage.FullName)，本次将使用新的临时目录继续安装。" -ForegroundColor DarkYellow
+    }
+}
+$audioStage = Join-Path $data ("jpmod_audio_stage_{0}_{1}" -f $stamp, ([guid]::NewGuid().ToString('N')))
 New-Item -ItemType Directory -Force -Path $audioStage | Out-Null
 New-Item -ItemType Directory -Force -Path (Join-Path $audioStage 'vocabulary') | Out-Null
 New-Item -ItemType Directory -Force -Path (Join-Path $audioStage 'sentence_audio') | Out-Null
@@ -282,6 +290,12 @@ New-Item -ItemType Directory -Force -Path (Join-Path $env:USERPROFILE 'AppData\L
 New-Item -ItemType Directory -Force -Path (Join-Path $data 'sentence_audio') | Out-Null
 Copy-Item -Path (Join-Path $audioStage 'vocabulary\*') -Destination (Join-Path $env:USERPROFILE 'AppData\LocalLow\WCP\vocabulary') -Recurse -Force
 Copy-Item -Path (Join-Path $audioStage 'sentence_audio\*') -Destination (Join-Path $data 'sentence_audio') -Recurse -Force
+try {
+    Remove-Item -LiteralPath $audioStage -Recurse -Force -ErrorAction Stop
+    Write-Host '音频临时目录已清理。' -ForegroundColor DarkGray
+} catch {
+    Write-Host "音频临时目录未能自动清理：$audioStage；不影响安装结果。" -ForegroundColor DarkYellow
+}
 
 function Set-WrappedValue($doc, [string]$key, $value, [string]$typeName) {
     $prop = $doc.PSObject.Properties[$key]

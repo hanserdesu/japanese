@@ -4,18 +4,17 @@ if /i not "%~1"=="--keep-open" (
     exit /b %ERRORLEVEL%
 )
 setlocal EnableExtensions
-chcp 65001 >nul
-title WCP 日语词书一键安装
+title WCP Japanese One-Click Installer
 
 set "ROOT=%~dp0"
 set "SUPPORT=%ROOT%support"
-if not exist "%SUPPORT%\保持窗口-运行安装.ps1" set "SUPPORT=%ROOT%"
-set "STARTUP_LOG=%ROOT%安装器启动日志.txt"
-echo [%date% %time%] 已启动安装器。>>"%STARTUP_LOG%"
+if not exist "%SUPPORT%\run-installer.ps1" set "SUPPORT=%ROOT%"
+set "STARTUP_LOG=%ROOT%installer-startup.log"
+>>"%STARTUP_LOG%" echo [%date% %time%] Installer started.
 
 echo ========================================
-echo   WCP 日语词书一键安装
-echo   请只双击此文件，无需打开 support 文件夹
+echo   WCP Japanese one-click installer
+echo   Double-click this file only.
 echo ========================================
 echo.
 
@@ -31,23 +30,23 @@ call :TestPowerShell "%PS_EXE%"
 if not errorlevel 1 goto RunPowerShell7
 
 :CompatibilityHelp
-echo [%date% %time%] 没有找到可用的 PowerShell 运行环境。>>"%STARTUP_LOG%"
-call "%SUPPORT%\兼容模式-说明.cmd"
+>>"%STARTUP_LOG%" echo [%date% %time%] No compatible PowerShell was found.
+call "%SUPPORT%\compatibility-help.cmd"
 exit /b %ERRORLEVEL%
 
 :RunWindowsPowerShell
-echo 已选择：系统 Windows PowerShell（兼容模式）。
-echo [%date% %time%] 已选择 Windows PowerShell：%PS_EXE%>>"%STARTUP_LOG%"
-"%PS_EXE%" -NoLogo -NoProfile -ExecutionPolicy Bypass -NoExit -File "%SUPPORT%\保持窗口-运行安装.ps1" -HostLabel "Windows PowerShell"
+echo Using Windows PowerShell compatibility mode.
+>>"%STARTUP_LOG%" echo [%date% %time%] Using Windows PowerShell: %PS_EXE%
+"%PS_EXE%" -NoLogo -NoProfile -ExecutionPolicy Bypass -NoExit -File "%SUPPORT%\run-installer.ps1" -HostLabel "Windows PowerShell"
 exit /b %ERRORLEVEL%
 
 :RunPowerShell7
-echo 已选择：PowerShell 7（兼容模式）。
-echo [%date% %time%] 已选择 PowerShell 7。>>"%STARTUP_LOG%"
-"%PS_EXE%" -NoLogo -NoProfile -ExecutionPolicy Bypass -NoExit -File "%SUPPORT%\保持窗口-运行安装.ps1" -HostLabel "PowerShell 7"
+echo Using PowerShell 7 compatibility mode.
+>>"%STARTUP_LOG%" echo [%date% %time%] Using PowerShell 7.
+"%PS_EXE%" -NoLogo -NoProfile -ExecutionPolicy Bypass -NoExit -File "%SUPPORT%\run-installer.ps1" -HostLabel "PowerShell 7"
 exit /b %ERRORLEVEL%
 
 :TestPowerShell
-if not exist "%SUPPORT%\检查系统兼容性.ps1" exit /b 1
-"%~1" -NoLogo -NoProfile -ExecutionPolicy Bypass -File "%SUPPORT%\检查系统兼容性.ps1" >nul 2>&1
+if not exist "%SUPPORT%\check-compatibility.ps1" exit /b 1
+"%~1" -NoLogo -NoProfile -ExecutionPolicy Bypass -File "%SUPPORT%\check-compatibility.ps1" >nul 2>&1
 exit /b %ERRORLEVEL%

@@ -280,8 +280,8 @@ def main():
         raise FileNotFoundError(f'missing installer readme: {readme}')
     shutil.copy2(readme, PKG / '使用说明.txt')
 
-    for name in ('保持窗口-运行安装.ps1', 'Install-WCP-Japanese.ps1',
-                 '检查系统兼容性.ps1', '兼容模式-说明.cmd'):
+    for name in ('run-installer.ps1', 'Install-WCP-Japanese.ps1',
+                 'check-compatibility.ps1', 'compatibility-help.cmd'):
         src = ROOT / 'installer' / name
         if not src.exists():
             raise FileNotFoundError(f'missing installer support file: {src}')

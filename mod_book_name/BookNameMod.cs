@@ -122,7 +122,9 @@ namespace WcpBookName
             // 检查配置，运行中关闭插件后新的界面仍会被写成 JP。
             if (_enabled == null || !_enabled.Value ||
                 _jpLabels == null || !_jpLabels.Value) return;
-            if (!JapaneseBookSelected()) return;
+            BookProfile managed = SelectedManagedBook();
+            if (managed == null) return;
+            string vLabel = VoiceLabelFor(managed);
             var texts = c.GetComponentsInChildren<TMP_Text>(true);
             for (int i = 0; i < texts.Length; i++)
             {
@@ -132,7 +134,7 @@ namespace WcpBookName
                 if (!HasButtonAncestorPublic(texts[i])) continue;
                 if (!_labelBackup.ContainsKey(texts[i]))
                     _labelBackup[texts[i]] = s;
-                texts[i].text = "JP";
+                texts[i].text = vLabel;
             }
         }
 
@@ -181,28 +183,41 @@ namespace WcpBookName
         private bool _groupLogged;
         private float _nextSwitchScan;
 
-        // 只有当前在学「完整词表匹配猫条版日语 Profile」时才改造单词旁发音按钮。
-        // 槽位不固定；其它任何自定义书和全部原版书里 UK/US 都保持游戏原样。
-        internal static bool JapaneseBookSelected()
+        internal static BookProfile SelectedManagedBook()
         {
             try
             {
                 var s = MyParameters.ChosenBook_Para;
-                if (string.IsNullOrEmpty(s)) return false;
+                if (string.IsNullOrEmpty(s)) return null;
                 int slot = Names.SlotOfCanonicalText(s);
-                if (slot < 0) return false;
+                if (slot < 0) return null;
                 string disk = ES3.Load<string>("ChosenBook_Para", defaultValue: null);
-                if (string.IsNullOrEmpty(disk) || disk != s) return false;
+                if (string.IsNullOrEmpty(disk) || disk != s) return null;
                 var list = MyParameters.ChosenBook_List;
-                if (list == null || list.Count < 5) return false;
+                if (list == null || list.Count < 5) return null;
                 BookProfile memory = BookProfiles.Match(list);
-                if (memory == null || memory.Language != BookProfiles.Japanese) return false;
+                if (memory == null) return null;
                 var plugin = Instance;
-                if (plugin == null) return false;
+                if (plugin == null) return null;
                 BookProfile stored = plugin.SlotProfile(slot);
-                return stored != null && stored.Id == memory.Id;
+                return (stored != null && stored.Id == memory.Id) ? memory : null;
             }
-            catch (Exception) { return false; }
+            catch (Exception) { return null; }
+        }
+
+        internal static string VoiceLabelFor(BookProfile profile)
+        {
+            if (profile == null) return null;
+            if (profile.Language == BookProfiles.Japanese) return "JP";
+            if (profile.Language == BookProfiles.French) return "FR";
+            return profile.Language.ToUpperInvariant();
+        }
+
+        // 只有当前在学「完整词表匹配猫条版日语 Profile」时才改造单词旁发音按钮。
+        // 槽位不固定；其它任何自定义书和全部原版书里 UK/US 都保持游戏原样。
+        internal static bool JapaneseBookSelected()
+        {
+            return SelectedManagedBook() != null;
         }
 
         // 书名单独显示时没有 ChosenBook_List 可用，因此从 MyBook.es3 读这个槽自己的完整词表。
@@ -214,7 +229,7 @@ namespace WcpBookName
             int slot = Names.SlotOfCanonicalText(label);
             if (slot < 0 || !plugin.CurrentSlotIs(slot)) return label;
             BookProfile profile = plugin.SlotProfile(slot);
-            if (profile == null || profile.Language != BookProfiles.Japanese) return label;
+            if (profile == null) return label;
             return profile.DisplayName;
         }
 
@@ -308,8 +323,10 @@ namespace WcpBookName
 
         private void Scan()
         {
-            bool jpBook = JapaneseBookSelected();
-            _lastJpBook = jpBook;
+            BookProfile managedBook = SelectedManagedBook();
+            bool isManaged = managedBook != null;
+            string vLabel = isManaged ? VoiceLabelFor(managedBook) : null;
+            _lastJpBook = isManaged;
             var all = Resources.FindObjectsOfTypeAll(typeof(TMP_Text));
             for (int i = 0; i < all.Length; i++)
             {
@@ -330,16 +347,16 @@ namespace WcpBookName
                 }
                 // 单词旁的发音按钮: 本游戏词条已全部改用本地日语发音,
                 // 英文的 UK/US 标记没有意义 -> 显示成 JP
-                if (_jpLabels.Value && jpBook && IsAccentLabel(s)
+                if (_jpLabels.Value && isManaged && IsAccentLabel(s)
                     && LooksLikeAccentNode(t))
                 {
                     if (!_labelBackup.ContainsKey(t))
                         _labelBackup[t] = s;
-                    t.text = "JP";
-                    Log.LogInfo("Label: " + s + " -> JP");
+                    t.text = vLabel;
+                    Log.LogInfo("Label: " + s + " -> " + vLabel);
                 }
             }
-            if (jpBook)
+            if (isManaged)
             {
                 if (_singleJp.Value) EnforceSingleWordJp();
                 else RestoreHiddenNodes();
@@ -367,7 +384,7 @@ namespace WcpBookName
                 for (int i = 0; i < keys.Count; i++)
                 {
                     var t = keys[i];
-                    if (t != null && t.text == "JP") t.text = _labelBackup[t];
+                    if (t != null && (t.text == "JP" || t.text == "FR")) t.text = _labelBackup[t];
                 }
                 _labelBackup.Clear();
             }
@@ -441,7 +458,8 @@ namespace WcpBookName
             {
                 var t = tmps[i];
                 if (t == null) continue;
-                if ((t.text ?? string.Empty).Trim() == "JP") return true;
+                string txt = (t.text ?? string.Empty).Trim();
+                if (txt == "JP" || txt == "FR") return true;
             }
             return false;
         }
@@ -489,7 +507,8 @@ namespace WcpBookName
             {
                 var t = all[i] as TMP_Text;
                 if (t == null || !IsWordSideAccentNode(t)) continue;
-                if (!IsAccentLabel(t.text) && t.text.Trim() != "JP") continue;
+                string txt = t.text.Trim();
+                if (!IsAccentLabel(t.text) && txt != "JP" && txt != "FR") continue;
                 var key = t.transform.parent == null
                     ? null : t.transform.parent.parent;
                 if (key == null) continue;

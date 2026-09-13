@@ -1,10 +1,7 @@
 // Shared identity registry for the portable WCP word-book plugins.
-//
-// A profile is identified by the complete normalized word set, never by the
-// custom-book slot or by a language heuristic.  Add future French/Russian
-// profiles here with their own Id/Language/DisplayName/count/fingerprint;
-// their behaviour plugins can then opt in by Language without touching books
-// that do not exactly match a profile.
+// French copy of D:/Japanese/mod_book_name/BookProfiles.cs. Keep the registry
+// content in sync with the Japanese one; each project deploys its own plugins
+// and the matching game install reads whichever DLL carries the profile.
 using System;
 using System.Collections.Generic;
 using System.Security.Cryptography;
@@ -34,13 +31,17 @@ namespace WcpBookProfiles
     internal static class BookProfiles
     {
         internal const string Japanese = "ja";
+        internal const string French = "fr";
 
-        // 猫条版 JLPT 合并单册。指纹基于排序后的完整词形集合，导入到任意槽位均相同。
-        // 新语言词书只需在此添加新的 BookProfile；现有日语逻辑只接管 Language=ja。
+        // Fingerprints are SHA256 over the sorted full word-form set, so a book
+        // matches in any custom slot. Registering the Japanese book here as well
+        // lets the FR plugin positively identify (and therefore never touch) it.
         internal static readonly BookProfile[] All = new BookProfile[]
         {
             new BookProfile("catbar-jlpt-complete", Japanese, "日语词库(猫条版)", 7922,
-                "6d7a51c0c5d30dd63d8a6e3412bce1cf2419554fb8487cf5c8a205e43ac41663")
+                "6d7a51c0c5d30dd63d8a6e3412bce1cf2419554fb8487cf5c8a205e43ac41663"),
+            new BookProfile("catbar-french-cefr-complete", French, "法语词库(猫条版)", 8116,
+                "376af2eae0292052cefb4cb0d673f48a5ca480a38e25a6bf5353998caea17e9d")
         };
 
         internal static BookProfile Match(IList<string> words)

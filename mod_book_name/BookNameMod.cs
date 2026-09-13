@@ -186,12 +186,17 @@ namespace WcpBookName
                 var s = MyParameters.ChosenBook_Para;
                 if (string.IsNullOrEmpty(s)) return false;
                 int slot = Names.SlotOfCanonicalText(s);
-                if (slot < 0 && !BookProfiles.IsManagedDisplayName(s))
-                    return false;
+                if (slot < 0) return false;
+                string disk = ES3.Load<string>("ChosenBook_Para", defaultValue: null);
+                if (string.IsNullOrEmpty(disk) || disk != s) return false;
                 var list = MyParameters.ChosenBook_List;
                 if (list == null || list.Count < 5) return false;
-                BookProfile profile = BookProfiles.Match(list);
-                return profile != null && profile.Language == BookProfiles.Japanese;
+                BookProfile memory = BookProfiles.Match(list);
+                if (memory == null || memory.Language != BookProfiles.Japanese) return false;
+                var plugin = Instance;
+                if (plugin == null) return false;
+                BookProfile stored = plugin.SlotProfile(slot);
+                return stored != null && stored.Id == memory.Id;
             }
             catch (Exception) { return false; }
         }

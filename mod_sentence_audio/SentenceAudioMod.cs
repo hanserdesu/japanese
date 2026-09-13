@@ -20,6 +20,7 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.Networking;
 using UnityEngine.UI;
+using WcpBookProfiles;
 
 namespace SentenceAudioMod
 {
@@ -51,6 +52,46 @@ namespace SentenceAudioMod
         private object _s8, _s17;
         private readonly Dictionary<TMP_Text, GameObject> _buttons =
             new Dictionary<TMP_Text, GameObject>();
+
+        // 例句按钮是游戏所有词书共用的 UI。只有当前内存词表、当前自定义槽和
+        // 已落盘的书名三者一致地指向已登记日语 Profile 时，才允许接管它。
+        // 任何读档/切书中的不一致都失败关闭，宁可暂时不显示日语按钮，也不碰别的词书。
+        private bool ManagedJapaneseBookSelected()
+        {
+            try
+            {
+                string name = MyParameters.ChosenBook_Para;
+                if (string.IsNullOrEmpty(name)) return false;
+                int slot = SlotOf(name);
+                if (slot <= 0) return false;
+                string disk = ES3.Load<string>("ChosenBook_Para", defaultValue: null);
+                if (string.IsNullOrEmpty(disk) || disk != name) return false;
+                List<string> current = MyParameters.ChosenBook_List;
+                BookProfile memory = BookProfiles.Match(current);
+                if (memory == null || memory.Language != BookProfiles.Japanese) return false;
+                string path = Path.Combine(Application.persistentDataPath, "MyBook.es3");
+                string[] slotWords = ES3.Load<string[]>("SelfBookList" + slot, path);
+                BookProfile stored = BookProfiles.Match(slotWords);
+                return stored != null && stored.Id == memory.Id;
+            }
+            catch (Exception) { return false; }
+        }
+
+        private static int SlotOf(string name)
+        {
+            if (string.IsNullOrEmpty(name) || !name.StartsWith("自定义词书",
+                StringComparison.Ordinal)) return 0;
+            for (int i = 0; i < name.Length; i++)
+            {
+                char c = name[i];
+                if (c == '一') return 1;
+                if (c == '二') return 2;
+                if (c == '三') return 3;
+                if (c == '四') return 4;
+                if (c >= '1' && c <= '4') return c - '0';
+            }
+            return 0;
+        }
 
         void Awake()
         {
@@ -312,6 +353,11 @@ namespace SentenceAudioMod
             }
             if (_s8 == null && _t8 != null) _s8 = FindObjectOfType(_t8);
             if (_s17 == null && _t17 != null) _s17 = FindObjectOfType(_t17);
+            if (!ManagedJapaneseBookSelected())
+            {
+                RestoreOtherBookUi();
+                return;
+            }
             if (_s8 == null && _s17 == null) return;
             if (_f8 == null && _f17 == null) return;
 
@@ -380,13 +426,13 @@ namespace SentenceAudioMod
                         bool changed = isNew ||
                             !string.Equals(st.file, file, StringComparison.Ordinal);
                         st.file = file;
-                        // 游戏在这些按钮上挂了 SoundTheWordS8: 点一下会转去播
-                        // 单词的英文 TTS(底部 UK/US), 和例句日语叠在一起就是
-                        // 「乱读」。禁用它, 并把 onClick 收口成只剩我们的监听
-                        // (游戏的 Start 里 AddListener 会晚于本插件执行)。
-                        SuppressWordTts(b);
-                        b.onClick.RemoveAllListeners();
-                        b.onClick.AddListener(st.action);
+                        // 原游戏监听和标签都保留；Harmony 前缀只在带 JpReadTag 的
+                        // 日语词书按钮上抑制英文 TTS。这样离开本词书时能无损恢复。
+                        if (!st.actionAttached)
+                        {
+                            b.onClick.AddListener(st.action);
+                            st.actionAttached = true;
+                        }
                         EnsurePreloaded(file);
                         if (isNew) Relabel(b, i);
                         if (changed)
@@ -397,6 +443,36 @@ namespace SentenceAudioMod
                 _gameButtonsActive = any;
             }
             catch (Exception e) { Diag("takeover error: " + e.Message); }
+        }
+
+        // 切出受管日语词书时撤销仅由本插件添加的东西。不能清空整个 onClick，
+        // 否则会删掉用户原本词书的运行时监听。
+        private void RestoreOtherBookUi()
+        {
+            if (_readStates.Count > 0)
+            {
+                foreach (KeyValuePair<Button, ReadBtnState> pair in _readStates)
+                {
+                    Button b = pair.Key;
+                    ReadBtnState st = pair.Value;
+                    if (b == null || st == null) continue;
+                    if (st.actionAttached && st.action != null)
+                        b.onClick.RemoveListener(st.action);
+                    st.actionAttached = false;
+                    foreach (KeyValuePair<TMP_Text, string> label in st.labels)
+                    {
+                        if (label.Key != null) label.Key.text = label.Value;
+                    }
+                    JpReadTag tag = b.GetComponent<JpReadTag>();
+                    if (tag != null) UnityEngine.Object.Destroy(tag);
+                }
+                _readStates.Clear();
+            }
+            _gameButtonsActive = false;
+            foreach (KeyValuePair<TMP_Text, GameObject> pair in _buttons)
+            {
+                if (pair.Value != null && pair.Value.activeSelf) pair.Value.SetActive(false);
+            }
         }
 
         // 该序号按钮当前应播放的本地日语 mp3。
@@ -448,6 +524,8 @@ namespace SentenceAudioMod
         // 标签 "读例句N" -> "JPN", 其余文字(如快捷键号)保留
         private void Relabel(Button b, int i)
         {
+            ReadBtnState state;
+            if (!_readStates.TryGetValue(b, out state) || state == null) return;
             var texts = b.GetComponentsInChildren<TMP_Text>(true);
             for (int j = 0; j < texts.Length; j++)
             {
@@ -455,6 +533,7 @@ namespace SentenceAudioMod
                 if (string.IsNullOrEmpty(s)) continue;
                 if (s.IndexOf("读例句", StringComparison.Ordinal) >= 0)
                 {
+                    if (!state.labels.ContainsKey(texts[j])) state.labels[texts[j]] = s;
                     texts[j].text = s.Replace("读例句", "JP");
                     Diag("relabel " + i + ": '" + s + "' -> '" + texts[j].text + "'");
                 }
@@ -724,29 +803,6 @@ namespace SentenceAudioMod
             PlayClip(clip, file);
         }
 
-        // 游戏在例句按钮上挂了 SoundTheWordS8, 点一下会转去触发单词的
-        // 英文 TTS(底部 UK/US 按钮) —— 这就是「例句乱读」的来源。
-        // 按类型名禁用, 避免编译期依赖游戏类型。
-        private void SuppressWordTts(Button b)
-        {
-            try
-            {
-                var comps = b.GetComponents<MonoBehaviour>();
-                for (int i = 0; i < comps.Length; i++)
-                {
-                    var m = comps[i];
-                    if (m == null) continue;
-                    if (m.GetType().Name != "SoundTheWordS8") continue;
-                    if (m.enabled)
-                    {
-                        m.enabled = false;
-                        Diag("disabled SoundTheWordS8 on " + b.name);
-                    }
-                }
-            }
-            catch (Exception e) { Diag("suppress error: " + e.Message); }
-        }
-
         // "ja（zh）" / TMP 标记 / "例句：" 前缀 → 还原出纯 ja 文本
         internal static string ExtractJa(string raw)
         {
@@ -822,6 +878,9 @@ namespace SentenceAudioMod
         public SentenceAudioPlugin owner;
         public string file;
         public UnityEngine.Events.UnityAction action;
+        public bool actionAttached;
+        public readonly Dictionary<TMP_Text, string> labels =
+            new Dictionary<TMP_Text, string>();
 
         public void Play()
         {

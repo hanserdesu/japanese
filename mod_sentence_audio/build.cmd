@@ -15,6 +15,8 @@ set REFS=/r:"%GAME%\BepInEx\core\BepInEx.dll" ^
  /r:"%MGD%\mscorlib.dll" ^
  /r:"%MGD%\System.dll" ^
  /r:"%MGD%\System.Core.dll" ^
+ /r:"%MGD%\Assembly-CSharp.dll" ^
+ /r:"%MGD%\Assembly-CSharp-firstpass.dll" ^
  /r:"%MGD%\UnityEngine.dll" ^
  /r:"%MGD%\UnityEngine.CoreModule.dll" ^
  /r:"%MGD%\UnityEngine.UIModule.dll" ^
@@ -25,7 +27,7 @@ set REFS=/r:"%GAME%\BepInEx\core\BepInEx.dll" ^
  /r:"%MGD%\UnityEngine.TextRenderingModule.dll" ^
  /r:"%MGD%\Unity.TextMeshPro.dll"
 "%CSC%" /nologo /noconfig /nostdlib+ /target:library /langversion:5 /optimize+ %REFS% ^
- /out:"%~dp0SentenceAudioMod.dll" "%~dp0SentenceAudioMod.cs"
+ /out:"%~dp0SentenceAudioMod.dll" "%~dp0SentenceAudioMod.cs" "%~dp0..\mod_book_name\BookProfiles.cs"
 if errorlevel 1 (echo BUILD FAILED & exit /b 1)
 echo BUILD OK
 copy /y "%~dp0SentenceAudioMod.dll" "%GAME%\BepInEx\plugins\SentenceAudioMod.dll" >nul

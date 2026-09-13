@@ -91,6 +91,7 @@
 //     假名词 = 「中文」。这是本书自有释义, 与游戏本地库无关。
 //   · 硬性规模要求: S9 需要 allTestWordsS10_Para.Count >= 5, 战斗需要 S7TestWordList_Para >= 4。
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Reflection;
 using BepInEx;
@@ -136,6 +137,7 @@ namespace JpWordList
         private static BookProfile _slotProfile;
         private static List<string> _memoryProfileList;
         private static int _memoryProfileCount = -1;
+        private static string _memoryProfileBookName;
         private static BookProfile _memoryProfile;
         private static string _stateMem = "<none>";   // 本次判定信号，仅供日志
         private static string _stateSlot = "<none>";
@@ -160,6 +162,9 @@ namespace JpWordList
         private const string OwnedListKey = "JpWL_owned_lists";
         private const string OwnedArrayKey = "JpWL_owned_arrays";
         private const string BakPrefix = "JpWL_bak_";
+        // 接管队列来自哪一个自定义槽。离开本书时只清掉能证明属于这个完整
+        // 词书的旧基线，绝不能因为“含日文”就误伤用户的另一本日语词书。
+        private const string OwnedSourceSlotKey = "JpWL_owned_source_slot";
 
         // 跨词书启动守卫: 每次进游戏只做一次
         private static bool _crossBookGuardDone;
@@ -274,6 +279,18 @@ namespace JpWordList
                 AccessTools.Method(typeof(JpWordListPlugin), "PostSearchDictCheck"));
             dictCount += PatchOne(harmony, "ButtonTextTransfer", "OnSearchButtonClick",
                 AccessTools.Method(typeof(JpWordListPlugin), "PostSearchDictTransfer"));
+            // 原界面把两套英语音标硬拼成「美音 , 英音」。日语只有一个读音，
+            // 因此会留下孤立的逗号；在答案区重新按非空读音显示。
+            MethodInfo postPhonetic = AccessTools.Method(typeof(JpWordListPlugin), "PostAnswerPhonetic");
+            int answerCount = 0;
+            answerCount += PatchOne(harmony, "showTheAnswerS8", "ShowAnswer", postPhonetic);
+            answerCount += PatchOne(harmony, "showTheAnswerS8", "ShowAnswerForStudy", postPhonetic);
+            answerCount += PatchOne(harmony, "showTheAnswerS8", "ShowAnswerNoAutoVoice", postPhonetic);
+
+            // SetInputFieldValueS8 的新版重选流程只更新存档，漏了刷新下一词/结束页。
+            // 剩余 0 时点击「认识该词」便会看似毫无反应。
+            int classifyCount = PatchOne(harmony, "SetInputFieldValueS8", "changeKnownFuzzUnknownTimes",
+                AccessTools.Method(typeof(JpWordListPlugin), "PostS8Classification"));
             // 发音: 题干改成假名后, 本地音频(按汉字形命名)会查不到, 发音前换回原词再查
             int audioCount = PatchPre(harmony, "VocabularyAudioPlayer", "PlayWordAudio",
                 AccessTools.Method(typeof(JpWordListPlugin), "PrePlayWordAudio"));
@@ -283,7 +300,8 @@ namespace JpWordList
             Log.LogInfo("JPWordList: 补丁完成 scene=" + preCount + " post=" + postCount +
                         " addref=" + refCount + " bookchange=" + bookCount +
                         " heal=" + healCount + " s9pre=" + s9Count + " sel=" + selCount +
-                        " stem=" + stemCount + " dict=" + dictCount + " audio=" + audioCount);
+                        " stem=" + stemCount + " dict=" + dictCount + " answer=" + answerCount +
+                        " classify=" + classifyCount + " audio=" + audioCount);
         }
 
         private int PatchSet(Harmony harmony, string[] typeNames, string[] methodNames, MethodInfo patch)
@@ -1021,10 +1039,13 @@ namespace JpWordList
         // 当前内存词表在一次切换后通常复用同一个 List；缓存避免每帧计算完整 SHA-256。
         private static BookProfile ProfileOfCurrentList(List<string> list)
         {
+            string bookName = MyParameters.ChosenBook_Para;
             if (System.Object.ReferenceEquals(list, _memoryProfileList) && list != null &&
-                list.Count == _memoryProfileCount) return _memoryProfile;
+                list.Count == _memoryProfileCount && bookName == _memoryProfileBookName)
+                return _memoryProfile;
             _memoryProfileList = list;
             _memoryProfileCount = list == null ? -1 : list.Count;
+            _memoryProfileBookName = bookName;
             _memoryProfile = BookProfiles.Match(list);
             return _memoryProfile;
         }
@@ -1288,6 +1309,51 @@ namespace JpWordList
         {
             if (__instance == null) return;
             FixDictPanel(__instance.meaningText, null, null);
+        }
+
+        private static void PostAnswerPhonetic(showTheAnswerS8 __instance)
+        {
+            if (!IsEnabled() || BookState() != 1 || __instance == null) return;
+            try
+            {
+                if (__instance.phonicsText == null) return;
+                string us = (__instance.Target_phonicsUSText == null) ? null :
+                    __instance.Target_phonicsUSText.text;
+                string uk = (__instance.Target_phonicsUKText == null) ? null :
+                    __instance.Target_phonicsUKText.text;
+                string phonetic = !string.IsNullOrEmpty(us) ? us.Trim() :
+                    (!string.IsNullOrEmpty(uk) ? uk.Trim() : null);
+                if (!string.IsNullOrEmpty(phonetic)) __instance.phonicsText.text = phonetic;
+            }
+            catch (Exception e) { WarnOnce("answerphonetic", "答案区读音修正异常: " + e.Message); }
+        }
+
+        private static void PostS8Classification(SetInputFieldValueS8 __instance)
+        {
+            if (!IsEnabled() || __instance == null || Instance == null) return;
+            if (BookState() != 1 || !__instance.gameObject.activeInHierarchy) return;
+            Instance.StartCoroutine(RefreshS8AfterClassification(__instance));
+        }
+
+        private static IEnumerator RefreshS8AfterClassification(SetInputFieldValueS8 instance)
+        {
+            // 等本次按钮的其它 listener 把状态写完，再读取最新队列；避免被旧 UI 回调覆盖。
+            yield return null;
+            try
+            {
+                if (instance == null || !instance.gameObject.activeInHierarchy) yield break;
+                MyParameters.S8LookBack_Para = MyParameters.S8Progress_Para;
+                List<string> left = MyParameters.S8needToLearnWordList_Para;
+                if (left == null || left.Count == 0)
+                {
+                    if (instance.invokeButtonFinish != null) instance.invokeButtonFinish.onClick.Invoke();
+                }
+                else
+                {
+                    instance.ShowTheWord();
+                }
+            }
+            catch (Exception e) { WarnOnce("s8refresh", "学习页推进修正异常: " + e.Message); }
         }
 
         private static void FixDictPanel(TextMeshProUGUI meaning, TextMeshProUGUI us, TextMeshProUGUI uk)
@@ -1621,6 +1687,12 @@ namespace JpWordList
         {
             try
             {
+                int sourceSlot = LoadInt(OwnedSourceSlotKey, 0);
+                if (sourceSlot <= 0)
+                {
+                    sourceSlot = SelfBookIndexOf(MyParameters.ChosenBook_Para);
+                    if (sourceSlot > 0) ES3.Save(OwnedSourceSlotKey, sourceSlot);
+                }
                 List<string> owned = LoadStringList(ownedKey);
                 if (owned.Contains(field)) return;
                 owned.Add(field);
@@ -1635,6 +1707,7 @@ namespace JpWordList
             {
                 ES3.Save(OwnedListKey, new List<string>());
                 ES3.Save(OwnedArrayKey, new List<string>());
+                ES3.Save(OwnedSourceSlotKey, 0);
             }
             catch (Exception e) { WarnOnce("own:clear", "清接管记录失败: " + e.Message); }
         }
@@ -1685,20 +1758,73 @@ namespace JpWordList
             }
         }
 
-        private static bool ContainsJapanese(List<string> list)
+        private static bool BaselineBelongsToOwnedBook(List<string> list)
         {
-            if (list == null) return false;
+            if (list == null || list.Count == 0) return false;
+            int slot = LoadInt(OwnedSourceSlotKey, 0);
+            HashSet<string> words = OwnedBookWords(slot);
+            if (words == null || words.Count == 0) return false;
+            bool found = false;
             for (int i = 0; i < list.Count; i++)
-                if (LooksJapanese(list[i])) return true;
-            return false;
+            {
+                string word = list[i];
+                if (string.IsNullOrEmpty(word)) continue;
+                found = true;
+                if (!words.Contains(word)) return false;
+            }
+            return found;
         }
 
-        private static bool ContainsJapanese(string[] arr)
+        private static bool BaselineBelongsToOwnedBook(string[] arr)
         {
-            if (arr == null) return false;
+            if (arr == null || arr.Length == 0) return false;
+            int slot = LoadInt(OwnedSourceSlotKey, 0);
+            HashSet<string> words = OwnedBookWords(slot);
+            if (words == null || words.Count == 0) return false;
+            bool found = false;
             for (int i = 0; i < arr.Length; i++)
-                if (LooksJapanese(arr[i])) return true;
-            return false;
+            {
+                string word = arr[i];
+                if (string.IsNullOrEmpty(word)) continue;
+                found = true;
+                if (!words.Contains(word)) return false;
+            }
+            return found;
+        }
+
+        private static HashSet<string> OwnedBookWords(int slot)
+        {
+            try
+            {
+                string path = System.IO.Path.Combine(Application.persistentDataPath, "MyBook.es3");
+                if (slot > 0)
+                {
+                    string[] list = ES3.Load<string[]>("SelfBookList" + slot, path);
+                    BookProfile profile = BookProfiles.Match(list);
+                    if (profile != null && profile.Language == BookProfiles.Japanese)
+                        return new HashSet<string>(list);
+                    return null;
+                }
+                // 兼容安装这个隔离修复之前留下的接管记录：扫描已登记的完整
+                // 日语槽位。找不到就不猜，保留原基线而不是误伤其它词书。
+                for (int i = 1; i <= 4; i++)
+                {
+                    try
+                    {
+                        string[] list = ES3.Load<string[]>("SelfBookList" + i, path);
+                        BookProfile profile = BookProfiles.Match(list);
+                        if (profile != null && profile.Language == BookProfiles.Japanese)
+                            return new HashSet<string>(list);
+                    }
+                    catch (Exception) { }
+                }
+                return null;
+            }
+            catch (Exception e)
+            {
+                WarnOnce("ownsource:" + slot, "读取接管词书槽位失败: " + e.Message);
+                return null;
+            }
         }
 
         // 改动前的存档值。必须在第一次 Persist 之前取, 取到的才是游戏自己的基线。
@@ -1763,8 +1889,8 @@ namespace JpWordList
         }
 
         // 统一还原核心: 逐字段优先用内存基线(本次会话第一次接管前的值), 没有才读存档基线
-        // (上一次会话留下的)。基线读不到(ES3 返回空表)或本身含日语时清空该字段 ——
-        // 把日语队列回填给别的词书等于继续泄漏。acted = 是否存在需要还原的字段。
+        // (上一次会话留下的)。只有基线的每个词都能严格归属到当时接管的完整词书
+        // 时才清空；其它书（包括用户自己的日语书）基线照原样恢复。acted = 是否存在需要还原的字段。
         private static bool RestoreQueues(out bool acted)
         {
             bool clearedAny = false;
@@ -1778,7 +1904,7 @@ namespace JpWordList
                 List<string> value;
                 if (!BaselineLists.TryGetValue(key, out value) || value == null)
                     value = LoadBaselineListFromDisk(key);
-                if (value == null || ContainsJapanese(value))
+                if (value == null || BaselineBelongsToOwnedBook(value))
                 {
                     RestoreList(key, new List<string>());
                     clearedAny = true;
@@ -1795,7 +1921,7 @@ namespace JpWordList
                 string[] value;
                 if (!BaselineArrays.TryGetValue(key, out value) || value == null)
                     value = LoadBaselineArrayFromDisk(key);
-                if (value == null || ContainsJapanese(value))
+                if (value == null || BaselineBelongsToOwnedBook(value))
                 {
                     RestoreArray(key, new string[0]);
                     clearedAny = true;

@@ -1,4 +1,11 @@
+﻿param(
+    [string]$HostLabel = 'Windows PowerShell'
+)
+
 $ErrorActionPreference = 'Stop'
+
+$version = $PSVersionTable.PSVersion.ToString()
+Write-Host "运行环境：$HostLabel $version" -ForegroundColor DarkCyan
 $installScript = Join-Path $PSScriptRoot 'Install-WCP-Japanese.ps1'
 $success = $false
 

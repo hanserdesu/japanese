@@ -73,6 +73,10 @@ function Get-SteamRoots {
     }
     $initial = @($roots)
     foreach ($root in $initial) {
+        if (-not [IO.Directory]::Exists($root)) {
+            Write-Host "跳过不存在的 Steam 路径：$root" -ForegroundColor DarkYellow
+            continue
+        }
         $vdf = Join-Path $root 'steamapps\libraryfolders.vdf'
         if (-not (Test-Path -LiteralPath $vdf)) { continue }
         try {
@@ -82,22 +86,34 @@ function Get-SteamRoots {
             }
         } catch {}
     }
-    return @($roots)
+    return @($roots | Where-Object { [IO.Directory]::Exists($_) })
 }
 
 function Get-GameCandidates {
     $list = New-Object 'System.Collections.Generic.List[string]'
     Add-Candidate $list $env:WCP_GAME_DIR
     foreach ($root in (Get-SteamRoots)) {
+        if (-not [IO.Directory]::Exists($root)) { continue }
         Add-Candidate $list (Join-Path $root 'steamapps\common\WCP-WordGirlgriend')
     }
     foreach ($root in @('C:\Program Files (x86)\Steam\steamapps\common', 'C:\Program Files\Steam\steamapps\common')) {
         Add-Candidate $list (Join-Path $root 'WCP-WordGirlgriend')
     }
-    return @($list | Where-Object {
-        (Test-Path -LiteralPath (Join-Path $_ 'wcp_Data\Managed\Assembly-CSharp.dll')) -and
-        (Test-Path -LiteralPath (Join-Path $_ 'wcp_Data\StreamingAssets\wcpFullEng.db'))
-    })
+    $valid = New-Object 'System.Collections.Generic.List[string]'
+    foreach ($candidate in @($list)) {
+        if (-not [IO.Directory]::Exists($candidate)) {
+            if ($candidate -match '^[A-Za-z]:') {
+                Write-Host "跳过不存在的游戏路径：$candidate" -ForegroundColor DarkYellow
+            }
+            continue
+        }
+        $managed = Join-Path $candidate 'wcp_Data\Managed\Assembly-CSharp.dll'
+        $database = Join-Path $candidate 'wcp_Data\StreamingAssets\wcpFullEng.db'
+        if ((Test-Path -LiteralPath $managed) -and (Test-Path -LiteralPath $database)) {
+            $valid.Add($candidate)
+        }
+    }
+    return @($valid)
 }
 
 function Get-LogGamePath {

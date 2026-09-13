@@ -6,12 +6,12 @@
 
 ## 普通用户怎么安装
 
-1. 下载 [WCP 日语词书一键安装包 v1.1.4](https://github.com/hanserdesu/japanese/releases/tag/wcp-jp-v1.1.4)。
+1. 下载 [WCP 日语词书一键安装包 v1.1.5](https://github.com/hanserdesu/japanese/releases/tag/wcp-jp-v1.1.5)。
 2. 解压安装包。
 3. 关闭万词破，双击解压后最外层的 `01_双击运行我.cmd`，不要进入 `support` 文件夹。
 4. 等待安装器完成，然后重新启动游戏。安装窗口会一直保留，请点击右上角 X 关闭；按 Enter 不会关闭窗口。
 
-安装器会先创建一个持续保留的 CMD 会话，因此不会因 PowerShell 或默认终端异常而直接闪退。下载音频时会显示实时百分比、已下载容量和下载速度。它会自动搜索 Steam 的所有游戏库，不要求游戏安装在固定盘符；优先使用系统 Windows PowerShell，找不到时自动改用 PowerShell 7；不满足运行条件时会显示原因并保持窗口。新用户不需要提前安装 BepInEx，安装器会自动安装随包提供的 BepInEx 5.4.23.5 和 Doorstop 运行环境。
+安装器会先创建一个持续保留的 CMD 会话，因此不会因 PowerShell 或默认终端异常而直接闪退。下载音频时会显示实时百分比、已下载容量和下载速度。它会自动搜索 Steam 的所有游戏库，不要求游戏安装在固定盘符；会自动跳过 Steam 注册表中已经不存在的盘符，并继续搜索其他有效游戏库；优先使用系统 Windows PowerShell，找不到时自动改用 PowerShell 7；不满足运行条件时会显示原因并保持窗口。新用户不需要提前安装 BepInEx，安装器会自动安装随包提供的 BepInEx 5.4.23.5 和 Doorstop 运行环境。
 
 ## 安装包包含什么
 

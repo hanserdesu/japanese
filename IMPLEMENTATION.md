@@ -320,5 +320,145 @@ PATCH 模式：文件已存在但不足 3 条时，只补差额，新 ja 不得�
 
 ---
 
+## 附录 A：端到端 Runbook（命令级，可直接照抄执行）
+
+工作目录均为 `D:\Japanese\wcp_wordbooks\`；Python 统一用托管版
+`C:/Users/hanserdesu/.workbuddy/binaries/python/versions/3.13.12/python.exe`（下称 `py`）。
+标记 [BG] 的步骤必须后台 `-u` 跑（>2 分钟，前台会被超时 SIGTERM）。
+
+```text
+# ── 阶段1 词书构建 ────────────────────────────────────────────
+py tools/build_books.py            # data/openjlpt_*.csv + kaishi + bluskyo
+                                   #   -> output/jlpt_books.json
+
+# ── 阶段2 翻译分层 ────────────────────────────────────────────
+py tools/make_llm_batch.py         # 导出下一批精翻任务 llm_batch_pending.json
+#   （人工/LLM 完成后落盘 data/translations/zh_llm_*.json，格式见附录 B）
+py tools/translate_gtx.py          # 机翻兜底 -> data/translations/gtx_zh.json（断点续传）
+py tools/fetch_readings.py         # Jisho 补读音 -> data/readings_jisho.json
+py tools/merge_translations.py --write-game   # 重建 jlpt_books.json
+                                   #   + 重写 MyBook.es3 + 导入文件
+                                   # 优先级: gtx < llm（按文件名时间升序，新覆盖旧）
+
+# ── 阶段3/4 例句生产（子代理批量） ─────────────────────────────
+py tools/build_sentence_jobs.py    # 词表切块 -> work/gen_words_NN.json
+                                   #   （每块 400 词，每块再分 4 批 × 100 词）
+py tools/gen_dispatch.py status    # 看总进度
+py tools/gen_dispatch.py batch NN Y     # 看某批词表+缺口（<<< 需补M条）
+#   子代理按 work/AGENT_SPEC.md + PATCH_SPEC.md 产出 work/gen_out_NN_Y.json
+py tools/gen_pipeline.py check-one NN Y # 每批写完立即校验，必须 PASS
+py tools/gen_helper.py merge NN Y work/patch_NN_Y.json   # PATCH 模式合并后重新 check
+py tools/gen_pipeline.py summary   # 主会话复核（子代理自述不算数）
+py -u tools/apply_sentences.py     # [BG] 合并 gen_out_* + tr_out_* + 翻译
+                                   #   -> sentences_master.json + UPDATE/INSERT sentence2
+py -u tools/patch_local_db.py      # [BG] 全部 books.json -> 灌 pron+sentence2
+                                   #   （幂等探针；--force 强制重灌）
+
+# ── 阶段5 音频 ────────────────────────────────────────────────
+py tools/gen_audio.py --limit 400  # 单词 MP3 -> vocabulary/<词>.mp3（断点续传）
+py tools/gen_audio.py --retry-failed
+py tools/gen_sentence_audio.py --limit 2000   # 例句 -> sentence_audio/<md5(ja)>.mp3
+
+# ── 阶段6 交付 ────────────────────────────────────────────────
+py tools/make_import_files.py      # output/import/ 无表头 xlsx + wcp_jlpt.db
+py tools/write_mybook.py --dry-run # 预览写槽位；去掉 --dry-run 实写
+py tools/rename_books.py           # 写署名（仅 wcp.exe 关闭时）
+py tools/verify_all.py             # 只读全量复核（例句/DB/音频/导入文件）
+
+# ── Steam 还原 .db 之后的修复 ─────────────────────────────────
+py -u tools/patch_local_db.py && py tools/build_grammar_book.py --patch
+```
+
+## 附录 B：中间文件 Schema（全部实测自现存文件）
+
+**`output/jlpt_books.json`**（各语言 books.json 的统一形态）：
+```json
+{"meta": {"sources": [...], "stats": {"n5": {"count":661,"zh":661,"en_only":0}, ...},
+          "translation_layers": {...}},
+ "levels": {"n5..n1": [{"word","reading","meaning_en","example_ja","example_en",
+                         "level","meaning_zh","meaning","zh_source","pos_zh"}]}}
+```
+`meaning` = 游戏显示释义（`【假名】中文〈词性〉` 格式在构建期拼好）；`zh_source` ∈ llm/kaishi/gtx。
+
+**`work/gen_words_NN.json`**（词块，每块 400 词）：
+`{"単語": {"reading","meaning","level","need"}}`（need 已废弃，新标准一律 3 条）
+
+**`work/gen_out_NN_Y.json`**（例句产出，每批 100 词）：
+`{"単語": [{"ja":"…。","zh":"…"} × 3]}`
+
+**`data/translations/sentences_master.json`**（灌 sentence2 的数据源）：
+`{"単語": [["ja","zh"] × 3]}`，15,812 词。
+
+**`output/audio_manifest.json`**（断点续传账本）：
+`{"done": {"単語": "generated"}, "failed": {"単語": "err:NoAudioReceived:…"}}`
+（每套词书独立 manifest：audio_manifest / _topic / _kanji / setb_audio_manifest）
+
+**翻译批次文件两种形状**：
+- JLPT 层：`zh_llm_*.json` = `{"単語": "中文"}` 或 `{"単語": {"zh","pos"}}`；
+  `gtx_zh.json` = `{"単語": {"zh","en"}}`
+- 主题层：`zh_llm_themed_*.json` = `{"単語": {"zh","pos","ex_ja"}}`
+
+**`logs/sentence_worklist.tsv`**：`idx \t rowid \t word \t ja \t 旧翻译`
+（⚠️ rowid 不可作更新键——曾导致 10,251 条例句写串；apply_sentences 已改为
+「词+原句」定位）
+
+## 附录 C：脚本 CLI 速查（已逐一核对源码）
+
+| 脚本 | 调用方式 |
+|---|---|
+| `gen_pipeline.py` | `summary`(默认) / `list` / `check [all]` / `check-one NN Y`；env `GEN_MIN` 可改每词条数 |
+| `gen_helper.py` | `plan [N]` / `audit` / `merge NN Y <补丁.json>` |
+| `gen_dispatch.py` | `status` / `claim [N]` / `batch NN Y` / `done` |
+| `gen_audio.py` | `--limit N`(默认500) / `--retry-failed` |
+| `gen_sentence_audio.py` | `--limit N` |
+| `merge_translations.py` | `--write-game`（同时重写 MyBook + 导入文件） |
+| `make_import_files.py` | `--combined-only` |
+| `build_grammar_book.py` | `--stages` / `--patch` / `--dry-run` / `--allow-missing` |
+| `merge_kanji.py` | `--audio`（生成音训朗读 MP3） |
+| `build_release.py` | `--reuse-audio`（复用已打包的音频 zip） |
+| `build_installer_payload.py` | `--skip-audio` |
+| `patch_local_db.py` | `--force`（跳过探针幂等） |
+| 其余（build_books / build_sentence_jobs / apply_sentences / apply_readings / verify_all / export_sentences / make_llm_batch / merge_themed / merge_topic / setb_import / make_all_db / export_jp_db_payload / normalize_installer_eol） | 无参数直接跑 |
+
+## 附录 D：BepInEx 插件构建（实测自 build.cmd）
+
+- 编译器：**NETFX 自带 csc**（`C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe`），
+  `/target:library /langversion:5 /optimize+ /codepage:65001 /noconfig /nostdlib+`。
+  不用 dotnet/msbuild —— 游戏是 NETFX 运行时，C# 5 语法上限（`mod_jp_wordlist` 的
+  源码就是刻意按 C#5 写的）。
+- 引用清单（见 `mod_jp_wordlist/*.cmd` / `mod_sentence_audio/*.cmd`）：
+  `BepInEx\core\BepInEx.dll`、`0Harmony.dll` + 游戏 Managed 下的
+  `Assembly-CSharp(.firstpass).dll`、netstandard、mscorlib、System(.Core/.Data)、
+  `Mono.Data.Sqlite`（JpWordList 用）、UnityEngine 各模块（Core/UI/Audio/
+  UnityWebRequest(·Audio)/TextRendering/TextMeshPro，按插件需要取用）。
+- 三个插件共享 `mod_book_name\BookProfiles.cs`（词书指纹/档案），编译时一并传入 csc。
+- 部署：copy 到 `<游戏>\BepInEx\plugins\`；游戏在跑会 dll 锁定 → DEPLOY FAILED。
+  环境变量：`WCP_GAME_DIR` 覆盖游戏目录、`WCP_NO_DEPLOY=1` 只编译不部署。
+- 重载：`taskkill /IM wcp.exe /F` + `start "" "steam://rungameid/1981560"`（appid 1981560）。
+- 插件 ID：`dev.hanserdesu.sentaudio` 等，`[BepInPlugin]` 特性声明。
+
+## 附录 E：诚实边界 —— 文档无法 1:1 传递的部分
+
+以下是**文档照抄也复刻不出来**、必须人工/会话内决策的点，列出来避免误估：
+
+1. **LLM 精翻的 prompt 本体没有落盘**。例句/语法有契约文件（AGENT_SPEC 等），
+   但 8,076 词的释义精翻是会话内直接完成的，批任务文件（llm_batch_pending.json）
+   只有词条没有系统提示词。新语言需要自写精翻 prompt（要求：中文释义+词性+
+   读音校正，参考 AGENT_SPEC 的词性表）。
+2. **词源人工筛选的判断**。SetB 的惯用句/四字熟语/高级词汇词表是人工自选 +
+   LLM 增补，过滤标准（剔 COBOL 级冷僻词、转义词）散落在会话记录里，只有
+   `extract_themed.py` 的机械过滤是可复用的。
+3. **子代理编排策略**（每波几个代理、波次复核节奏、check_slice 收口）是会话级
+   实践，不在任何文件里——附录 A 只固化了命令序列本身。
+4. **install/wall 细节**：安装器 `installer/Install-WCP-Japanese.ps1` 全文约
+   数百行（Steam 库扫描、备份、音频下载校验、多线程解压），本文档只记录了行为
+   约束；1:1 复刻安装器应直接以该脚本为蓝本改造，而非凭本文重写。
+
+除以上四点外，本文档 + 仓库脚本 + 三份 SPEC 足以支撑无上下文的会话 1:1 复刻
+整条管线（词书构建→翻译→例句→音频→落库→导入→Mod→安装器）。
+
+---
+
 *本文档基于 2026-09-13 项目状态整理；契约细节以 `wcp_wordbooks/README.md`
-与 `work/*_SPEC.md` 的最新版为准，冲突时以代码行为为准。*
+与 `work/*_SPEC.md` 的最新版为准，冲突时以代码行为为准。附录 B/C 的 schema
+与 CLI 均实测自现存文件与源码，非转述。*

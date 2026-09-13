@@ -55,7 +55,7 @@ function Download-WithProgress([string]$uri, [string]$destination, [string]$disp
 }
 
 function Ensure-ZipExtractor {
-    if ('WcpJapaneseZipExtractor' -as [type]) { return }
+    if ('WcpJapaneseZipSession' -as [type]) { return }
     Add-Type -AssemblyName System.IO.Compression -ErrorAction Stop
     Add-Type -AssemblyName System.IO.Compression.FileSystem -ErrorAction Stop
     $zipReferences = @('System.dll', 'System.Core.dll',
@@ -67,34 +67,41 @@ using System.IO.Compression;
 using System.Threading;
 using System.Threading.Tasks;
 
-public static class WcpJapaneseZipExtractor
+public sealed class WcpJapaneseZipSession
 {
-    public static int TotalFiles;
-    public static long TotalBytes;
-    public static int CompletedFiles;
-    public static long CompletedBytes;
+    public Task Task;
+    public volatile bool TotalReady;
+    public int TotalFiles;
+    public long TotalBytes;
+    public int CompletedFiles;
+    public long CompletedBytes;
 
-    private static readonly object ErrorLock = new object();
-    private static string ErrorText;
+    private readonly object ErrorLock = new object();
+    private string ErrorText;
 
-    public static Task Start(string zipPath, string destination, int workerCount)
+    public static WcpJapaneseZipSession Start(string zipPath, string destination, int workerCount)
     {
-        return Task.Factory.StartNew(
-            () => Extract(zipPath, destination, workerCount),
+        WcpJapaneseZipSession session = new WcpJapaneseZipSession();
+        session.CompletedFiles = 0;
+        session.CompletedBytes = 0;
+        session.TotalFiles = 0;
+        session.TotalBytes = 0;
+        session.TotalReady = false;
+        session.Task = Task.Factory.StartNew(
+            () => session.Extract(zipPath, destination, workerCount),
             CancellationToken.None,
             TaskCreationOptions.LongRunning,
             TaskScheduler.Default);
+        return session;
     }
 
-    public static string GetError()
+    public string GetError()
     {
         lock (ErrorLock) { return ErrorText; }
     }
 
-    private static void Extract(string zipPath, string destination, int workerCount)
+    private void Extract(string zipPath, string destination, int workerCount)
     {
-        CompletedFiles = 0;
-        CompletedBytes = 0;
         ErrorText = null;
         string root = Path.GetFullPath(destination);
         if (!root.EndsWith(Path.DirectorySeparatorChar.ToString(), StringComparison.Ordinal))
@@ -121,6 +128,7 @@ public static class WcpJapaneseZipExtractor
                 if (!String.IsNullOrEmpty(entry.Name)) total += entry.Length;
             }
             TotalBytes = total;
+            TotalReady = true;
         }
 
         int workers = Math.Max(1, Math.Min(workerCount, Math.Max(1, names.Length)));
@@ -145,8 +153,8 @@ public static class WcpJapaneseZipExtractor
         }
     }
 
-    private static void ExtractWorker(string zipPath, string root, string[] names,
-                                      int workerIndex, int workerCount)
+    private void ExtractWorker(string zipPath, string root, string[] names,
+                               int workerIndex, int workerCount)
     {
         try
         {
@@ -179,7 +187,7 @@ public static class WcpJapaneseZipExtractor
         }
     }
 
-    private static void SetError(string text)
+    private void SetError(string text)
     {
         lock (ErrorLock) { if (ErrorText == null) ErrorText = text; }
     }
@@ -195,13 +203,18 @@ public static class WcpJapaneseZipExtractor
 function Expand-ZipWithProgress([string]$zipPath, [string]$destination, [string]$displayName) {
     Ensure-ZipExtractor
     $workers = [Math]::Max(2, [Math]::Min(4, [Environment]::ProcessorCount))
-    $task = [WcpJapaneseZipExtractor]::Start($zipPath, $destination, $workers)
-    $totalFiles = [WcpJapaneseZipExtractor]::TotalFiles
-    $totalBytes = [WcpJapaneseZipExtractor]::TotalBytes
+    $session = [WcpJapaneseZipSession]::Start($zipPath, $destination, $workers)
+    while (-not $session.TotalReady -and -not $session.Task.IsCompleted) {
+        Write-Progress -Activity "解压 $displayName" -Status '正在读取资源清单...' -PercentComplete 0
+        Start-Sleep -Milliseconds 100
+    }
+    $task = $session.Task
+    $totalFiles = $session.TotalFiles
+    $totalBytes = $session.TotalBytes
     $watch = [Diagnostics.Stopwatch]::StartNew()
     while (-not $task.IsCompleted) {
-        $doneFiles = [WcpJapaneseZipExtractor]::CompletedFiles
-        $doneBytes = [WcpJapaneseZipExtractor]::CompletedBytes
+        $doneFiles = [Math]::Min($session.CompletedFiles, $totalFiles)
+        $doneBytes = [Math]::Min($session.CompletedBytes, $totalBytes)
         $percent = if ($totalFiles -gt 0) { [Math]::Min(100, [int](($doneFiles * 100) / $totalFiles)) } else { 100 }
         $speed = if ($watch.Elapsed.TotalSeconds -gt 0) { $doneBytes / 1MB / $watch.Elapsed.TotalSeconds } else { 0 }
         $status = "$percent%  文件 $doneFiles / $totalFiles  $([Math]::Round($doneBytes / 1MB, 1)) / $([Math]::Round($totalBytes / 1MB, 1)) MB  $([Math]::Round($speed, 2)) MB/s  并行线程 $workers"
@@ -209,7 +222,7 @@ function Expand-ZipWithProgress([string]$zipPath, [string]$destination, [string]
         Start-Sleep -Milliseconds 250
     }
     $task.GetAwaiter().GetResult()
-    $finalStatus = "100%  文件 $([WcpJapaneseZipExtractor]::CompletedFiles) / $totalFiles  $([Math]::Round([WcpJapaneseZipExtractor]::CompletedBytes / 1MB, 1)) / $([Math]::Round($totalBytes / 1MB, 1)) MB"
+    $finalStatus = "100%  文件 $totalFiles / $totalFiles  $([Math]::Round($totalBytes / 1MB, 1)) / $([Math]::Round($totalBytes / 1MB, 1)) MB"
     Write-Progress -Activity "解压 $displayName" -Status $finalStatus -PercentComplete 100
     Write-Progress -Activity "解压 $displayName" -Completed
 }

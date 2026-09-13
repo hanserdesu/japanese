@@ -58,20 +58,9 @@ function Ensure-ZipExtractor {
     if ('WcpJapaneseZipExtractor' -as [type]) { return }
     Add-Type -AssemblyName System.IO.Compression -ErrorAction Stop
     Add-Type -AssemblyName System.IO.Compression.FileSystem -ErrorAction Stop
-    $runtimeDirectory = [IO.Path]::GetDirectoryName([System.Object].Assembly.Location)
-    $runtimeReferences = @('System.Collections.dll', 'System.Runtime.dll',
-        'System.Threading.dll', 'System.Threading.Tasks.dll',
-        'System.Threading.Tasks.Parallel.dll') |
-        ForEach-Object { Join-Path $runtimeDirectory $_ } |
-        Where-Object { Test-Path -LiteralPath $_ }
-    $zipReferences = @(
-        [System.Object].Assembly.Location,
-        [System.Collections.Generic.List[object]].Assembly.Location,
-        [System.Threading.Tasks.Task].Assembly.Location,
-        [System.IO.Compression.ZipArchive].Assembly.Location,
-        [System.IO.Compression.ZipFile].Assembly.Location
-    ) + $runtimeReferences | Select-Object -Unique
-    Add-Type -TypeDefinition @'
+    $zipReferences = @('System.dll', 'System.Core.dll',
+        'System.IO.Compression.dll', 'System.IO.Compression.FileSystem.dll')
+    $zipSource = @'
 using System;
 using System.IO;
 using System.IO.Compression;
@@ -125,7 +114,7 @@ public static class WcpJapaneseZipExtractor
             {
                 if (!String.IsNullOrEmpty(entry.Name)) names[nameIndex++] = entry.FullName;
             }
-            TotalFiles = names.Count;
+            TotalFiles = names.Length;
             long total = 0;
             foreach (ZipArchiveEntry entry in archive.Entries)
             {
@@ -134,7 +123,7 @@ public static class WcpJapaneseZipExtractor
             TotalBytes = total;
         }
 
-        int workers = Math.Max(1, Math.Min(workerCount, Math.Max(1, names.Count)));
+        int workers = Math.Max(1, Math.Min(workerCount, Math.Max(1, names.Length)));
         Task[] tasks = new Task[workers];
         for (int worker = 0; worker < workers; worker++)
         {
@@ -163,7 +152,7 @@ public static class WcpJapaneseZipExtractor
         {
             using (ZipArchive archive = ZipFile.OpenRead(zipPath))
             {
-                for (int i = workerIndex; i < names.Count; i += workerCount)
+                for (int i = workerIndex; i < names.Length; i += workerCount)
                 {
                     ZipArchiveEntry entry = archive.GetEntry(names[i]);
                     if (entry == null) throw new InvalidDataException("ZIP entry disappeared: " + names[i]);
@@ -195,7 +184,12 @@ public static class WcpJapaneseZipExtractor
         lock (ErrorLock) { if (ErrorText == null) ErrorText = text; }
     }
 }
-'@ -Language CSharp -ReferencedAssemblies $zipReferences -ErrorAction Stop
+'@
+    if ($PSVersionTable.PSEdition -eq 'Core') {
+        Add-Type -TypeDefinition $zipSource -Language CSharp -ErrorAction Stop
+    } else {
+        Add-Type -TypeDefinition $zipSource -Language CSharp -ReferencedAssemblies $zipReferences -ErrorAction Stop
+    }
 }
 
 function Expand-ZipWithProgress([string]$zipPath, [string]$destination, [string]$displayName) {
@@ -528,4 +522,8 @@ if (Test-Path -LiteralPath $myBookPath) {
 }
 
 $marker = [ordered]@{ installed = (Get-Date).ToString('s'); game = $game; backup = $backup; profile = $bookPayload.id; words = $words.Count }
-[IO.File]::WriteAllText((Join-Path $data 'jpmod_install.json'), ($m
+[IO.File]::WriteAllText((Join-Path $data 'jpmod_install.json'), ($marker | ConvertTo-Json), (New-Object Text.UTF8Encoding($false)))
+Write-Host "游戏目录: $game"
+Write-Host "备份目录: $backup"
+Write-Host '安装成功。'
+Write-Step '全部安装步骤已完成。'

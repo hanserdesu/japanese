@@ -1,24 +1,19 @@
-import io
-import json
-import sqlite3
-import sys
-
-sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
-
-DB = r'E:\Steam\steamapps\common\WCP-WordGirlgriend\wcp_Data\StreamingAssets\wcpOnlyWord.db'
-conn = sqlite3.connect(DB)
-cur = conn.cursor()
-
-for w in ['割れる', '黄色', '続ける', '歯医者', '全部', 'うち', 'あそこ']:
-    cur.execute("select meaning from pron where word=?", (w,))
-    row = cur.fetchone()
-    print(repr(w), "=>", (row[0][:70] if row else None))
-
-sv = json.load(io.open(r'C:\Users\hanserdesu\AppData\LocalLow\WCP\wcp\SaveFile.es3', encoding='utf-8'))
-book = sv['ChosenBook_List']['value']
-cur.execute("select word from pron")
-db = set(r[0] for r in cur.fetchall())
-hit = sum(1 for w in book if w in db)
-print("book words with a pron row: %d / %d" % (hit, len(book)))
-missing = [w for w in book if w not in db][:12]
-print("missing sample:", missing)
+import sqlite3, re
+db = sqlite3.connect(r'E:\Steam\steamapps\common\WCP-WordGirlgriend\wcp_Data\StreamingAssets\wcpFullEng.db')
+kana = re.compile(r'[\u3040-\u30ff]')
+jp = set()
+total = 0
+for (w,) in db.execute('select word from pron'):
+    total += 1
+    if w and kana.search(w):
+        jp.add(w)
+print('pron total rows:', total)
+print('distinct kana-containing words:', len(jp))
+# also count via jp payload union
+base = r'wcp_wordbooks/output/jp_db_payload'
+pl = set()
+with open(base + '\\jp_pron.tsv', encoding='utf-8') as fh:
+    for line in fh:
+        pl.add(line.split('\t')[0])
+print('payload words:', len(pl), '| payload words missing from db pron:', len(pl - jp))
+db.close()

@@ -1,12 +1,13 @@
 # -*- coding: utf-8 -*-
 """构建可移植安装包 (WCP日语词书安装包/):
 
-  安装日语词书.exe        ← tools/wcp_installer.py 经 PyInstaller 另行编译
+  一键安装日语词书.cmd    ← 自动定位 Steam 游戏目录并安装
   payload/additions.db    pron/help/sentence2/bookslot 增量数据 (SQL 安装时合并)
   payload/books/          persistentDataPath 词书文件 (xlsx + db)
   payload/audio/words.zip        单词发音 mp3 (~350MB)
   payload/audio/sentences.zip    例句发音 mp3 (~1.4GB)
-  payload/SentenceAudioMod.dll   BepInEx 播放插件
+  payload/plugins/*.dll          BepInEx 插件
+  payload/catbar_book.json       可移植合并词书, 安装时自动写入一个自定义槽
   payload/manifest.json
 
 用法: python tools/build_installer_payload.py [--skip-audio]
@@ -26,13 +27,47 @@ OUT = ROOT / 'output'
 PKG = OUT / 'installer_pkg' / 'WCP日语词书安装包'
 PAYLOAD = PKG / 'payload'
 PDA = Path.home() / 'AppData' / 'LocalLow' / 'WCP'
-SA = Path(r'E:\SteamLibrary\steamapps\common\WCP-WordGirlgriend\wcp_Data\StreamingAssets')
 
 BOOK_FILES = ['JLPT_N5N4_初级.xlsx', 'JLPT_N3.xlsx', 'JLPT_N2.xlsx',
               'JLPT_N1.xlsx', 'IT用语.xlsx',
               'wcp_jlpt.db', 'wcp_setb.db', 'wcp_themed.db',
               'wcp_kanji.db', 'wcp_all.db', 'wcp_grammar.db',
               '语法路线.xlsx']
+
+PLUGIN_FILES = {
+    'JpWordListMod.dll': ROOT.parent / 'mod_jp_wordlist' / 'JpWordListMod.dll',
+    'BookNameMod.dll': ROOT.parent / 'mod_book_name' / 'BookNameMod.dll',
+    'SentenceAudioMod.dll': ROOT.parent / 'mod_sentence_audio' / 'SentenceAudioMod.dll',
+}
+
+
+def build_combined_book_payload():
+    """Write the exact profile recognized by BookProfiles.cs."""
+    data = json.loads((OUT / 'jlpt_books.json').read_text(encoding='utf-8'))
+    seen, words, meanings = set(), [], {}
+    for level in ('n5', 'n4', 'n3', 'n2', 'n1'):
+        for row in data['levels'][level]:
+            word = (row.get('word') or '').strip()
+            meaning = (row.get('meaning') or row.get('meaning_en') or '').strip()
+            if not word or not meaning or word in seen:
+                continue
+            seen.add(word)
+            words.append(word)
+            meanings[word] = meaning
+    if len(words) != 7922:
+        raise RuntimeError(f'combined JLPT profile count mismatch: {len(words)}')
+    payload = {
+        'id': 'catbar-jlpt-complete',
+        'language': 'ja',
+        'display_name': '日语词库(猫条版)',
+        'word_count': len(words),
+        'fingerprint_sha256': '6d7a51c0c5d30dd63d8a6e3412bce1cf2419554fb8487cf5c8a205e43ac41663',
+        'words': words,
+        'meanings': meanings,
+    }
+    (PAYLOAD / 'catbar_book.json').write_text(
+        json.dumps(payload, ensure_ascii=False, indent=1), encoding='utf-8')
+    print(f'catbar_book.json: {len(words)} 词')
 
 
 def collect_words():
@@ -113,10 +148,13 @@ def main():
         shutil.rmtree(PKG)
     PAYLOAD.mkdir(parents=True)
     (PAYLOAD / 'books').mkdir()
+    (PAYLOAD / 'plugins').mkdir()
+    (PAYLOAD / 'jp_db_payload').mkdir()
     (PAYLOAD / 'audio').mkdir()
 
     words, route = collect_words()
     build_additions(words, route)
+    build_combined_book_payload()
 
     for name in BOOK_FILES:
         src = PDA / 'wcp' / name
@@ -126,9 +164,29 @@ def main():
             print(f'!! 缺词书文件: {name}')
     print(f'books: {len(list((PAYLOAD / "books").iterdir()))} 个')
 
-    dll = ROOT.parent / 'mod_sentence_audio' / 'SentenceAudioMod.dll'
-    if dll.exists():
-        shutil.copy2(dll, PAYLOAD / 'SentenceAudioMod.dll')
+    for name, dll in PLUGIN_FILES.items():
+        if not dll.exists():
+            raise FileNotFoundError(f'missing plugin build: {dll}')
+        shutil.copy2(dll, PAYLOAD / 'plugins' / name)
+    db_payload = ROOT / 'output' / 'jp_db_payload'
+    for name in ('jp_pron.tsv', 'jp_sentences.tsv', 'jp_only_pron.tsv', 'manifest.json'):
+        src = db_payload / name
+        if not src.exists():
+            raise FileNotFoundError(f'missing database repair payload: {src}')
+        shutil.copy2(src, PAYLOAD / 'jp_db_payload' / name)
+
+    combined = ROOT / 'output' / 'import' / '日语词库(猫条版).xlsx'
+    if combined.exists():
+        shutil.copy2(combined, PAYLOAD / 'books' / combined.name)
+    else:
+        print(f'!! 缺少可移植合并词书: {combined}')
+
+    for name in ('一键安装日语词书.cmd', 'Install-WCP-Japanese.ps1',
+                 '说明-给群友.txt'):
+        src = ROOT / 'installer' / name
+        if not src.exists():
+            raise FileNotFoundError(f'missing installer file: {src}')
+        shutil.copy2(src, PKG / name)
 
     if not skip_audio:
         t0 = time.time()
@@ -144,6 +202,8 @@ def main():
         'stages': 5,
         'route_rows': len(route),
         'skip_audio': skip_audio,
+        'plugins': sorted(PLUGIN_FILES),
+        'auto_import': True,
         'size_mb': round(total / 1e6, 1),
     }
     (PAYLOAD / 'manifest.json').write_text(

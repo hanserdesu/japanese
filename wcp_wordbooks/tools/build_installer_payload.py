@@ -230,6 +230,8 @@ def copy_windows_script(src: Path, dst: Path):
 
 def main():
     skip_audio = '--skip-audio' in sys.argv
+    normalize = ROOT / 'tools' / 'normalize_installer_eol.py'
+    subprocess.run([sys.executable, str(normalize)], check=True)
     if PKG.exists():
         shutil.rmtree(PKG)
     PAYLOAD.mkdir(parents=True)

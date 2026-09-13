@@ -153,8 +153,8 @@ public sealed class WcpJapaneseZipSession
         }
     }
 
-    private static void ExtractWorker(string zipPath, string root, string[] names,
-                                      int workerIndex, int workerCount)
+    private void ExtractWorker(string zipPath, string root, string[] names,
+                               int workerIndex, int workerCount)
     {
         try
         {
@@ -187,7 +187,7 @@ public sealed class WcpJapaneseZipSession
         }
     }
 
-    private static void SetError(string text)
+    private void SetError(string text)
     {
         lock (ErrorLock) { if (ErrorText == null) ErrorText = text; }
     }

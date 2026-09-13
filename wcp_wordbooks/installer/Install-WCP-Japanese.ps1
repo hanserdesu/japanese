@@ -171,7 +171,7 @@ public sealed class WcpJapaneseZipSession
                     string parent = Path.GetDirectoryName(target);
                     if (!String.IsNullOrEmpty(parent)) Directory.CreateDirectory(parent);
                     using (Stream input = entry.Open())
-                    using (FileStream output = new FileStream(target, FileMode.Create, FileAccess.Write, FileShare.None))
+                    using (FileStream output = new FileStream(ExtendedPathIfNeeded(target), FileMode.Create, FileAccess.Write, FileShare.None))
                     {
                         input.CopyTo(output);
                     }
@@ -185,6 +185,25 @@ public sealed class WcpJapaneseZipSession
             SetError(ex.ToString());
             throw;
         }
+    }
+
+    private static string ExtendedPathIfNeeded(string path)
+    {
+        string name = Path.GetFileName(path);
+        if (string.IsNullOrEmpty(name)) return path;
+        string stem = name;
+        int dot = name.IndexOf('.');
+        if (dot >= 0) stem = name.Substring(0, dot);
+        string upper = stem.ToUpperInvariant();
+        if (upper == "AUX" || upper == "CON" || upper == "PRN" || upper == "NUL")
+            return @"\\?\" + path;
+        if ((upper.StartsWith("COM") || upper.StartsWith("LPT")) && upper.Length > 3)
+        {
+            int n;
+            if (int.TryParse(upper.Substring(3), out n) && n >= 1 && n <= 9)
+                return @"\\?\" + path;
+        }
+        return path;
     }
 
     private void SetError(string text)
@@ -225,6 +244,46 @@ function Expand-ZipWithProgress([string]$zipPath, [string]$destination, [string]
     $finalStatus = "100%  文件 $totalFiles / $totalFiles  $([Math]::Round($totalBytes / 1MB, 1)) / $([Math]::Round($totalBytes / 1MB, 1)) MB"
     Write-Progress -Activity "解压 $displayName" -Status $finalStatus -PercentComplete 100
     Write-Progress -Activity "解压 $displayName" -Completed
+}
+
+function Copy-TreeNet([string]$sourceDir, [string]$targetDir, [string]$displayName) {
+    # PowerShell Copy-Item rejects Windows reserved device names (aux.mp3,
+    # nul.mp3, ...). The audio packages legitimately contain such word audio,
+    # so this copy uses plain .NET file APIs, which handle those names fine.
+    New-Item -ItemType Directory -Force -Path $targetDir | Out-Null
+    $count = 0
+    foreach ($src in [IO.Directory]::EnumerateFiles($sourceDir, '*', [IO.SearchOption]::AllDirectories)) {
+        $rel = $src.Substring($sourceDir.Length).TrimStart('\', '/')
+        $dst = [IO.Path]::Combine($targetDir, $rel)
+        $dstParent = [IO.Path]::GetDirectoryName($dst)
+        if (-not [IO.Directory]::Exists($dstParent)) { [IO.Directory]::CreateDirectory($dstParent) | Out-Null }
+        [IO.File]::Copy((Get-ExtendedPath $src), (Get-ExtendedPath $dst), $true)
+        $count++
+        if (($count % 2000) -eq 0) { Write-Host ("  copied {0} {1} files..." -f $count, $displayName) }
+    }
+    Write-Host ("{0} copy done, {1} files." -f $displayName, $count)
+}
+
+function Get-ExtendedPath([string]$path) {
+    $name = [IO.Path]::GetFileName($path)
+    if ([string]::IsNullOrEmpty($name)) { return $path }
+    $dot = $name.IndexOf('.')
+    $stem = if ($dot -ge 0) { $name.Substring(0, $dot) } else { $name }
+    $u = $stem.ToUpperInvariant()
+    if ($u -eq 'AUX' -or $u -eq 'CON' -or $u -eq 'PRN' -or $u -eq 'NUL') { return ('\\?\' + $path) }
+    if (($u.StartsWith('COM') -or $u.StartsWith('LPT')) -and $u.Length -gt 3) {
+        $n = 0
+        if ([int]::TryParse($u.Substring(3), [ref]$n) -and $n -ge 1 -and $n -le 9) { return ('\\?\' + $path) }
+    }
+    return $path
+}
+
+function Remove-TreeNet([string]$path) {
+    try {
+        [IO.Directory]::Delete($path, $true)
+    } catch {
+        Remove-Item -LiteralPath $path -Recurse -Force -ErrorAction SilentlyContinue
+    }
 }
 
 Write-Step '开始安装 WCP 日语词书。'
@@ -461,10 +520,10 @@ Get-ChildItem -LiteralPath (Join-Path $payload 'jp_db_payload') -File | ForEach-
 }
 New-Item -ItemType Directory -Force -Path (Join-Path $env:USERPROFILE 'AppData\LocalLow\WCP\vocabulary') | Out-Null
 New-Item -ItemType Directory -Force -Path (Join-Path $data 'sentence_audio') | Out-Null
-Copy-Item -Path (Join-Path $audioStage 'vocabulary\*') -Destination (Join-Path $env:USERPROFILE 'AppData\LocalLow\WCP\vocabulary') -Recurse -Force
-Copy-Item -Path (Join-Path $audioStage 'sentence_audio\*') -Destination (Join-Path $data 'sentence_audio') -Recurse -Force
+Copy-TreeNet (Join-Path $audioStage 'vocabulary') (Join-Path $env:USERPROFILE 'AppData\LocalLow\WCP\vocabulary') 'words'
+Copy-TreeNet (Join-Path $audioStage 'sentence_audio') (Join-Path $data 'sentence_audio') 'sentences'
 try {
-    Remove-Item -LiteralPath $audioStage -Recurse -Force -ErrorAction Stop
+    Remove-TreeNet $audioStage
     Write-Host '音频临时目录已清理。' -ForegroundColor DarkGray
 } catch {
     Write-Host "音频临时目录未能自动清理：$audioStage；不影响安装结果。" -ForegroundColor DarkYellow

@@ -22,7 +22,7 @@ ROOT = Path(__file__).resolve().parent.parent
 OUT = ROOT / 'output'
 PKG = OUT / 'installer_pkg' / 'WCP日语词书安装包'
 RELEASE = OUT / 'release'
-MAIN_TAG = 'wcp-jp-v1.1.8'
+MAIN_TAG = 'wcp-jp-v1.1.9'
 RESOURCE_TAG = 'wcp-jp-resources-v1.0.0'
 
 

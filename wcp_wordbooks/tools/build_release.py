@@ -33,6 +33,21 @@ GITEE_URL_TEMPLATE = os.environ.get(
     'WCP_GITEE_URL_TEMPLATE',
     f'{GITEE_REPO}/releases/download/{RESOURCE_TAG}/{{name}}',
 )
+# Gitee applies a repository-wide attachment quota. Keep the source release
+# as the primary domestic route, and place the remaining resource parts in
+# two small resource-only repositories. Each part carries its own URL so the
+# installer can span these repositories without changing the route contract.
+GITEE_WORDS_REPO = os.environ.get(
+    'WCP_GITEE_WORDS_REPO',
+    'https://gitee.com/cat-stripe/wcp-jp-audio-words',
+).rstrip('/')
+GITEE_SENTENCES_REPO = os.environ.get(
+    'WCP_GITEE_SENTENCES_REPO',
+    'https://gitee.com/cat-stripe/wcp-jp-audio-sentences',
+).rstrip('/')
+GITEE_PRIMARY_SENTENCE_PARTS = int(
+    os.environ.get('WCP_GITEE_PRIMARY_SENTENCE_PARTS', '22')
+)
 # Stay below the strict 50 MB single-file quota so the same parts can be
 # uploaded even when a Gitee account applies repository-style limits.
 GITEE_PART_SIZE = 45 * 1024 * 1024
@@ -82,6 +97,20 @@ def split_file(source, target_dir):
     return parts
 
 
+def add_gitee_part_urls(parts, kind):
+    """Attach the domestic Release URL for each generated split part."""
+    for index, part in enumerate(parts, start=1):
+        if kind == 'word_audio':
+            repo = GITEE_WORDS_REPO
+        elif index <= GITEE_PRIMARY_SENTENCE_PARTS:
+            repo = GITEE_REPO
+        else:
+            repo = GITEE_SENTENCES_REPO
+        part['url_template'] = (
+            f'{repo}/releases/download/{RESOURCE_TAG}/{{name}}'
+        )
+
+
 def zip_uncompressed_size(path):
     with zipfile.ZipFile(path) as archive:
         return sum(info.file_size for info in archive.infolist())
@@ -115,11 +144,13 @@ def main():
     assets = []
     gitee_parts = RELEASE / 'gitee-parts'
     for kind, path in (('word_audio', word_zip), ('sentence_audio', sentence_zip)):
+        parts = split_file(path, gitee_parts)
+        add_gitee_part_urls(parts, kind)
         assets.append({'kind': kind, 'name': path.name,
                        'size': path.stat().st_size,
                        'expanded_size': zip_uncompressed_size(path),
                        'sha256': sha256(path),
-                       'parts': split_file(path, gitee_parts)})
+                       'parts': parts})
     release_manifest = {
         'version': RESOURCE_TAG,
         'built': time.strftime('%Y-%m-%d %H:%M:%S'),

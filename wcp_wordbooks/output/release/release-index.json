@@ -3,8 +3,8 @@
   "resource_release": "wcp-jp-resources-v1.0.0",
   "core_installer": {
     "name": "WCP-Japanese-OneClick-Installer-wcp-jp-v1.2.2.zip",
-    "size": 12263302,
-    "sha256": "8cffba80fdc039df79c6da4357f4596b516e586535c344a91f74cc3c799dcb04"
+    "size": 12263466,
+    "sha256": "11bd1467572928764bb6f219adf6855bff90e8672889ea42bc9a526a5042f50f"
   },
   "resource_manifest": "release-manifest.json"
 }

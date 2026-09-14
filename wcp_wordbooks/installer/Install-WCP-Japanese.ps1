@@ -935,7 +935,10 @@ if ($downloadRoutes.Count -eq 0) { Fail 'release-manifest.json 没有资源下�
 
 function Get-AssetUrl($route, $asset) {
     $name = [Uri]::EscapeDataString([string]$asset.name)
-    $template = [string]$route.UrlTemplate
+    # A split part may override the route template so one domestic mirror can
+    # span multiple Gitee repositories under the same resource Release tag.
+    $template = [string]$asset.url_template
+    if (-not $template) { $template = [string]$route.UrlTemplate }
     if ($template.Contains('{name}')) {
         return $template.Replace('{name}', $name)
     }

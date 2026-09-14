@@ -14,9 +14,11 @@ namespace WcpHost
         internal static Dictionary<string, object> Fields = new Dictionary<string, object>();
         internal static Dictionary<string, object> Saved = new Dictionary<string, object>();
         internal static string FailKey;
+        internal static bool FailSet;
         internal static int Writes;
         internal static object StaticField(string type, string key) { object v; return Fields.TryGetValue(key, out v) ? v : null; }
-        internal static void SetStaticField(string type, string key, object value) { Fields[key] = value; }
+        internal static bool SetStaticField(string type, string key, object value)
+        { if (FailSet) return false; Fields[key] = value; return true; }
         internal static IList<string> ToWordList(object value) { return value as IList<string>; }
         internal static object Es3Load(string key, Type type, object fallback, string file)
         { object v; return Saved.TryGetValue(key, out v) ? v : fallback; }
@@ -33,7 +35,7 @@ internal static class TakeoverScopeTest
     { Console.WriteLine((value ? "PASS " : "FAIL ") + label); if (!value) failures++; }
     private static TakeoverScope Setup()
     {
-        GameAdapter.Fields.Clear(); GameAdapter.Saved.Clear(); GameAdapter.FailKey = null; GameAdapter.Writes = 0;
+        GameAdapter.Fields.Clear(); GameAdapter.Saved.Clear(); GameAdapter.FailKey = null; GameAdapter.FailSet = false; GameAdapter.Writes = 0;
         var registry = new BookRegistry();
         var manifest = new LanguageManifest { Profile = new BookProfile { Id = "test", Es3Prefix = "test" } };
         registry.Manifests.Add(manifest);
@@ -65,6 +67,27 @@ internal static class TakeoverScopeTest
         GameAdapter.Saved["test_owned_arrays"] = new string[] { Field };
         scope.RecoverStale(WcpHostPlugin.Instance.Registry, null);
         Check(Original(), "missing persisted baseline does not invent empty queue");
+        scope = Setup(); scope.Enforce();
+        var restarted = new TakeoverScope();
+        restarted.Enter(WcpHostPlugin.Instance.Registry.Manifests[0], new string[] { "book" });
+        restarted.Enforce(); restarted.Leave();
+        Check(Original(), "restart in same profile preserves original baseline");
+        scope = Setup();
+        GameAdapter.Fields["S8needToLearnWordList_Para"] = new List<string> { "english" };
+        GameAdapter.FailKey = "test_bak_S8needToLearnWordList_Para"; scope.Enforce();
+        Check(((IList<string>)GameAdapter.Fields["S8needToLearnWordList_Para"])[0] == "english", "list backup failure prevents takeover");
+        scope = Setup();
+        GameAdapter.Fields["S8needToLearnWordList_Para"] = new List<string> { "english" };
+        scope.Enforce(); GameAdapter.Saved.Clear(); scope.Leave();
+        Check(((IList<string>)GameAdapter.Fields["S8needToLearnWordList_Para"])[0] == "english", "list session baseline survives missing disk markers");
+        scope = Setup(); scope.Enforce(); GameAdapter.FailKey = Field; scope.Leave();
+        Check(((string[])GameAdapter.Saved["test_owned_arrays"]).Length == 1, "failed restore keeps retry marker");
+        GameAdapter.FailKey = null; scope.RecoverStale(WcpHostPlugin.Instance.Registry, null);
+        Check(((string[])GameAdapter.Saved["test_owned_arrays"]).Length == 0 && Original(), "successful recovery clears retry marker");
+        scope = Setup(); GameAdapter.Fields["testingIf_Para"] = true; scope.Enforce(); scope.Leave();
+        Check((bool)GameAdapter.Fields["testingIf_Para"], "array-only restore does not change test flags");
+        scope = Setup(); GameAdapter.FailSet = true; scope.Enforce();
+        Check(Original(), "field write failure does not persist takeover");
         Console.WriteLine("Failures: " + failures); return failures == 0 ? 0 : 1;
     }
 }

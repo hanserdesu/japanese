@@ -53,7 +53,10 @@ namespace WcpHost
             _manifest = manifest;
             _bookWords = new List<string>(bookWords);
             _active = true;
-            RecoverStale(manifest.Profile.Id);
+            // A previous process may have exited in this same profile. Restore
+            // its baseline before taking ownership again, or the filtered queue
+            // would become the next baseline and leak when leaving the book.
+            RecoverStale(null);
         }
 
         internal void Leave()
@@ -127,7 +130,7 @@ namespace WcpHost
             if (minimum > 0 && filtered.Count < minimum) return;
             if (!CaptureList(fieldName, current)) return;
             object replacement = ListValueForField(raw, filtered);
-            GameAdapter.SetStaticField("MyParameters", fieldName, replacement);
+            if (!GameAdapter.SetStaticField("MyParameters", fieldName, replacement)) return;
             GameAdapter.Es3Save(fieldName, replacement);
         }
 
@@ -143,7 +146,7 @@ namespace WcpHost
             if (raw is string[])
                 GameAdapter.SetStaticField("MyParameters", fieldName, value);
             else
-                GameAdapter.SetStaticField("MyParameters", fieldName, value);
+            if (!GameAdapter.SetStaticField("MyParameters", fieldName, value)) return;
             GameAdapter.Es3Save(fieldName, value);
         }
 
@@ -176,7 +179,7 @@ namespace WcpHost
                 List<string> old = current == null ? new List<string>() : new List<string>(current);
                 if (!CaptureList("S8needToLearnWordList_Para", old)) return;
                 object replacement = ListValueForField(needRaw, expected);
-                GameAdapter.SetStaticField("MyParameters", "S8needToLearnWordList_Para", replacement);
+                if (!GameAdapter.SetStaticField("MyParameters", "S8needToLearnWordList_Para", replacement)) return;
                 GameAdapter.Es3Save("S8needToLearnWordList_Para", replacement);
             }
         }
@@ -270,14 +273,14 @@ namespace WcpHost
             object replacement;
             if (current is string[]) replacement = value.ToArray();
             else replacement = value;
-            GameAdapter.SetStaticField("MyParameters", fieldName, replacement);
+            if (!GameAdapter.SetStaticField("MyParameters", fieldName, replacement)) return false;
             return GameAdapter.Es3Save(fieldName, replacement);
         }
 
         private bool RestoreArray(string fieldName, string[] value)
         {
-            GameAdapter.SetStaticField("MyParameters", fieldName,
-                (string[])value.Clone());
+            if (!GameAdapter.SetStaticField("MyParameters", fieldName,
+                (string[])value.Clone())) return false;
             return GameAdapter.Es3Save(fieldName, (string[])value.Clone());
         }
 

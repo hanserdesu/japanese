@@ -37,6 +37,8 @@ set REFS=/r:"%GAME%\BepInEx\core\BepInEx.dll" ^
  "%HERE%Core\Manifest.cs" ^
  "%HERE%Core\ResourceRouter.cs" ^
  "%HERE%Core\ILanguageStrategy.cs" ^
+ "%HERE%Core\StrategyContext.cs" ^
+ "%HERE%StrategyLoader.cs" ^
  "%HERE%GameAdapter.cs" ^
  "%HERE%Host.cs"
 if errorlevel 1 (echo BUILD FAILED & exit /b 1)

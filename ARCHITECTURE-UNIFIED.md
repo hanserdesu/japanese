@@ -553,6 +553,35 @@ PASS 4.2: Russian  项目注册表（sha256=767adff6）登记齐全
 回滚：删 `BepInEx/plugins/WcpHost.dll` 与 `LocalLow/WCP/packs/` 即回到部署前状态；
 JA 例句插件的新 DLL 在 pack 目录为空时与旧版行为一致，无需回滚。
 
+### 9.6 第四轮执行结果（2026-09-14，本轮）
+
+本轮继续把宿主从“能识别”推进到“可安全承载策略”的机制层，仍不接管旧插件的
+Harmony 行为，也不部署到游戏目录。
+
+- **清单运行时校验补齐。** `Manifest.cs` 现在拒绝不支持的 schema、空身份、非法
+  指纹、越界槽位、缺资源字段和 pack 外路径；`BookRegistry` 同时拒绝重复的
+  `profile_id`、语言、指纹、词数和槽位。静态 `arch_check.py` 之外，游戏内加载器
+  也 fail-closed。
+- **资源路由修正。** `ResourceRouter` 的单词/例句音频路径现在先解析 manifest
+  的 pack 相对目录，再生成绝对路径；未激活、空 key 和 `..` 越界路径一律返回
+  `null`。此前音频路由会把 `audio/word/` 当作当前工作目录，这是一个实际的
+  可用性 bug。
+- **策略装载边界落地。** 新增 `mod_host/StrategyLoader.cs`：只从当前 pack 内
+  的 `strategy.assembly` 反射加载 `ILanguageStrategy`，并校验类型和 language
+  码；缺失或不匹配只阻止该策略，不影响其它清单的身份层。当前四个 manifest
+  尚未附带 `WcpPack.<Lang>.dll`，因此实测为身份层 4/4、策略 0/4，这是预期的
+  未完成边界，不把旧 fork 冒充成新策略。
+- **回归测试去除三语言硬编码。** `RegistryTest` 已覆盖当前 1–4 个语言包、四槽
+  指纹矩阵、未激活 fail-closed、pack 内资源路由和越界拒绝；德语加入后不再因
+  “必须正好 3 个包”产生假失败。
+- **四语言验收纳入。** `arch_check.py` 已能从 `D:\German\output\import` 复算
+  德语 3,488 词指纹，并检查德语自愈探针；德语生成模板已修正残留的法语探针。
+
+本轮静态结果：`RegistryTest` 全部通过；`WcpHost.dll` 编译通过；四份 manifest
+身份、指纹、槽位和 pack 路由检查通过。未完成/未声称的仍是：策略 DLL 的实际
+实现与 Harmony 接线、宿主新 DLL/德语 manifest 的游戏目录部署，以及游戏内四语言
+切换和音频行为。
+
 ---
 
 
@@ -582,4 +611,3 @@ cat mod_book_name/BookProfiles.cs
 - `packs/{ja,fr,ru}/manifest.json` — 已实作的语言包清单（§9.1）
 - `mod_host/` — 宿主骨架，已编译（§9.1）
 - `tools/arch_check.py` — 本文 §5 的机检实现，随时可跑
-

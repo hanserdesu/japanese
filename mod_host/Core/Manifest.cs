@@ -93,14 +93,27 @@ namespace WcpHost
             Dictionary<string, object> st = Json.Sub(root, "strategy");
             m.StrategyAssembly = Json.Str(st, "assembly", null);
             m.StrategyType = Json.Str(st, "type", null);
+
+            Validate(m);
             return m;
         }
 
         internal string Resolve(string relative)
         {
             if (string.IsNullOrEmpty(relative)) return null;
-            if (Path.IsPathRooted(relative)) return relative;
-            return Path.GetFullPath(Path.Combine(PackRoot, relative.Replace('/', Path.DirectorySeparatorChar)));
+            // Pack manifests are data, not an escape hatch to arbitrary host paths.
+            // A malformed or malicious path must make that resource unavailable.
+            if (Path.IsPathRooted(relative)) return null;
+            string normalized = relative.Replace('/', Path.DirectorySeparatorChar)
+                                        .Replace('\\', Path.DirectorySeparatorChar);
+            string path = Path.GetFullPath(Path.Combine(PackRoot, normalized));
+            string root = PackRoot.TrimEnd(Path.DirectorySeparatorChar,
+                                           Path.AltDirectorySeparatorChar) +
+                          Path.DirectorySeparatorChar;
+            if (!path.StartsWith(root, StringComparison.OrdinalIgnoreCase) &&
+                !string.Equals(path, PackRoot, StringComparison.OrdinalIgnoreCase))
+                return null;
+            return path;
         }
 
         internal bool Matches(IList<string> words)
@@ -108,6 +121,48 @@ namespace WcpHost
             if (words == null || words.Count == 0) return false;
             if (words.Count != Profile.WordCount) return false;
             return BookRegistry.FingerprintOf(words) == Profile.Fingerprint;
+        }
+
+        private static void Validate(LanguageManifest m)
+        {
+            if (m.Schema != 1) throw new FormatException("不支持的 manifest schema: " + m.Schema);
+            if (m.Profile == null || string.IsNullOrEmpty(m.Profile.Id) ||
+                string.IsNullOrEmpty(m.Profile.Language) ||
+                string.IsNullOrEmpty(m.Profile.DisplayName))
+                throw new FormatException("manifest 身份字段不完整");
+            if (m.Profile.WordCount <= 0)
+                throw new FormatException("word_count 必须为正数: " + m.Profile.Id);
+            if (m.Profile.ObservedSlot < 1 || m.Profile.ObservedSlot > 4)
+                throw new FormatException("observed_slot 必须在 1..4: " + m.Profile.Id);
+            if (m.Profile.Fingerprint == null || m.Profile.Fingerprint.Length != 64)
+                throw new FormatException("fingerprint_sha256 长度不是 64: " + m.Profile.Id);
+            for (int i = 0; i < m.Profile.Fingerprint.Length; i++)
+            {
+                char c = m.Profile.Fingerprint[i];
+                bool hex = (c >= '0' && c <= '9') ||
+                           (c >= 'a' && c <= 'f');
+                if (!hex) throw new FormatException("fingerprint_sha256 不是小写十六进制: " + m.Profile.Id);
+            }
+            if (string.IsNullOrEmpty(m.Profile.Es3Prefix))
+                throw new FormatException("es3_prefix 不能为空: " + m.Profile.Id);
+            if (m.Books == null || m.Books.Count == 0)
+                throw new FormatException("resources.books 为空: " + m.Profile.Id);
+            RequireInside(m, m.MeaningDb, "meaning_db");
+            RequireInside(m, m.SentenceTable, "sentence_table");
+            RequireInside(m, m.Repair, "repair");
+            RequireInside(m, m.WordAudioDir, "word_audio");
+            RequireInside(m, m.SentenceAudioDir, "sentence_audio");
+            for (int i = 0; i < m.Books.Count; i++)
+                RequireInside(m, m.Books[i], "books[" + i + "]");
+            if (string.IsNullOrEmpty(m.StrategyAssembly) || string.IsNullOrEmpty(m.StrategyType))
+                throw new FormatException("strategy 未声明完整: " + m.Profile.Id);
+            RequireInside(m, m.StrategyAssembly, "strategy.assembly");
+        }
+
+        private static void RequireInside(LanguageManifest m, string relative, string field)
+        {
+            if (string.IsNullOrEmpty(relative) || m.Resolve(relative) == null)
+                throw new FormatException(field + " 必须是 pack 内相对路径: " + m.Profile.Id);
         }
     }
 
@@ -139,8 +194,19 @@ namespace WcpHost
                 {
                     LanguageManifest m = LanguageManifest.Load(mp);
                     for (int j = 0; j < r._manifests.Count; j++)
-                        if (r._manifests[j].Profile.Id == m.Profile.Id)
+                    {
+                        BookProfile old = r._manifests[j].Profile;
+                        if (old.Id == m.Profile.Id)
                             throw new FormatException("profile_id 重复: " + m.Profile.Id);
+                        if (old.Language == m.Profile.Language)
+                            throw new FormatException("language 重复: " + m.Profile.Language);
+                        if (old.Fingerprint == m.Profile.Fingerprint)
+                            throw new FormatException("fingerprint 重复: " + m.Profile.Fingerprint);
+                        if (old.WordCount == m.Profile.WordCount)
+                            throw new FormatException("word_count 重复: " + m.Profile.WordCount);
+                        if (old.ObservedSlot == m.Profile.ObservedSlot)
+                            throw new FormatException("observed_slot 重复: " + m.Profile.ObservedSlot);
+                    }
                     r._manifests.Add(m);
                 }
                 catch (Exception e)

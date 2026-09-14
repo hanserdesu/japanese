@@ -67,4 +67,13 @@ namespace WcpHost
         // 同时冗余登记在 manifest.repair_probes，供宿主在没有策略程序集时也能自检。
         IList<string> RepairProbes { get; }
     }
+
+    /// <summary>
+    /// 可选的资源绑定扩展。宿主把当前 manifest 解析后的绝对路径注入策略，
+    /// 策略不得自行猜测 packs 根目录或拼接其它语言的路径。
+    /// </summary>
+    public interface IPackBoundStrategy
+    {
+        void BindPack(StrategyContext context);
+    }
 }

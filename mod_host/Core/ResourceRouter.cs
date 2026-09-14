@@ -93,9 +93,9 @@ namespace WcpHost
                 case ResourceKind.Repair:
                     return m.Resolve(m.Repair);
                 case ResourceKind.WordAudio:
-                    return AudioPath(m.WordAudioDir, key, null);
+                    return AudioPath(m.Resolve(m.WordAudioDir), key, null);
                 case ResourceKind.SentenceAudio:
-                    return AudioPath(m.SentenceAudioDir, null, key);
+                    return AudioPath(m.Resolve(m.SentenceAudioDir), null, key);
                 default:
                     return null;
             }
@@ -117,17 +117,19 @@ namespace WcpHost
         // （UTF-8、小写十六进制、无分隔）。
         private static string AudioPath(string dir, string wordKey, string sentenceKey)
         {
+            if (string.IsNullOrEmpty(dir)) return null;
             string name;
             if (wordKey != null)
             {
+                if (wordKey.Length == 0) return null;
                 name = Sanitize(wordKey) + ".mp3";
             }
             else
             {
-                if (sentenceKey == null) return null;
+                if (string.IsNullOrEmpty(sentenceKey)) return null;
                 name = Md5(sentenceKey) + ".mp3";
             }
-            return JoinAudio(dir, name);
+            return System.IO.Path.Combine(dir, name);
         }
 
         // 词形里可能有路径分隔符/保留设备名；文件名侧的兜底规则见复刻契约 §1.5。
@@ -143,15 +145,6 @@ namespace WcpHost
                 sb.Append(ok ? s[i] : '_');
             }
             return sb.ToString();
-        }
-
-        private static string JoinAudio(string dir, string name)
-        {
-            if (string.IsNullOrEmpty(dir)) return null;
-            string d = dir.Replace('/', System.IO.Path.DirectorySeparatorChar);
-            char sep = System.IO.Path.DirectorySeparatorChar;
-            if (d.Length > 0 && d[d.Length - 1] != sep) d += sep;
-            return d + name;
         }
 
         internal static string Md5(string s)

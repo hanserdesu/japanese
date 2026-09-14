@@ -36,12 +36,22 @@ namespace WcpHost
 
         private ResourceRouter _router;
         private BookRegistry _registry;
+        private StrategyRegistry _strategies;
         private float _nextProbe;
         private string _lastReported = "";
         private const float ProbeInterval = 1.0f;
 
         internal static WcpHostPlugin Instance { get { return _instance; } }
         internal ResourceRouter Router { get { return _router; } }
+        // 阶段 2 的补丁协调器从这里取得当前策略；身份层未激活时始终为 null。
+        internal ILanguageStrategy ActiveStrategy
+        {
+            get
+            {
+                if (_router == null || _strategies == null || !_router.IsActive) return null;
+                return _strategies.ForProfile(_router.ActiveProfileId);
+            }
+        }
 
         private void Awake()
         {
@@ -59,6 +69,7 @@ namespace WcpHost
                 string root = ResolvePacksRoot();
                 _registry = BookRegistry.Load(root);
                 _router = new ResourceRouter(_registry);
+                _strategies = StrategyRegistry.Load(_registry);
                 ReportRegistry(root);
             }
             catch (Exception e)
@@ -93,8 +104,12 @@ namespace WcpHost
             string detail;
             bool ok = _registry.SlotBudgetOk(out detail);
             Log.LogInfo("WcpHost: 槽位预算 " + detail + (ok ? " — 通过" : " — 超限（游戏硬上限 4）"));
+            Log.LogInfo("WcpHost: 策略装载 " + _strategies.LoadedCount + "/" +
+                        _registry.Manifests.Count + "（缺失策略时仅保留身份层）");
             for (int i = 0; i < _registry.Errors.Count; i++)
                 Log.LogWarning("WcpHost: 语言包加载告警: " + _registry.Errors[i]);
+            for (int i = 0; i < _strategies.Errors.Count; i++)
+                Log.LogWarning("WcpHost: 策略加载告警: " + _strategies.Errors[i]);
         }
 
         private void Update()

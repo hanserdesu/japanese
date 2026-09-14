@@ -43,6 +43,7 @@ namespace WcpBookProfiles
         internal const string Japanese = "ja";
         internal const string French = "fr";
         internal const string Russian = "ru";
+        internal const string German = "de";
 
         // Fingerprints are SHA256 over the sorted full word-form set, so a book
         // matches in any custom slot. Registering every managed book here lets a
@@ -55,6 +56,8 @@ namespace WcpBookProfiles
                 "376af2eae0292052cefb4cb0d673f48a5ca480a38e25a6bf5353998caea17e9d"),
             new BookProfile("catbar-russian-cefr-complete", Russian, "俄语词库(猫条版)", 8451,
                 "dfecb0ab75e9b3ef75aedd47c677d68594b060bfbb84cc6bd94efd7888f4b74e"),
+            new BookProfile("catbar-german-complete", German, "德语词库(猫条版)", 3488,
+                "00d757b8d643b9018a0f29f5820d175425143ff7745e69f83fb09689b0148771"),
         };
 
         internal static BookProfile Match(IList<string> words)

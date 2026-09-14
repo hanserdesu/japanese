@@ -37,6 +37,7 @@ REGISTRY_CANDIDATES = ["mod_book_name/BookProfiles.cs"]
 PAYLOAD_GLOBS = [
     "output/installer_pkg/*/support/payload/books",
     "wcp_wordbooks/output/installer_pkg/*/support/payload/books",
+    "output/import",
 ]
 
 VERBOSE = "-v" in sys.argv
@@ -272,10 +273,12 @@ def check_probes_are_real(manifests):
         "Japanese": "mod_jp_wordlist/JpWordListMod.cs",
         "French": "mod_fr_wordlist/FrWordListMod.cs",
         "Russian": "mod_ru_wordlist/RuWordListMod.cs",
+        "German": "mod_de_wordlist/DeWordListMod.cs",
     }
     for m in manifests:
         proj = next((k for k, v in {"Japanese": "ja", "French": "fr",
-                                    "Russian": "ru"}.items() if v == m["language"]), None)
+                                    "Russian": "ru", "German": "de"}.items()
+                     if v == m["language"]), None)
         if proj is None:
             warn("7.x", f"{m['language']}: 无对应插件源码，跳过")
             continue

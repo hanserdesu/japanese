@@ -14,6 +14,8 @@ set CSC=C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe
  "%HERE%..\Core\Manifest.cs" ^
  "%HERE%..\Core\ResourceRouter.cs" ^
  "%HERE%..\Core\ILanguageStrategy.cs" ^
+ "%HERE%..\Core\StrategyContext.cs" ^
+ "%HERE%..\StrategyLoader.cs" ^
  "%HERE%RegistryTest.cs"
 if errorlevel 1 (echo BUILD FAILED & exit /b 1)
 echo BUILD OK

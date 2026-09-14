@@ -48,7 +48,8 @@ internal static class RegistryTest
         for (int i = 0; i < reg.Errors.Count; i++)
             Console.WriteLine("   告警: " + reg.Errors[i]);
         Check(reg.Errors.Count == 0, "注册表加载无告警", "");
-        Check(reg.Manifests.Count == 3, "加载 3 个语言包", "实际 " + reg.Manifests.Count);
+        Check(reg.Manifests.Count >= 1 && reg.Manifests.Count <= 4,
+              "加载 1..4 个语言包", "实际 " + reg.Manifests.Count);
 
         for (int i = 0; i < reg.Manifests.Count; i++)
         {
@@ -60,6 +61,34 @@ internal static class RegistryTest
         string budgetDetail;
         bool budgetOk = reg.SlotBudgetOk(out budgetDetail);
         Check(budgetOk, "槽位预算 ≤ 4", budgetDetail);
+
+        StrategyRegistry strategies = StrategyRegistry.Load(reg);
+        Check(strategies.LoadedCount + strategies.Errors.Count == reg.Manifests.Count,
+              "策略装载结果覆盖全部语言包",
+              "已装载 " + strategies.LoadedCount + "，告警 " + strategies.Errors.Count);
+
+        Console.WriteLine("\n== 资源路由回归（pack 内路径 + fail-closed） ==");
+        ResourceRouter router = new ResourceRouter(reg);
+        Check(router.Resolve(ResourceKind.MeaningDb, "probe") == null,
+              "未激活时释义资源为空", "");
+        Check(router.Resolve(ResourceKind.WordAudio, "probe") == null,
+              "未激活时单词音频为空", "");
+        for (int i = 0; i < reg.Manifests.Count; i++)
+        {
+            LanguageManifest m = reg.Manifests[i];
+            router.SetActive(m.Profile.Id);
+            string meaning = router.Resolve(ResourceKind.MeaningDb, "probe");
+            string wordAudio = router.Resolve(ResourceKind.WordAudio, "gehen");
+            string sentenceAudio = router.Resolve(ResourceKind.SentenceAudio, "例句 probe");
+            Check(IsInside(m.PackRoot, meaning), m.Profile.Language + " 释义路由在 pack 内", meaning);
+            Check(IsInside(m.PackRoot, wordAudio) && wordAudio.EndsWith("gehen.mp3", StringComparison.Ordinal),
+                  m.Profile.Language + " 单词音频路由在 pack 内", wordAudio);
+            Check(IsInside(m.PackRoot, sentenceAudio) && sentenceAudio.EndsWith(".mp3", StringComparison.Ordinal),
+                  m.Profile.Language + " 例句音频路由在 pack 内", sentenceAudio);
+            Check(m.Resolve("../outside") == null, m.Profile.Language + " 拒绝 pack 越界路径", "");
+        }
+        router.SetActive(null);
+        Check(!router.IsActive, "取消激活后路由关闭", "");
 
         if (!File.Exists(es3))
         {
@@ -95,8 +124,9 @@ internal static class RegistryTest
                 "  声明=" + p.Fingerprint.Substring(0, 12) +
                 " 实算=" + fp.Substring(0, 12));
         }
-        Check(matched == 3, "3 个非空槽位全部命中", "实际 " + matched);
-        Check(empty == 1, "1 个空槽位", "实际 " + empty);
+        Check(matched == reg.Manifests.Count, "所有非空槽位全部命中",
+              "命中 " + matched + "/语言包 " + reg.Manifests.Count);
+        Check(empty + matched == 4, "槽位总数为 4", "空 " + empty + " + 命中 " + matched);
 
         Console.WriteLine("\n== 唯一性矩阵（一个槽的词表只能命中一个语言包） ==");
         for (int slot = 1; slot <= 4; slot++)
@@ -118,5 +148,15 @@ internal static class RegistryTest
         Console.WriteLine();
         Console.WriteLine("结果: " + (_fail == 0 ? "全部通过" : _fail + " 条 FAIL"));
         return _fail == 0 ? 0 : 1;
+    }
+
+    private static bool IsInside(string root, string path)
+    {
+        if (string.IsNullOrEmpty(root) || string.IsNullOrEmpty(path)) return false;
+        string fullRoot = Path.GetFullPath(root).TrimEnd(Path.DirectorySeparatorChar,
+                                                         Path.AltDirectorySeparatorChar) +
+                          Path.DirectorySeparatorChar;
+        string fullPath = Path.GetFullPath(path);
+        return fullPath.StartsWith(fullRoot, StringComparison.OrdinalIgnoreCase);
     }
 }

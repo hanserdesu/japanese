@@ -1,0 +1,30 @@
+{
+  "schema": 1,
+  "profile_id": "catbar-german-complete",
+  "language": "de",
+  "display_name": "德语词库(猫条版)",
+  "word_count": 3488,
+  "fingerprint_sha256": "00d757b8d643b9018a0f29f5820d175425143ff7745e69f83fb09689b0148771",
+  "observed_slot": 4,
+  "es3_prefix": "de",
+  "book_layout": "fragmented",
+  "strategy": {
+    "assembly": "WcpPack.De.dll",
+    "type": "WcpPack.De.GermanStrategy"
+  },
+  "resources": {
+    "books": ["books/德语A1.xlsx", "books/德语A2.xlsx", "books/德语A1A2.xlsx"],
+    "meaning_db": "db/meaning.sqlite",
+    "sentence_table": "db/sentences.json",
+    "repair": "db/repair.tsv",
+    "word_audio": "audio/word/",
+    "sentence_audio": "audio/sentence/"
+  },
+  "repair_probes": ["gehen", "haben", "müssen"],
+  "notes": [
+    "word_count / fingerprint_sha256 是对 resources.books 全部分册的并集去重后排序算的 SHA-256。",
+    "德语是合并单册与分级双轨: A1=658, A2=2830, A1A2=3488，并集去重 = 3488，与指纹精确吻合。",
+    "observed_slot=4，写入 MyBook.es3 的 SelfBookList4（3488 词）。",
+    "与英语同形词 99 个，运行时由 DeWordListMod 动态隔离切换。"
+  ]
+}

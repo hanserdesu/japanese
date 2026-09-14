@@ -7,10 +7,10 @@
 `DEOM` SQL 拼写错误，并可能与法语插件争抢同一组共享库。两者会造成
 语言标签、词义/例句和共享数据库状态短暂不一致。
 
-- `D:\French\mod_fr_wordlist\FrWordListMod.cs`：德语词书激活时法语侧只读，避免覆盖德语共享库；其它非德语受管词书仍恢复英语基线。
-- `D:\German\mod_de_wordlist\DeWordListMod.cs`：只有德语词书激活时才拥有共享库，避免覆盖法语、日语和俄语状态。
-- `D:\German\tools\build_all_mods_de.py`：固定生成器，防止后续重新生成时恢复 `DEOM` 或旧的共享库守卫。
-- 已重新构建并部署法语、德语插件，以及 `D:\Japanese\mod_host\WcpHost.dll`；旧 DLL 均已在插件目录保留 `.before_fix_20260914_*.bak` 备份。
+- `D:\ATooManyLanguage\French\mod_fr_wordlist\FrWordListMod.cs`：德语词书激活时法语侧只读，避免覆盖德语共享库；其它非德语受管词书仍恢复英语基线。
+- `D:\ATooManyLanguage\German\mod_de_wordlist\DeWordListMod.cs`：只有德语词书激活时才拥有共享库，避免覆盖法语、日语和俄语状态。
+- `D:\ATooManyLanguage\German\tools\build_all_mods_de.py`：固定生成器，防止后续重新生成时恢复 `DEOM` 或旧的共享库守卫。
+- 已重新构建并部署法语、德语插件，以及 `D:\ATooManyLanguage\Japanese\mod_host\WcpHost.dll`；旧 DLL 均已在插件目录保留 `.before_fix_20260914_*.bak` 备份。
 
 本轮检查统一宿主的队列接管/恢复、身份与资源路由、既有日语测试脚本、数据库自愈载荷和安装脚本语法，并结合新日志复核了日语启动及后续语言切换。未完成完整安装矩阵或全部方向的界面切换，不能据此断言项目不存在其他 bug。
 
@@ -52,3 +52,20 @@ $env:WCP_NO_DEPLOY = '1'
 - 旧 `kana_logic_test.py` 虽返回 0，但读到 8,451 个俄语词、汉字词覆盖为 0；该脚本结果不计入日语功能通过证据。
 - 已验证日语启动以及日志中的日语 → 法语/俄语路径；尚未由自动化工具完成一次法语 → 日语的鼠标界面复现，也未完成插件停用和退出再启动矩阵。原生游戏窗口当前不在可用的 UI 自动化 surface 中，因此这部分应由下一次人工切换确认。
 - `DrunkDemo.OnDestroy`、缺少字体字符、`SaveButton` 脚本缺失等仍出现在游戏原始日志中，和本次语言插件 SQL/共享库问题无直接关联。
+
+
+## 2026-09-14 晚间追加：跨语言队列窜写根因修复（RU -> JP）
+
+`Player.log` 显示俄语 -> 日语切换时：JP 插件先重建日语队列，RU 插件的
+`PostBookChange` 随后执行 `RestoreSharedFields`，把旧基线写回共享队列并触发
+`FightList`；游戏按全局已学词典补池，战斗词表混入俄语词。五个词表插件
+(JP/FR/RU/DE/YUE) 均存在同一竞争窗口，且接管基线可能把上一本受管词书的
+残留内容记为自己的基线（污染复活路径）。
+
+- 五插件统一加入 OtherManagedBookActive / OtherRestoreDeferred / DeferredRestoreCheck：对方受管词书指纹活跃时暂缓一切还原写入，场景补丁 + 每秒轮询 + CrossBookGuard 三条路在窗口关闭后重试。
+- 基线记录/还原加入 BaselineFromOtherManagedBook（指纹前缀归属判定）：属于其它受管词书的基线一律按空处理，不再复活上一本书的内容。
+- FR 为模板源（RU/DE/YUE 由生成器适配），JP 为独立实现，语义一致。
+- Contonese 生成器写 BookProfiles.Cantonese 而常量名是 Yue，在两份 BookProfiles 副本补等价别名常量使构建通过。
+- packs/yue 与实装德语书同占 observed_slot 4 导致注册表唯一性冲突：yue 包自 JP 仓库移除（Contonese 项目持有正本），注册表恢复 4 包全 PASS。
+
+验证：五插件全部 BUILD OK 并部署；JP takeover 15 断言、RegistryTest 全部通过；JP 四个离线回归 ALL PASS；FR verify_all_fr ALL PASS；DE verify_all_de ALL PASS（共享库当前德语态，符合 book-scoped 设计，RU/FR 校验中的共享库断言因此预期不适用）；RU verify_all_ru 其余项通过。运行时五语言切换矩阵仍需实机确认。

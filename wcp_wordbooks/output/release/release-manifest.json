@@ -1,6 +1,6 @@
 {
   "version": "wcp-jp-resources-v1.0.0",
-  "built": "2026-09-14 14:18:33",
+  "built": "2026-09-14 14:38:52",
   "base_urls": [
     "https://github.com/hanserdesu/japanese/releases/download/wcp-jp-resources-v1.0.0"
   ],
@@ -9,7 +9,7 @@
       "id": "gitee",
       "name": "国内 Gitee Release",
       "mode": "parts",
-      "url_template": "https://gitee.com/hanserdesu/japanese/releases/download/wcp-jp-resources-v1.0.0/{name}"
+      "url_template": "https://gitee.com/cat-stripe/code-warehouse-for-cat-stripes/releases/download/wcp-jp-resources-v1.0.0/{name}"
     },
     {
       "id": "github",

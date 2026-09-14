@@ -25,7 +25,10 @@ PKG = OUT / 'installer_pkg' / 'WCP日语词书安装包'
 RELEASE = OUT / 'release'
 MAIN_TAG = 'wcp-jp-v1.2.2'
 RESOURCE_TAG = 'wcp-jp-resources-v1.0.0'
-GITEE_REPO = os.environ.get('WCP_GITEE_REPO', 'https://gitee.com/hanserdesu/japanese').rstrip('/')
+GITEE_REPO = os.environ.get(
+    'WCP_GITEE_REPO',
+    'https://gitee.com/cat-stripe/code-warehouse-for-cat-stripes',
+).rstrip('/')
 GITEE_URL_TEMPLATE = os.environ.get(
     'WCP_GITEE_URL_TEMPLATE',
     f'{GITEE_REPO}/releases/download/{RESOURCE_TAG}/{{name}}',
@@ -132,8 +135,8 @@ def main():
         'assets': assets,
     }
     manifest = RELEASE / 'release-manifest.json'
-    manifest.write_text(json.dumps(release_manifest, ensure_ascii=False, indent=2) + '\n',
-                        encoding='utf-8')
+    with manifest.open('w', encoding='utf-8', newline='\n') as stream:
+        stream.write(json.dumps(release_manifest, ensure_ascii=False, indent=2) + '\n')
     shutil.copy2(manifest, PKG / 'support' / 'release-manifest.json')
 
     # GitHub release uploads can mangle non-ASCII asset names. Keep the
@@ -146,13 +149,14 @@ def main():
             if p.is_file():
                 z.write(p, p.relative_to(PKG.parent).as_posix())
     index = RELEASE / 'release-index.json'
-    index.write_text(json.dumps({
-        'main_release': MAIN_TAG,
-        'resource_release': RESOURCE_TAG,
-        'core_installer': {'name': core_zip.name, 'size': core_zip.stat().st_size,
-                           'sha256': sha256(core_zip)},
-        'resource_manifest': manifest.name,
-    }, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+    with index.open('w', encoding='utf-8', newline='\n') as stream:
+        stream.write(json.dumps({
+            'main_release': MAIN_TAG,
+            'resource_release': RESOURCE_TAG,
+            'core_installer': {'name': core_zip.name, 'size': core_zip.stat().st_size,
+                               'sha256': sha256(core_zip)},
+            'resource_manifest': manifest.name,
+        }, ensure_ascii=False, indent=2) + '\n')
     print('release manifest:', manifest)
     print('release files:', RELEASE)
 

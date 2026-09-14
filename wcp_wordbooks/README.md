@@ -10,9 +10,9 @@
 
 只需要下载主 Release 里的一个安装包：
 
-[下载 WCP 日语词书一键安装包 v1.2.1](https://github.com/hanserdesu/japanese/releases/tag/wcp-jp-v1.2.1)
+[下载 WCP 日语词书一键安装包 v1.2.2](https://github.com/hanserdesu/japanese/releases/tag/wcp-jp-v1.2.2)
 
-不要单独下载资源 Release。安装器会自动从 GitHub 下载单词音频和例句音频，并检查文件是否完整。
+不要单独下载资源 Release。安装器会先探测国内 Gitee，再回退到 GitHub 下载单词音频和例句音频，并检查文件是否完整；Gitee 资源采用自动合并的分卷。
 
 ### 安装包会做什么？
 
@@ -64,7 +64,7 @@
 **提示 The directory is not empty：** 这是旧版安装失败后遗留临时解压目录造成的。v1.1.6 每次使用独立临时目录，旧目录清理失败也不会阻止安装；如果磁盘空间不足，可在 `%USERPROFILE%\AppData\LocalLow\WCP\wcp` 中删除名称以 `jpmod_audio_stage` 开头的旧临时目录。
 **提示解压速度慢或没有百分比：** 旧版使用 Windows PowerShell 自带的 Expand-Archive，进度显示不完整。v1.1.7 改为内置 .NET 多线程解压，并显示文件百分比、容量和速度。
 
-**音频下载失败：** 检查网络和磁盘空间，修复网络后重新运行安装器即可。已下载且校验正确的资源会复用，不必从头重复下载。
+**音频下载失败：** 安装器会自动切换国内 Gitee/GitHub 路由；若两条路由都不可用，检查网络和磁盘空间后重新运行即可。已下载且校验正确的资源会复用，不必从头重复下载。
 
 **游戏启动后没有插件效果：** 确认游戏已完全退出后再安装，并检查游戏目录中是否存在 `BepInEx` 文件夹。安装器运行结束后要重新启动游戏。
 

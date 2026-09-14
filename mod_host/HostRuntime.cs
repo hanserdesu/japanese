@@ -28,13 +28,12 @@ namespace WcpHost
             new Dictionary<TMP_Text, string>();
         private readonly Dictionary<TMP_Text, string> _labelWritten =
             new Dictionary<TMP_Text, string>();
-        private readonly Dictionary<TMP_Text, string> _temporaryBookLabels =
-            new Dictionary<TMP_Text, string>();
         private SentenceAudioService _sentenceAudio;
         private HostAudioPlayer _audio;
         private IList<string> _activeWords;
         private string _activeProfileId;
         private bool _leftOnce;
+        private bool _staleRecoveryAttempted;
 
         internal HostRuntime(WcpHostPlugin plugin, BookRegistry registry,
                              ResourceRouter router, StrategyRegistry strategies)
@@ -74,6 +73,7 @@ namespace WcpHost
             if (manifest == null || words == null || words.Count == 0)
             {
                 _router.SetActive(null);
+                _staleRecoveryAttempted = true;
                 return;
             }
 
@@ -93,13 +93,18 @@ namespace WcpHost
         {
             if (_activeProfileId == null)
             {
-                _scope.RecoverStale(_registry, null);
+                if (!_staleRecoveryAttempted)
+                {
+                    _scope.RecoverStale(_registry, null);
+                    _staleRecoveryAttempted = true;
+                }
                 return;
             }
             LeaveCurrent();
             _activeProfileId = null;
             _activeWords = null;
             _router.SetActive(null);
+            _staleRecoveryAttempted = true;
         }
 
         internal void Tick()
@@ -121,32 +126,6 @@ namespace WcpHost
         {
             SetInactive();
             if (_sentenceAudio != null) _sentenceAudio.Leave();
-        }
-
-        internal void PrepareBookChoose(object instance, object[] args)
-        {
-            int slot = FirstInt(args);
-            if (slot < 0 || slot >= 4) return;
-            TMP_Text label = BookLabelAt(instance, slot);
-            if (label == null) return;
-            LanguageManifest manifest = ManifestForSlot(slot + 1);
-            if (manifest == null) return;
-            string canonical = GameAdapter.CanonicalBookName(slot + 1);
-            if (string.IsNullOrEmpty(canonical) || label.text == canonical) return;
-            if (!_temporaryBookLabels.ContainsKey(label))
-                _temporaryBookLabels[label] = label.text;
-            label.text = canonical;
-        }
-
-        internal void FinishBookChoose(object instance, object[] args)
-        {
-            int slot = FirstInt(args);
-            if (slot < 0 || slot >= 4) return;
-            TMP_Text label = BookLabelAt(instance, slot);
-            LanguageManifest manifest = ManifestForSlot(slot + 1);
-            if (label != null && manifest != null)
-                label.text = manifest.Profile.DisplayName;
-            if (label != null) _temporaryBookLabels.Remove(label);
         }
 
         internal bool BlockEnglishSentenceTts(object instance)
@@ -372,7 +351,6 @@ namespace WcpHost
             }
             _labelBackup.Clear();
             _labelWritten.Clear();
-            _temporaryBookLabels.Clear();
         }
 
         private LanguageManifest ManifestForSlot(int slot)
@@ -380,13 +358,6 @@ namespace WcpHost
             IList<string> words = GameAdapter.SlotWords(slot);
             return words == null ? null : _registry.ByProfileId(_registry.Match(words) == null
                 ? null : _registry.Match(words).Id);
-        }
-
-        private TMP_Text BookLabelAt(object instance, int slot)
-        {
-            object raw = GameAdapter.InstanceField(instance, "BookNameText");
-            IList list = ToObjectList(raw);
-            return list == null || slot >= list.Count ? null : list[slot] as TMP_Text;
         }
 
         private string StaticString(string field)
@@ -433,17 +404,6 @@ namespace WcpHost
             IList list = value as IList;
             if (list != null) return list;
             return null;
-        }
-
-        private static int FirstInt(object[] args)
-        {
-            if (args == null) return -1;
-            for (int i = 0; i < args.Length; i++)
-            {
-                if (args[i] is int) return (int)args[i];
-                if (args[i] is short) return (short)args[i];
-            }
-            return -1;
         }
 
         private void SetQuestionStem(string canonical, string display)

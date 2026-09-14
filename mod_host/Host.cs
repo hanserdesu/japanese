@@ -33,7 +33,8 @@ namespace WcpHost
         private BookRegistry _registry;
         private StrategyRegistry _strategies;
         private HostRuntime _runtime;
-        private Harmony _harmony;
+        private Harmony _featureHarmony;
+        private bool _featuresInstalled;
         private float _nextProbe;
         private string _lastReported = "";
         private const float ProbeInterval = 1.0f;
@@ -70,9 +71,8 @@ namespace WcpHost
                 _strategies = StrategyRegistry.Load(_registry);
                 _runtime = new HostRuntime(this, _registry, _router, _strategies);
                 ReportRegistry(root);
-                _harmony = new Harmony("dev.hanserdesu.wcphost");
-                HostPatches.Install(_harmony);
-                Log.LogInfo("WcpHost: 固定 Harmony 接线已安装");
+                _featureHarmony = new Harmony("dev.hanserdesu.wcphost.features");
+                Log.LogInfo("WcpHost: 身份轮询已启用（兼容旧选书补丁），行为接线等待身份门通过");
             }
             catch (Exception e)
             {
@@ -128,6 +128,7 @@ namespace WcpHost
             try
             {
                 state = Evaluate();
+                SyncFeaturePatches();
                 if (_runtime != null) _runtime.Tick();
             }
             catch (Exception e)
@@ -135,32 +136,13 @@ namespace WcpHost
                 // fail-closed: 判定出错一律取消激活，绝不猜测
                 _router.SetActive(null);
                 if (_runtime != null) _runtime.SetInactive();
+                RemoveFeaturePatches();
                 state = "ERR " + e.GetType().Name + ": " + e.Message;
             }
             if (state != _lastReported)
             {
                 _lastReported = state;
                 Log.LogInfo("WcpHost: " + state);
-            }
-        }
-
-        internal void RefreshIdentity()
-        {
-            if (!_enabled.Value || _router == null) return;
-            try
-            {
-                string state = Evaluate();
-                if (state != _lastReported)
-                {
-                    _lastReported = state;
-                    Log.LogInfo("WcpHost: " + state);
-                }
-            }
-            catch (Exception e)
-            {
-                _router.SetActive(null);
-                if (_runtime != null) _runtime.SetInactive();
-                Log.LogWarning("WcpHost: 刷新身份失败，已关闭接管: " + e.Message);
             }
         }
 
@@ -245,12 +227,44 @@ namespace WcpHost
                    (ActiveStrategy == null ? "，策略缺失" : "，策略已载入") + "）";
         }
 
+        private void SyncFeaturePatches()
+        {
+            // A manifest without its strategy is an identity-only pack.  Do
+            // not install behavior hooks that cannot be implemented safely.
+            bool shouldInstall = _runtime != null && _runtime.IsActive &&
+                                 ActiveStrategy != null;
+            if (shouldInstall && !_featuresInstalled)
+            {
+                HostPatches.InstallFeatures(_featureHarmony);
+                _featuresInstalled = true;
+                Log.LogInfo("WcpHost: 语言策略已确认，行为 Harmony 接线已安装");
+            }
+            else if (!shouldInstall && _featuresInstalled)
+            {
+                RemoveFeaturePatches();
+            }
+        }
+
+        private void RemoveFeaturePatches()
+        {
+            if (!_featuresInstalled) return;
+            try
+            {
+                if (_featureHarmony != null) _featureHarmony.UnpatchSelf();
+            }
+            finally
+            {
+                _featuresInstalled = false;
+                if (Log != null) Log.LogInfo("WcpHost: 行为 Harmony 接线已移除");
+            }
+        }
+
         private void OnDestroy()
         {
             try
             {
                 if (_runtime != null) _runtime.OnDisabled();
-                if (_harmony != null) _harmony.UnpatchSelf();
+                RemoveFeaturePatches();
             }
             catch (Exception) { }
             if (_instance == this) _instance = null;

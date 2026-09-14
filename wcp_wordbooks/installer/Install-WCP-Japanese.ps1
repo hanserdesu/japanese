@@ -8,6 +8,18 @@ function Fail([string]$message) {
     throw "错误: $message"
 }
 
+function Get-Sha256([string]$path) {
+    $sha = [Security.Cryptography.SHA256]::Create()
+    $stream = $null
+    try {
+        $stream = [IO.File]::OpenRead($path)
+        return ([BitConverter]::ToString($sha.ComputeHash($stream))).Replace('-', '').ToLowerInvariant()
+    } finally {
+        if ($stream) { $stream.Dispose() }
+        if ($sha) { $sha.Dispose() }
+    }
+}
+
 function Download-WithProgress([string]$uri, [string]$destination, [string]$displayName, [int64]$expectedSize) {
     $request = $null
     $response = $null
@@ -18,6 +30,7 @@ function Download-WithProgress([string]$uri, [string]$destination, [string]$disp
         $request.Method = 'GET'
         $request.Timeout = 60000
         $request.ReadWriteTimeout = 60000
+        $request.UserAgent = 'WCP-Japanese-Installer/1.2.2'
         $request.Proxy = [Net.WebRequest]::DefaultWebProxy
         if ($request.Proxy) { $request.Proxy.Credentials = [Net.CredentialCache]::DefaultCredentials }
         $response = $request.GetResponse()
@@ -853,9 +866,153 @@ $releaseManifestPath = Join-Path $PSScriptRoot 'release-manifest.json'
 if (-not (Test-Path -LiteralPath $releaseManifestPath)) { Fail '安装包缺少 release-manifest.json。' }
 $release = Get-Content -LiteralPath $releaseManifestPath -Raw -Encoding UTF8 | ConvertFrom-Json
 if (-not $release.assets) { Fail 'release-manifest.json 无效。' }
-$baseUrls = @($release.base_urls)
-if ($baseUrls.Count -eq 0 -and $release.base_url) { $baseUrls = @($release.base_url) }
-if ($baseUrls.Count -eq 0) { Fail 'release-manifest.json 没有资源下载地址。' }
+$downloadRoutes = @()
+foreach ($route in @($release.download_routes)) {
+    if ($null -eq $route) { continue }
+    if ($route -is [string]) {
+        $template = [string]$route
+        $name = $template
+        $mode = 'full'
+    } else {
+        $template = [string]$route.url_template
+        if (-not $template) { $template = [string]$route.base_url }
+        $name = [string]$route.name
+        if (-not $name) { $name = $template }
+        $mode = if ($route.mode) { [string]$route.mode } else { 'full' }
+    }
+    if ($template) {
+        $downloadRoutes += [pscustomobject]@{
+            Name = $name
+            UrlTemplate = $template
+            Mode = $mode
+        }
+    }
+}
+
+# Keep accepting manifests produced before download_routes was introduced.
+if ($downloadRoutes.Count -eq 0) {
+    $legacyBaseUrls = @($release.base_urls)
+    if ($legacyBaseUrls.Count -eq 0 -and $release.base_url) {
+        $legacyBaseUrls = @($release.base_url)
+    }
+    foreach ($baseUrl in $legacyBaseUrls) {
+        if ($baseUrl) {
+            $downloadRoutes += [pscustomobject]@{
+                Name = [string]$baseUrl
+                UrlTemplate = ([string]$baseUrl).TrimEnd('/') + '/{name}'
+                Mode = 'full'
+            }
+        }
+    }
+}
+if ($downloadRoutes.Count -eq 0) { Fail 'release-manifest.json 没有资源下载地址。' }
+
+function Get-AssetUrl($route, $asset) {
+    $name = [Uri]::EscapeDataString([string]$asset.name)
+    $template = [string]$route.UrlTemplate
+    if ($template.Contains('{name}')) {
+        return $template.Replace('{name}', $name)
+    }
+    return $template.TrimEnd('/') + '/' + $name
+}
+
+function Test-DownloadRoute([string]$uri) {
+    $headRequest = $null
+    $headResponse = $null
+    $headError = $null
+    try {
+        $headRequest = [Net.WebRequest]::Create($uri)
+        $headRequest.Method = 'HEAD'
+        $headRequest.Timeout = 15000
+        $headRequest.ReadWriteTimeout = 15000
+        $headRequest.UserAgent = 'WCP-Japanese-Installer/1.2.2'
+        $headRequest.Proxy = [Net.WebRequest]::DefaultWebProxy
+        if ($headRequest.Proxy) { $headRequest.Proxy.Credentials = [Net.CredentialCache]::DefaultCredentials }
+        $headResponse = $headRequest.GetResponse()
+        $statusCode = [int]$headResponse.StatusCode
+        if ($statusCode -ge 200 -and $statusCode -lt 400) {
+            return [pscustomobject]@{
+                Success = $true
+                StatusCode = $statusCode
+                Method = 'HEAD'
+                Error = $null
+            }
+        }
+        $headError = "HTTP $statusCode"
+    } catch {
+        $headError = $_.Exception.GetType().Name
+    } finally {
+        if ($headResponse) { $headResponse.Dispose() }
+    }
+
+    # Some mirrors reject HEAD. A one-byte range GET verifies the same route
+    # without starting a full multi-gigabyte transfer.
+    $rangeRequest = $null
+    $rangeResponse = $null
+    $rangeStream = $null
+    try {
+        $rangeRequest = [Net.WebRequest]::Create($uri)
+        $rangeRequest.Method = 'GET'
+        $rangeRequest.Timeout = 15000
+        $rangeRequest.ReadWriteTimeout = 15000
+        $rangeRequest.UserAgent = 'WCP-Japanese-Installer/1.2.2'
+        $rangeRequest.Proxy = [Net.WebRequest]::DefaultWebProxy
+        if ($rangeRequest.Proxy) { $rangeRequest.Proxy.Credentials = [Net.CredentialCache]::DefaultCredentials }
+        if ($rangeRequest -is [Net.HttpWebRequest]) { $rangeRequest.AddRange(0, 0) }
+        $rangeResponse = $rangeRequest.GetResponse()
+        $rangeStream = $rangeResponse.GetResponseStream()
+        $probeBuffer = New-Object byte[] 1
+        [void]$rangeStream.Read($probeBuffer, 0, 1)
+        $statusCode = [int]$rangeResponse.StatusCode
+        if ($statusCode -ge 200 -and $statusCode -lt 400) {
+            return [pscustomobject]@{
+                Success = $true
+                StatusCode = $statusCode
+                Method = 'GET range'
+                Error = $null
+            }
+        }
+        return [pscustomobject]@{
+            Success = $false
+            StatusCode = $statusCode
+            Method = 'GET range'
+            Error = "HEAD $headError; HTTP $statusCode"
+        }
+    } catch {
+        return [pscustomobject]@{
+            Success = $false
+            StatusCode = 0
+            Method = 'HEAD/GET range'
+            Error = "HEAD $headError; $($_.Exception.GetType().Name)"
+        }
+    } finally {
+        if ($rangeStream) { $rangeStream.Dispose() }
+        if ($rangeResponse) { $rangeResponse.Dispose() }
+    }
+}
+
+function Join-Files([string[]]$paths, [string]$destination) {
+    $output = $null
+    try {
+        $output = [IO.File]::Open($destination, [IO.FileMode]::Create,
+            [IO.FileAccess]::Write, [IO.FileShare]::None)
+        $buffer = New-Object byte[] (1024 * 1024)
+        foreach ($path in $paths) {
+            $input = $null
+            try {
+                $input = [IO.File]::OpenRead($path)
+                while (($read = $input.Read($buffer, 0, $buffer.Length)) -gt 0) {
+                    $output.Write($buffer, 0, $read)
+                }
+            } finally {
+                if ($input) { $input.Dispose() }
+            }
+        }
+        $output.Flush()
+    } finally {
+        if ($output) { $output.Dispose() }
+    }
+}
 
 function Download-VerifiedAsset($asset) {
     if (-not $asset.name -or -not $asset.sha256 -or -not $asset.size) { Fail 'Release 资源清单缺少文件信息。' }
@@ -868,28 +1025,99 @@ function Download-VerifiedAsset($asset) {
     if (Test-Path -LiteralPath $target) {
         $item = Get-Item -LiteralPath $target
         if ($item.Length -eq [int64]$asset.size) {
-            $valid = ((Get-FileHash -LiteralPath $target -Algorithm SHA256).Hash.ToLower() -eq $asset.sha256.ToLower())
+            $valid = ((Get-Sha256 $target) -eq $asset.sha256.ToLower())
         }
     }
     if (-not $valid) {
-        Write-Host "正在从 GitHub 下载 $($asset.name)，文件较大，请耐心等待..."
-        $tmp = "$target.part"
-        Remove-Item -LiteralPath $tmp -Force -ErrorAction SilentlyContinue
+        Write-Host "正在选择 $($asset.name) 的可用下载路由，文件较大，请耐心等待..."
         [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
         $downloaded = $false
-        foreach ($baseUrl in $baseUrls) {
+        $errors = New-Object System.Collections.Generic.List[string]
+        $seenUrls = New-Object System.Collections.Generic.HashSet[string]([StringComparer]::OrdinalIgnoreCase)
+        foreach ($route in $downloadRoutes) {
+            $parts = @($asset.parts | Where-Object { $_ })
+            $isPartsRoute = ([string]$route.Mode).ToLowerInvariant() -eq 'parts'
+            if ($isPartsRoute -and $parts.Count -eq 0) {
+                $errors.Add("$($route.Name)：清单没有分卷信息")
+                continue
+            }
+            $probeAsset = if ($isPartsRoute) { $parts[0] } else { $asset }
+            $uri = Get-AssetUrl $route $probeAsset
+            if (-not $seenUrls.Add($uri)) { continue }
+            $probe = Test-DownloadRoute $uri
+            if (-not $probe.Success) {
+                $errors.Add("$($route.Name)：连通性探测失败（$($probe.Error)）")
+                continue
+            }
+            Write-Host "已选择下载路由：$($route.Name)（$($probe.Method)，HTTP $($probe.StatusCode)）" -ForegroundColor DarkCyan
+            $tmp = "$target.part"
+            Remove-Item -LiteralPath $tmp -Force -ErrorAction SilentlyContinue
+            $routeSucceeded = $false
             try {
-                Download-WithProgress ("$baseUrl/$($asset.name)") $tmp $asset.name ([int64]$asset.size)
-                if ((Get-Item -LiteralPath $tmp).Length -eq [int64]$asset.size -and
-                    (Get-FileHash -LiteralPath $tmp -Algorithm SHA256).Hash.ToLower() -eq $asset.sha256.ToLower()) {
+                if ($isPartsRoute) {
+                    $partPaths = @()
+                    $partIndex = 0
+                    foreach ($part in $parts) {
+                        $partIndex++
+                        $partTarget = "$target.gitee.part{0:D3}" -f $partIndex
+                        $partValid = $false
+                        if (Test-Path -LiteralPath $partTarget) {
+                            $partItem = Get-Item -LiteralPath $partTarget
+                            if ($partItem.Length -eq [int64]$part.size) {
+                                $partValid = (Get-Sha256 $partTarget) -eq ([string]$part.sha256).ToLowerInvariant()
+                            }
+                        }
+                        if (-not $partValid) {
+                            $partUrl = Get-AssetUrl $route $part
+                            $partTmp = "$partTarget.download"
+                            Remove-Item -LiteralPath $partTmp -Force -ErrorAction SilentlyContinue
+                            Download-WithProgress $partUrl $partTmp $part.name ([int64]$part.size)
+                            $partActualSize = (Get-Item -LiteralPath $partTmp).Length
+                            if ($partActualSize -ne [int64]$part.size) {
+                                throw "分卷 $($part.name) 长度不符（实际 $partActualSize / 期望 $($part.size) 字节）"
+                            }
+                            $partActualHash = Get-Sha256 $partTmp
+                            if ($partActualHash -ne ([string]$part.sha256).ToLowerInvariant()) {
+                                throw "分卷 $($part.name) SHA-256 不符（实际 $partActualHash）"
+                            }
+                            Move-Item -LiteralPath $partTmp -Destination $partTarget -Force
+                        }
+                        $partPaths += $partTarget
+                    }
+                    Join-Files $partPaths $tmp
+                } else {
+                    Download-WithProgress $uri $tmp $asset.name ([int64]$asset.size)
+                }
+                $actualSize = (Get-Item -LiteralPath $tmp).Length
+                if ($actualSize -ne [int64]$asset.size) {
+                    $errors.Add("$($route.Name)：下载长度不符（实际 $actualSize / 期望 $($asset.size) 字节）")
+                    continue
+                }
+                $actualHash = Get-Sha256 $tmp
+                if ($actualHash -eq $asset.sha256.ToLower()) {
                     Move-Item -LiteralPath $tmp -Destination $target -Force
+                    if ($isPartsRoute -and $partPaths) {
+                        foreach ($partPath in $partPaths) {
+                            Remove-Item -LiteralPath $partPath -Force -ErrorAction SilentlyContinue
+                        }
+                    }
                     $downloaded = $true
+                    $routeSucceeded = $true
                     break
                 }
-            } catch {}
-            Remove-Item -LiteralPath $tmp -Force -ErrorAction SilentlyContinue
+                $errors.Add("$($route.Name)：SHA-256 不符（实际 $actualHash）")
+            } catch {
+                $errors.Add("$($route.Name)：$($_.Exception.GetType().Name)")
+            } finally {
+                if (-not $routeSucceeded) {
+                    Remove-Item -LiteralPath $tmp -Force -ErrorAction SilentlyContinue
+                }
+            }
         }
-        if (-not $downloaded) { Fail "资源下载或 SHA-256 校验失败：$($asset.name)" }
+        if (-not $downloaded) {
+            $detail = if ($errors.Count) { [string]::Join("`n", $errors) } else { '没有可用下载路由。' }
+            Fail "资源下载或 SHA-256 校验失败：$($asset.name)`n$detail"
+        }
     }
     return $target
 }

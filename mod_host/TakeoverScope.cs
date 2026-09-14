@@ -206,7 +206,10 @@ namespace WcpHost
             if (string.IsNullOrEmpty(prefix)) return;
             string[] lists = LoadOwned(prefix + "_owned_lists");
             string[] arrays = LoadOwned(prefix + "_owned_arrays");
-            bool acted = lists.Length > 0 || arrays.Length > 0;
+            // An inactive host must be completely read-only when it has no
+            // ownership marker.  Writing empty marker arrays on every probe
+            // races legacy language plugins while they switch books.
+            if (lists.Length == 0 && arrays.Length == 0) return;
             for (int i = 0; i < lists.Length; i++)
             {
                 string field = lists[i];
@@ -222,8 +225,7 @@ namespace WcpHost
                     typeof(string[]), null, null) as string[];
                 RestoreArray(field, baseline == null ? new string[0] : baseline);
             }
-            if (acted)
-                MarkNoTestIfUnsafe();
+            MarkNoTestIfUnsafe();
             GameAdapter.Es3Save(prefix + "_owned_lists", new string[0]);
             GameAdapter.Es3Save(prefix + "_owned_arrays", new string[0]);
         }

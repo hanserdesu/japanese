@@ -6,7 +6,7 @@
 
 ## 普通用户怎么安装
 
-1. 下载 [WCP 日语词书一键安装包 v1.2.1](https://github.com/hanserdesu/japanese/releases/tag/wcp-jp-v1.2.1)。
+1. 下载 [WCP 日语词书一键安装包 v1.2.2](https://github.com/hanserdesu/japanese/releases/tag/wcp-jp-v1.2.2)。
 2. 解压安装包。
 3. 关闭万词破，双击解压后最外层的 `01_双击运行我.cmd`，不要进入 `support` 文件夹。
 4. 等待安装器完成，然后重新启动游戏。安装窗口会一直保留，请点击右上角 X 关闭；按 Enter 不会关闭窗口。
@@ -22,7 +22,7 @@
 - 日语词书、数据库修复和例句播放插件。
 - 与作者本机一致的 BepInEx 5 运行环境。
 
-音频资源会由安装器从 [资源 Release](https://github.com/hanserdesu/japanese/releases/tag/wcp-jp-resources-v1.0.0) 自动下载，并进行完整性校验。普通用户只需要下载主 Release 的一键安装包。
+音频资源会由安装器先探测国内 Gitee 和 [GitHub 资源 Release](https://github.com/hanserdesu/japanese/releases/tag/wcp-jp-resources-v1.0.0)，按可用路由自动下载，并进行完整性校验。Gitee 路由使用小于平台单附件限制的分卷，安装器会自动下载、合并和校验，普通用户只需要下载主 Release 的一键安装包。
 
 ## 会不会影响英语词库？
 
@@ -43,7 +43,7 @@
 
 **找不到游戏目录：** 确认游戏已安装并至少启动过一次；如果存在多个游戏目录，安装器会让你选择。
 
-**音频下载失败：** 检查网络和磁盘空间后重新运行安装器，已完成校验的资源会复用。
+**音频下载失败：** 安装器会自动切换国内 Gitee/GitHub 路由；若两条路由都不可用，检查网络和磁盘空间后重新运行，已完成校验的资源会复用。窗口中的逐路由错误信息可用于判断是连通性、下载长度还是 SHA-256 校验问题。
 
 **游戏启动后没有插件效果：** 确认游戏已完全退出后再安装，并检查游戏目录中是否存在 `BepInEx` 文件夹。安装器运行结束后要重新启动游戏。
 

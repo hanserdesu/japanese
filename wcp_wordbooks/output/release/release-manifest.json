@@ -1,21 +1,173 @@
 {
   "version": "wcp-jp-resources-v1.0.0",
-  "built": "2026-09-13 19:12:53",
+  "built": "2026-09-14 13:56:32",
   "base_urls": [
     "https://github.com/hanserdesu/japanese/releases/download/wcp-jp-resources-v1.0.0"
+  ],
+  "download_routes": [
+    {
+      "id": "gitee",
+      "name": "国内 Gitee Release",
+      "mode": "parts",
+      "url_template": "https://gitee.com/hanserdesu/japanese/releases/download/wcp-jp-resources-v1.0.0/{name}"
+    },
+    {
+      "id": "github",
+      "name": "GitHub Release",
+      "url_template": "https://github.com/hanserdesu/japanese/releases/download/wcp-jp-resources-v1.0.0/{name}"
+    }
   ],
   "assets": [
     {
       "kind": "word_audio",
       "name": "wcp-japanese-audio-words.zip",
       "size": 394614754,
-      "sha256": "b4f63bcf2e01c67c6ebeb34bdabd1b46b86576077c14517ab08e68c833b0f5ea"
+      "sha256": "b4f63bcf2e01c67c6ebeb34bdabd1b46b86576077c14517ab08e68c833b0f5ea",
+      "parts": [
+        {
+          "name": "wcp-japanese-audio-words.zip.001",
+          "size": 94371840,
+          "sha256": "7e3944e5c9b6049764a5e7838892103f35c40364196aebde6760411f0d8953ba"
+        },
+        {
+          "name": "wcp-japanese-audio-words.zip.002",
+          "size": 94371840,
+          "sha256": "fead9a7f03696e49fb3f6a5d646a3c95c14bbd5cbe9070096ec9d3d8df119181"
+        },
+        {
+          "name": "wcp-japanese-audio-words.zip.003",
+          "size": 94371840,
+          "sha256": "0983cd6bf636744d7277dd0a8f230bfec388606491a398c65107ed6d99832c43"
+        },
+        {
+          "name": "wcp-japanese-audio-words.zip.004",
+          "size": 94371840,
+          "sha256": "a71bd79a3518835c7b94987d4e7b89ea99c04b4b670b622ef1d25763cd9eb507"
+        },
+        {
+          "name": "wcp-japanese-audio-words.zip.005",
+          "size": 17127394,
+          "sha256": "1580630ee514e8db781b24ccef26cf4d279c10e3e8e30fd5f42272d410bf1199"
+        }
+      ]
     },
     {
       "kind": "sentence_audio",
       "name": "wcp-japanese-audio-sentences.zip",
       "size": 2057214618,
-      "sha256": "f87fdcd117506a339226d26751968fec9bc028d4860827886cb90994827b5dd2"
+      "sha256": "f87fdcd117506a339226d26751968fec9bc028d4860827886cb90994827b5dd2",
+      "parts": [
+        {
+          "name": "wcp-japanese-audio-sentences.zip.001",
+          "size": 94371840,
+          "sha256": "eeaace9bbba0139bc1b57ed8f1814e204a85b429af0eaa89d8b3a9d8adad449b"
+        },
+        {
+          "name": "wcp-japanese-audio-sentences.zip.002",
+          "size": 94371840,
+          "sha256": "e65138c40f507b736568ae998f7981c6c551350541361c1c6eeb5bbac3fdda68"
+        },
+        {
+          "name": "wcp-japanese-audio-sentences.zip.003",
+          "size": 94371840,
+          "sha256": "7c15b9734ae84b4c6a4f7d4ebdf7c2d8664bb7d2e544f36cd9d3aaf1e29a6dcc"
+        },
+        {
+          "name": "wcp-japanese-audio-sentences.zip.004",
+          "size": 94371840,
+          "sha256": "1a0b84aaf437342de21c35f5e02568a5cc964d3b396742fa8bbca150a424d8c3"
+        },
+        {
+          "name": "wcp-japanese-audio-sentences.zip.005",
+          "size": 94371840,
+          "sha256": "ab2ca92b0a07128f36ca99d42061f5d0aad9f91268429aa17f431a99834d9de0"
+        },
+        {
+          "name": "wcp-japanese-audio-sentences.zip.006",
+          "size": 94371840,
+          "sha256": "2dd151c2d6ff6b98054d8c92b0b353246cf8c92c26f6ec1f105b2b16f4d477a2"
+        },
+        {
+          "name": "wcp-japanese-audio-sentences.zip.007",
+          "size": 94371840,
+          "sha256": "d888682e5dab9fb29a203e81d3135f56785e00f355a2518d0e41dc0ca4efe794"
+        },
+        {
+          "name": "wcp-japanese-audio-sentences.zip.008",
+          "size": 94371840,
+          "sha256": "b2ef4ea07fdb06a2445f206a7b9f35f5acc6fef6b8b4af9673a860edd101c71b"
+        },
+        {
+          "name": "wcp-japanese-audio-sentences.zip.009",
+          "size": 94371840,
+          "sha256": "f1483ee2be1ee0f9479c15e09839987e25413cf358f5afeb04636a637af613d4"
+        },
+        {
+          "name": "wcp-japanese-audio-sentences.zip.010",
+          "size": 94371840,
+          "sha256": "4a12aa2650ae5e6b4ec233733e09e83625d3f551b2421de5e9ed5af9d1879b16"
+        },
+        {
+          "name": "wcp-japanese-audio-sentences.zip.011",
+          "size": 94371840,
+          "sha256": "3b68c7ed4556daf728fbea3f35cb7b32055d681a62d3cacfd20c81279e0d967b"
+        },
+        {
+          "name": "wcp-japanese-audio-sentences.zip.012",
+          "size": 94371840,
+          "sha256": "74515344ed71d31fe9029be556e5212944e14a6fc9ba1d38c913a26af7d1a4d7"
+        },
+        {
+          "name": "wcp-japanese-audio-sentences.zip.013",
+          "size": 94371840,
+          "sha256": "02e6eae819152ec2503c2b6862b78f5e50f86b015c4edab8fe054fc23ea711bc"
+        },
+        {
+          "name": "wcp-japanese-audio-sentences.zip.014",
+          "size": 94371840,
+          "sha256": "a311f704888a5fd08804211e35c2952f9f4edcf7b44caad66c32f32592e49bb3"
+        },
+        {
+          "name": "wcp-japanese-audio-sentences.zip.015",
+          "size": 94371840,
+          "sha256": "72fd642aaff3eb801f451d3e34f420f5ebeeb00a48e4fc72f2ecf6526a78db82"
+        },
+        {
+          "name": "wcp-japanese-audio-sentences.zip.016",
+          "size": 94371840,
+          "sha256": "6f7f8dd48b0f0ab0a92e69b74cfc36203f34d310c90569140ed09a16a5e2aec1"
+        },
+        {
+          "name": "wcp-japanese-audio-sentences.zip.017",
+          "size": 94371840,
+          "sha256": "74cf2ec092f4e52a8c77871dfa94e68c50276c8ed29b5e9579f691db7dcb7b88"
+        },
+        {
+          "name": "wcp-japanese-audio-sentences.zip.018",
+          "size": 94371840,
+          "sha256": "2ae86fd30d8820c088704a10cdb0a0c522ab48ca9ec12e2a6d66b82852d4506d"
+        },
+        {
+          "name": "wcp-japanese-audio-sentences.zip.019",
+          "size": 94371840,
+          "sha256": "79d7bd93afdc3aa1664a6f05925bfcdb19c4fed608ec2bc1b1c64675dd48941b"
+        },
+        {
+          "name": "wcp-japanese-audio-sentences.zip.020",
+          "size": 94371840,
+          "sha256": "1c10faab565785e645868206b602a1e7b48bb25b81b7e0be7e43485254b01a94"
+        },
+        {
+          "name": "wcp-japanese-audio-sentences.zip.021",
+          "size": 94371840,
+          "sha256": "a970242f9abe94d519fa9d1ce93544c2128421369cf639b3a4992c36c7bae88d"
+        },
+        {
+          "name": "wcp-japanese-audio-sentences.zip.022",
+          "size": 75405978,
+          "sha256": "681f0bea1a1fc00635d4998afc88c9843e4f9abd9cf8b862f73fa537bc3f76bb"
+        }
+      ]
     }
   ]
 }

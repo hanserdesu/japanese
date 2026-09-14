@@ -11,24 +11,18 @@ namespace WcpHost
 {
     internal static class HostPatches
     {
-        internal static void Install(Harmony harmony)
+        // Behavior hooks are installed only after a manifest and strategy
+        // have both passed the runtime gate; identity itself is polled from
+        // MyParameters during the migration period.  This avoids competing
+        // with the legacy BookNameMod SonBookChoose patch.
+        internal static void InstallFeatures(Harmony harmony)
         {
             if (harmony == null) return;
-            PatchBookChoose(harmony);
             PatchGenericSceneHooks(harmony);
             PatchDisplay(harmony);
             PatchDictionary(harmony);
             PatchAudio(harmony);
             PatchSelectionAndRefresh(harmony);
-        }
-
-        private static void PatchBookChoose(Harmony harmony)
-        {
-            PatchOne(harmony, "WordChooseButtonS10", "SonBookChoose",
-                AccessTools.Method(typeof(HostPatches), "BookChoosePrefix"),
-                AccessTools.Method(typeof(HostPatches), "BookChoosePostfix"));
-            PatchOne(harmony, "WordChooseButtonS10", "MakeCertainChange",
-                null, AccessTools.Method(typeof(HostPatches), "RefreshPostfix"));
         }
 
         private static void PatchGenericSceneHooks(Harmony harmony)
@@ -110,26 +104,6 @@ namespace WcpHost
                 AccessTools.Method(typeof(HostPatches), "EnforcePostfix"));
             PatchOne(harmony, "SetInputFieldValueS8", "changeKnownFuzzUnknownTimes", null,
                 AccessTools.Method(typeof(HostPatches), "EnforcePostfix"));
-        }
-
-        private static void BookChoosePrefix(object __instance, object[] __args)
-        {
-            WcpHostPlugin plugin = WcpHostPlugin.Instance;
-            if (plugin != null && plugin.Runtime != null)
-                plugin.Runtime.PrepareBookChoose(__instance, __args);
-        }
-
-        private static void BookChoosePostfix(object __instance, object[] __args)
-        {
-            WcpHostPlugin plugin = WcpHostPlugin.Instance;
-            if (plugin != null && plugin.Runtime != null)
-                plugin.Runtime.FinishBookChoose(__instance, __args);
-        }
-
-        private static void RefreshPostfix()
-        {
-            WcpHostPlugin plugin = WcpHostPlugin.Instance;
-            if (plugin != null) plugin.RefreshIdentity();
         }
 
         private static void EnforcePrefix()

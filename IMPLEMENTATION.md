@@ -49,7 +49,7 @@
 • rename_books.py 写署名昵称      • WcpEs3Helper（C# 内存编译）：保型改 ES3、防元数据丢失
 • make_import_files*.py 出导入件  • payload：catbar_book.json / books / plugins /
                                   •   bepinex / jp_db_payload / additions.db / manifest.json
-                                  • 音频不在主包：运行时从 GitHub Release 下载（约 2.4 GB）
+                                  • 音频不在主包：运行时优先从 Gitee 分卷、回退 GitHub 下载（约 2.4 GB）
         │                               │
         └───────────────┬───────────────┘
                         ▼
@@ -577,10 +577,10 @@ WCP日语词书安装包/                          ← 用户只解压这一层
 > 在 `installer/` 里找 `01_双击运行我.cmd` 是找不到的。
 
 **音频不在主包内**：`payload/manifest.json` 里 `skip_audio: true`，
-主包体积约 27.5 MB。安装时从 `release-manifest.json` 的 `base_urls`
-（GitHub Release `wcp-jp-resources-v1.0.0`）下载两份**整包**：
+主包体积约 27.5 MB。安装时从 `release-manifest.json` 的 `download_routes`
+探测 Gitee/GitHub 路由：Gitee Release 下载分卷并合并，GitHub Release 下载两份**整包**：
 `wcp-japanese-audio-words.zip`（约 394 MB）与 `wcp-japanese-audio-sentences.zip`（约 2.06 GB），
-带 SHA-256 校验、实时百分比/速度显示、多线程解压、失败复用已校验资源。
+两种路由都带 SHA-256 校验、实时百分比/速度显示、多线程解压、失败复用已校验资源。
 > 旧版文档写「远程**分卷**下载」——`[实测]` 当前是**两个整包**，不是分卷，措辞需按实现改写。
 
 **安装器其余必须复刻的行为**：自动扫描 Steam 全部库目录并跳过不存在的盘符；
@@ -776,7 +776,7 @@ WCP日语词书安装包/                          ← 用户只解压这一层
 | 共享 `sentence_audio/` 目录总量 | **82,486** 个 mp3（多语言共享，非本语言基线） | `ls \| wc -l` |
 | 共享 `vocabulary/` 目录总量 | **约 19,200** 个音频（多语言共享，非本语言基线） | `ls \| wc -l` |
 | BepInEx 插件集 | `JpWordListMod.dll`（v1.7.6）/ `BookNameMod.dll` / `SentenceAudioMod.dll`（NETFX 4.0 csc，C# 5，共享 `BookProfiles.cs`） | `grep BepInPlugin` 取版本号 |
-| 玩家一键安装包 | `WCP-Japanese-OneClick-Installer-wcp-jp-v1.2.1.zip`（约 12.3 MB） | `output/release/` |
+| 玩家一键安装包 | `WCP-Japanese-OneClick-Installer-wcp-jp-v1.2.2.zip`（约 12.3 MB） | `output/release/` |
 | 音频 Release 资产 | words 394,614,754 B / sentences 2,057,214,618 B（各带 SHA-256） | `support/release-manifest.json` |
 
 **三条验收命令**（都在 `D:/Japanese/wcp_wordbooks/` 下跑）：
@@ -893,7 +893,7 @@ cmd /c "cd /d D:\Japanese\mod_sentence_audio && build.cmd"
 `bundled_bepinex`, `plugins[]`, `auto_import`, `size_mb`。
 
 **`support/release-manifest.json`**（音频资产账本）：
-`version`, `built`, `base_urls[]`, `assets[]`（`kind`/`name`/`size`/`sha256`）。
+`version`, `built`, `base_urls[]`（旧版兼容）、`download_routes[]`（Gitee 分卷/GitHub 整包）、`assets[]`（`kind`/`name`/`size`/`sha256`/`parts[]`）。
 
 **`<lang>_db_payload/` 离线自愈补丁包**（四件）：
 - `jp_pron.tsv`：`word \t ukPhonic \t usPhonic \t meaning`
@@ -988,5 +988,5 @@ cmd /c "cd /d D:\Japanese\mod_sentence_audio && build.cmd"
 
 ---
 
-*本文档基于 2026-09-14 项目最新状态（Installer v1.2.1 / JpWordListMod v1.7.6）对齐；
+*本文档基于 2026-09-14 项目最新状态（Installer v1.2.2 / JpWordListMod v1.7.6）对齐；
 契约细节以代码与真实运行时行为为准。发现文档与实现不符时，先改文档并说明理由。*

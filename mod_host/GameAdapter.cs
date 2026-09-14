@@ -132,18 +132,6 @@ namespace WcpHost
             return 0;
         }
 
-        internal static string CanonicalBookName(int slot)
-        {
-            switch (slot)
-            {
-                case 1: return "自定义词书一";
-                case 2: return "自定义词书二";
-                case 3: return "自定义词书三";
-                case 4: return "自定义词书四";
-                default: return null;
-            }
-        }
-
         // 落盘书名。ES3 是游戏自带的静态类，这里只找 (string key, T default) 这个重载。
         internal static string DiskBookName()
         {

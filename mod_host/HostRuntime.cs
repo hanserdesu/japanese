@@ -1,0 +1,576 @@
+// WCP Host — 语言无关的运行时服务
+//
+// 这里承载固定的游戏接线：词书身份确认后，宿主把队列、题面、查词、
+// 单词音频和例句按钮交给当前 ILanguageStrategy。代码不包含任何语言
+// 专属路径或语言分支；语言资源只从当前 manifest 的 ResourceRouter 取得。
+using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.IO;
+using System.Reflection;
+using BepInEx.Logging;
+using HarmonyLib;
+using TMPro;
+using UnityEngine;
+using UnityEngine.Networking;
+using UnityEngine.UI;
+
+namespace WcpHost
+{
+    internal sealed class HostRuntime
+    {
+        private readonly WcpHostPlugin _plugin;
+        private readonly BookRegistry _registry;
+        private readonly ResourceRouter _router;
+        private readonly StrategyRegistry _strategies;
+        private readonly TakeoverScope _scope = new TakeoverScope();
+        private readonly Dictionary<TMP_Text, string> _labelBackup =
+            new Dictionary<TMP_Text, string>();
+        private readonly Dictionary<TMP_Text, string> _labelWritten =
+            new Dictionary<TMP_Text, string>();
+        private readonly Dictionary<TMP_Text, string> _temporaryBookLabels =
+            new Dictionary<TMP_Text, string>();
+        private SentenceAudioService _sentenceAudio;
+        private HostAudioPlayer _audio;
+        private IList<string> _activeWords;
+        private string _activeProfileId;
+        private bool _leftOnce;
+
+        internal HostRuntime(WcpHostPlugin plugin, BookRegistry registry,
+                             ResourceRouter router, StrategyRegistry strategies)
+        {
+            _plugin = plugin;
+            _registry = registry;
+            _router = router;
+            _strategies = strategies;
+        }
+
+        internal string ActiveProfileId { get { return _activeProfileId; } }
+        internal LanguageManifest ActiveManifest { get { return _router == null ? null : _router.Active; } }
+        internal ILanguageStrategy ActiveStrategy
+        {
+            get
+            {
+                if (_activeProfileId == null || _strategies == null) return null;
+                return _strategies.ForProfile(_activeProfileId);
+            }
+        }
+        internal bool IsActive { get { return _activeProfileId != null && ActiveManifest != null; } }
+        internal IList<string> ActiveWords { get { return _activeWords; } }
+
+        internal void SetIdentity(LanguageManifest manifest, IList<string> words)
+        {
+            string next = manifest == null ? null : manifest.Profile.Id;
+            if (string.Equals(_activeProfileId, next, StringComparison.Ordinal))
+            {
+                _activeWords = words;
+                if (IsActive) _scope.Enforce();
+                return;
+            }
+
+            LeaveCurrent();
+            _activeProfileId = next;
+            _activeWords = words == null ? null : new List<string>(words);
+            if (manifest == null || words == null || words.Count == 0)
+            {
+                _router.SetActive(null);
+                return;
+            }
+
+            _router.SetActive(manifest.Profile.Id);
+            _scope.Enter(manifest, _activeWords);
+            EnsureServices();
+            if (ActiveStrategy == null)
+                WcpHostPlugin.Log.LogWarning("WcpHost: 当前语言包没有可用策略，保留身份但不接管行为: " +
+                    manifest.Profile.Id);
+            else
+                WcpHostPlugin.Log.LogInfo("WcpHost: 接管语言包 " + manifest.Profile.Language +
+                    " / " + manifest.Profile.Id);
+            _leftOnce = false;
+        }
+
+        internal void SetInactive()
+        {
+            if (_activeProfileId == null)
+            {
+                _scope.RecoverStale(_registry, null);
+                return;
+            }
+            LeaveCurrent();
+            _activeProfileId = null;
+            _activeWords = null;
+            _router.SetActive(null);
+        }
+
+        internal void Tick()
+        {
+            if (!IsActive) return;
+            EnsureServices();
+            try { _scope.Enforce(); }
+            catch (Exception e) { Warn("运行态队列校正失败: " + e.Message); }
+            try { ScanBookLabels(); }
+            catch (Exception e) { Warn("书名/UI 扫描失败: " + e.Message); }
+            try
+            {
+                if (ActiveStrategy != null) _sentenceAudio.Tick();
+            }
+            catch (Exception e) { Warn("例句按钮扫描失败: " + e.Message); }
+        }
+
+        internal void OnDisabled()
+        {
+            SetInactive();
+            if (_sentenceAudio != null) _sentenceAudio.Leave();
+        }
+
+        internal void PrepareBookChoose(object instance, object[] args)
+        {
+            int slot = FirstInt(args);
+            if (slot < 0 || slot >= 4) return;
+            TMP_Text label = BookLabelAt(instance, slot);
+            if (label == null) return;
+            LanguageManifest manifest = ManifestForSlot(slot + 1);
+            if (manifest == null) return;
+            string canonical = GameAdapter.CanonicalBookName(slot + 1);
+            if (string.IsNullOrEmpty(canonical) || label.text == canonical) return;
+            if (!_temporaryBookLabels.ContainsKey(label))
+                _temporaryBookLabels[label] = label.text;
+            label.text = canonical;
+        }
+
+        internal void FinishBookChoose(object instance, object[] args)
+        {
+            int slot = FirstInt(args);
+            if (slot < 0 || slot >= 4) return;
+            TMP_Text label = BookLabelAt(instance, slot);
+            LanguageManifest manifest = ManifestForSlot(slot + 1);
+            if (label != null && manifest != null)
+                label.text = manifest.Profile.DisplayName;
+            if (label != null) _temporaryBookLabels.Remove(label);
+        }
+
+        internal bool BlockEnglishSentenceTts(object instance)
+        {
+            if (!IsActive || _sentenceAudio == null) return false;
+            return _sentenceAudio.IsOwnedReadButton(instance);
+        }
+
+        internal bool PrefixWordAudio(object instance)
+        {
+            if (!IsActive || ActiveStrategy == null || instance == null) return true;
+            TMP_Text text = GameAdapter.InstanceField(instance, "text1") as TMP_Text;
+            if (text == null || string.IsNullOrEmpty(text.text)) return true;
+            string displayed = text.text.Trim();
+            string canonical = CurrentWord(displayed);
+            string lookup;
+            try { lookup = ActiveStrategy.AudioLookupForm(displayed, canonical); }
+            catch (Exception e)
+            {
+                Warn("策略音频词形失败: " + e.Message);
+                return true;
+            }
+            if (string.IsNullOrEmpty(lookup)) lookup = canonical;
+            string path = _router.Resolve(ResourceKind.WordAudio, lookup);
+            if (string.IsNullOrEmpty(path) || !File.Exists(path)) return true;
+            EnsureServices();
+            _audio.Play(path);
+            return false;
+        }
+
+        internal void PostMultipleChoice(object instance)
+        {
+            if (!IsActive || ActiveStrategy == null || instance == null) return;
+            try
+            {
+                string target = CurrentFightWord();
+                TMP_Text[] options = new TMP_Text[] {
+                    FieldText(instance, "option1Text"), FieldText(instance, "option2Text"),
+                    FieldText(instance, "option3Text"), FieldText(instance, "option4Text") };
+                TMP_Text[] small = new TMP_Text[] {
+                    FieldText(instance, "option1Text_SM"), FieldText(instance, "option2Text_SM"),
+                    FieldText(instance, "option3Text_SM"), FieldText(instance, "option4Text_SM") };
+                TMP_Text[] words = new TMP_Text[] {
+                    FieldText(instance, "word1Text"), FieldText(instance, "word2Text"),
+                    FieldText(instance, "word3Text"), FieldText(instance, "word4Text") };
+                string targetMeaning = null;
+                for (int i = 0; i < options.Length; i++)
+                {
+                    if (options[i] == null || words[i] == null) continue;
+                    string word = words[i].text;
+                    if (word == target) targetMeaning = options[i].text;
+                }
+                for (int i = 0; i < options.Length; i++)
+                {
+                    if (options[i] == null || words[i] == null) continue;
+                    string display = ActiveStrategy.OptionDisplay(words[i].text, options[i].text);
+                    if (display == null) continue;
+                    options[i].text = display;
+                    if (small[i] != null) small[i].text = display;
+                }
+                if (!string.IsNullOrEmpty(target))
+                {
+                    string stem = ActiveStrategy.StemDisplay(target, targetMeaning);
+                    if (!string.IsNullOrEmpty(stem)) SetQuestionStem(target, stem);
+                }
+            }
+            catch (Exception e) { Warn("四选一题面改写失败: " + e.Message); }
+        }
+
+        internal void PostMultipleChoiceS9(object instance)
+        {
+            if (!IsActive || ActiveStrategy == null || instance == null) return;
+            try
+            {
+                IList options = ToObjectList(GameAdapter.InstanceField(instance, "optionText"));
+                if (options == null) return;
+                string[] optionWords = new string[] {
+                    StaticString("S9Option1_Para"), StaticString("S9Option2_Para"),
+                    StaticString("S9Option3_Para"), StaticString("S9Option4_Para") };
+                string target = CurrentTestWord();
+                string meaning = null;
+                for (int i = 0; i < options.Count && i < optionWords.Length; i++)
+                {
+                    TMP_Text text = options[i] as TMP_Text;
+                    if (text != null && optionWords[i] == target) meaning = text.text;
+                }
+                for (int i = 0; i < options.Count && i < optionWords.Length; i++)
+                {
+                    TMP_Text text = options[i] as TMP_Text;
+                    if (text == null || string.IsNullOrEmpty(optionWords[i])) continue;
+                    text.text = ActiveStrategy.OptionDisplay(optionWords[i], text.text);
+                }
+                if (!string.IsNullOrEmpty(target))
+                    SetQuestionStem(target, ActiveStrategy.StemDisplay(target, meaning));
+            }
+            catch (Exception e) { Warn("已学词测试题面改写失败: " + e.Message); }
+        }
+
+        internal void PostShowTheWord(object instance)
+        {
+            if (!IsActive || ActiveStrategy == null || instance == null) return;
+            if (!string.Equals(StaticString("S8ThisMode_Para"), "已学词测试",
+                               StringComparison.Ordinal)) return;
+            TMP_InputField input = GameAdapter.InstanceField(instance, "inputField") as TMP_InputField;
+            if (input == null || string.IsNullOrEmpty(input.text)) return;
+            string display = ActiveStrategy.StemDisplay(input.text, null);
+            if (!string.IsNullOrEmpty(display)) SetQuestionStem(input.text, display);
+        }
+
+        internal void PostDictionary(object instance)
+        {
+            if (!IsActive || ActiveStrategy == null || instance == null) return;
+            try
+            {
+                string word = StaticString("checkWordInDictionary");
+                if (string.IsNullOrEmpty(word)) return;
+                string meaning, phonic;
+                if (!ActiveStrategy.ProvideMeaning(word, out meaning, out phonic)) return;
+                TMP_Text meaningText = GameAdapter.InstanceField(instance, "meaningText") as TMP_Text;
+                TMP_Text us = GameAdapter.InstanceField(instance, "usPhoneticText") as TMP_Text;
+                TMP_Text uk = GameAdapter.InstanceField(instance, "ukPhoneticText") as TMP_Text;
+                if (meaningText != null && !string.IsNullOrEmpty(meaning))
+                    meaningText.text = meaning + Environment.NewLine;
+                if (us != null && !string.IsNullOrEmpty(phonic)) us.text = phonic;
+                if (uk != null && !string.IsNullOrEmpty(phonic)) uk.text = string.Empty;
+            }
+            catch (Exception e) { Warn("查词面板改写失败: " + e.Message); }
+        }
+
+        internal void PostAnswer(object instance)
+        {
+            if (!IsActive || instance == null) return;
+            TMP_Text dst = GameAdapter.InstanceField(instance, "phonicsText") as TMP_Text;
+            if (dst == null) return;
+            TMP_Text us = GameAdapter.InstanceField(instance, "Target_phonicsUSText") as TMP_Text;
+            TMP_Text uk = GameAdapter.InstanceField(instance, "Target_phonicsUKText") as TMP_Text;
+            string value = us == null ? null : us.text;
+            if (string.IsNullOrEmpty(value) && uk != null) value = uk.text;
+            if (!string.IsNullOrEmpty(value)) dst.text = value.Trim();
+        }
+
+        internal void EnforceNow()
+        {
+            if (IsActive) _scope.Enforce();
+        }
+
+        internal string CurrentWord(string displayed)
+        {
+            string value = CurrentTestWord();
+            if (string.Equals(value, displayed, StringComparison.Ordinal)) return value;
+            value = CurrentFightWord();
+            if (string.Equals(value, displayed, StringComparison.Ordinal)) return value;
+            if (!string.IsNullOrEmpty(displayed) && _activeWords != null)
+            {
+                for (int i = 0; i < _activeWords.Count; i++)
+                    if (string.Equals(_activeWords[i], displayed, StringComparison.Ordinal)) return displayed;
+            }
+            return value;
+        }
+
+        internal void PlayFile(string file)
+        {
+            EnsureServices();
+            if (_audio != null) _audio.Play(file);
+        }
+
+        private void LeaveCurrent()
+        {
+            if (_leftOnce) return;
+            _leftOnce = true;
+            if (_sentenceAudio != null) _sentenceAudio.Leave();
+            RestoreLabels();
+            _scope.Leave();
+        }
+
+        private void EnsureServices()
+        {
+            if (_audio == null)
+            {
+                GameObject go = new GameObject("WcpHostAudio");
+                UnityEngine.Object.DontDestroyOnLoad(go);
+                _audio = go.AddComponent<HostAudioPlayer>();
+            }
+            if (_sentenceAudio == null)
+                _sentenceAudio = new SentenceAudioService(this, _audio);
+        }
+
+        private void ScanBookLabels()
+        {
+            UnityEngine.Object[] all = Resources.FindObjectsOfTypeAll(typeof(TMP_Text));
+            for (int i = 0; i < all.Length; i++)
+            {
+                TMP_Text text = all[i] as TMP_Text;
+                if (text == null || string.IsNullOrEmpty(text.text)) continue;
+                int slot = GameAdapter.SlotOfBookName(text.text);
+                if (slot > 0)
+                {
+                    LanguageManifest m = ManifestForSlot(slot);
+                    if (m != null && text.text != m.Profile.DisplayName)
+                    {
+                        if (!_labelBackup.ContainsKey(text)) _labelBackup[text] = text.text;
+                        text.text = m.Profile.DisplayName;
+                        _labelWritten[text] = m.Profile.DisplayName;
+                    }
+                    continue;
+                }
+                if (!IsAccentLabel(text.text) || !HasButtonAncestor(text)) continue;
+                if (!_labelBackup.ContainsKey(text)) _labelBackup[text] = text.text;
+                string value = ActiveManifest.Profile.Language.ToUpperInvariant();
+                text.text = value;
+                _labelWritten[text] = value;
+            }
+        }
+
+        private void RestoreLabels()
+        {
+            foreach (KeyValuePair<TMP_Text, string> pair in _labelBackup)
+            {
+                TMP_Text text = pair.Key;
+                string written;
+                if (text != null && _labelWritten.TryGetValue(text, out written) && text.text == written)
+                    text.text = pair.Value;
+            }
+            _labelBackup.Clear();
+            _labelWritten.Clear();
+            _temporaryBookLabels.Clear();
+        }
+
+        private LanguageManifest ManifestForSlot(int slot)
+        {
+            IList<string> words = GameAdapter.SlotWords(slot);
+            return words == null ? null : _registry.ByProfileId(_registry.Match(words) == null
+                ? null : _registry.Match(words).Id);
+        }
+
+        private TMP_Text BookLabelAt(object instance, int slot)
+        {
+            object raw = GameAdapter.InstanceField(instance, "BookNameText");
+            IList list = ToObjectList(raw);
+            return list == null || slot >= list.Count ? null : list[slot] as TMP_Text;
+        }
+
+        private string StaticString(string field)
+        {
+            object value = GameAdapter.StaticField("MyParameters", field);
+            return value as string;
+        }
+
+        private string CurrentFightWord()
+        {
+            IList<string> values = GameAdapter.ToWordList(
+                GameAdapter.StaticField("MyParameters", "S7TestWordList_Para"));
+            int index = StaticInt("S7Progress_Para");
+            return At(values, index);
+        }
+
+        private string CurrentTestWord()
+        {
+            IList<string> values = GameAdapter.ToWordList(
+                GameAdapter.StaticField("MyParameters", "allTestWordsS10_Para"));
+            int index = StaticInt("S8Progress_Para");
+            return At(values, index);
+        }
+
+        private int StaticInt(string field)
+        {
+            object value = GameAdapter.StaticField("MyParameters", field);
+            return value is int ? (int)value : 0;
+        }
+
+        private static string At(IList<string> values, int index)
+        {
+            return values == null || index < 0 || index >= values.Count ? null : values[index];
+        }
+
+        private static TMP_Text FieldText(object instance, string field)
+        {
+            return GameAdapter.InstanceField(instance, field) as TMP_Text;
+        }
+
+        private static IList ToObjectList(object value)
+        {
+            if (value == null || value is string) return null;
+            IList list = value as IList;
+            if (list != null) return list;
+            return null;
+        }
+
+        private static int FirstInt(object[] args)
+        {
+            if (args == null) return -1;
+            for (int i = 0; i < args.Length; i++)
+            {
+                if (args[i] is int) return (int)args[i];
+                if (args[i] is short) return (short)args[i];
+            }
+            return -1;
+        }
+
+        private void SetQuestionStem(string canonical, string display)
+        {
+            if (string.IsNullOrEmpty(canonical) || string.IsNullOrEmpty(display)) return;
+            Type sifType = AccessTools.TypeByName("SetInputFieldValueS8");
+            if (sifType != null)
+            {
+                UnityEngine.Object[] sifs = Resources.FindObjectsOfTypeAll(sifType);
+                for (int i = 0; i < sifs.Length; i++)
+                {
+                    TMP_InputField input = GameAdapter.InstanceField(sifs[i], "inputField") as TMP_InputField;
+                    if (input != null && input.text == canonical) input.text = display;
+                }
+            }
+            Type vapType = AccessTools.TypeByName("VocabularyAudioPlayer");
+            if (vapType != null)
+            {
+                UnityEngine.Object[] vaps = Resources.FindObjectsOfTypeAll(vapType);
+                for (int i = 0; i < vaps.Length; i++)
+                {
+                    TMP_Text text = GameAdapter.InstanceField(vaps[i], "text1") as TMP_Text;
+                    if (text != null && text.text == canonical) text.text = display;
+                }
+            }
+        }
+
+        private static bool IsAccentLabel(string value)
+        {
+            string s = (value ?? string.Empty).Trim();
+            return s == "US" || s == "UK" || s == "美" || s == "英";
+        }
+
+        private static bool HasButtonAncestor(TMP_Text text)
+        {
+            Transform t = text == null ? null : text.transform;
+            for (int i = 0; i < 5 && t != null; i++)
+            {
+                if (t.GetComponent<Button>() != null) return true;
+                t = t.parent;
+            }
+            return false;
+        }
+
+        private void Warn(string message)
+        {
+            if (WcpHostPlugin.Log != null) WcpHostPlugin.Log.LogWarning("WcpHost: " + message);
+        }
+    }
+
+    internal sealed class HostAudioPlayer : MonoBehaviour
+    {
+        private AudioSource _source;
+        private readonly Dictionary<string, AudioClip> _cache =
+            new Dictionary<string, AudioClip>(StringComparer.Ordinal);
+        private readonly HashSet<string> _loading =
+            new HashSet<string>(StringComparer.Ordinal);
+
+        private void Awake()
+        {
+            _source = gameObject.AddComponent<AudioSource>();
+            _source.playOnAwake = false;
+            _source.spatialBlend = 0f;
+            _source.volume = 1f;
+        }
+
+        internal void Play(string file)
+        {
+            if (string.IsNullOrEmpty(file) || !File.Exists(file)) return;
+            AudioClip clip;
+            if (_cache.TryGetValue(file, out clip) && clip != null)
+            {
+                _source.Stop();
+                _source.clip = clip;
+                _source.Play();
+                return;
+            }
+            if (!_loading.Contains(file))
+            {
+                _loading.Add(file);
+                StartCoroutine(LoadAndPlay(file));
+            }
+        }
+
+        private IEnumerator LoadAndPlay(string file)
+        {
+            UnityWebRequest request = null;
+            try
+            {
+                request = UnityWebRequestMultimedia.GetAudioClip(
+                    "file:///" + file.Replace('\\', '/'), AudioType.MPEG);
+            }
+            catch (Exception e)
+            {
+                _loading.Remove(file);
+                if (WcpHostPlugin.Log != null)
+                    WcpHostPlugin.Log.LogWarning("WcpHost: 音频请求失败: " + e.Message);
+                yield break;
+            }
+            yield return request.SendWebRequest();
+            try
+            {
+                if (request.result == UnityWebRequest.Result.Success)
+                {
+                    AudioClip clip = DownloadHandlerAudioClip.GetContent(request);
+                    if (clip != null)
+                    {
+                        _cache[file] = clip;
+                        _source.Stop();
+                        _source.clip = clip;
+                        _source.Play();
+                    }
+                }
+                else if (WcpHostPlugin.Log != null)
+                    WcpHostPlugin.Log.LogWarning("WcpHost: 音频载入失败: " + request.error);
+            }
+            catch (Exception e)
+            {
+                if (WcpHostPlugin.Log != null)
+                    WcpHostPlugin.Log.LogWarning("WcpHost: 音频解码失败: " + e.Message);
+            }
+            _loading.Remove(file);
+            request.Dispose();
+        }
+    }
+
+    internal sealed class HostSentenceTag : MonoBehaviour
+    {
+    }
+}

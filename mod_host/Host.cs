@@ -1,17 +1,12 @@
-// WCP Host — 统一接入宿主（阶段 2 骨架，v0.1.0）
+// WCP Host — 统一接入宿主（阶段 2，v0.2.0）
 //
 // 职责边界（这是整个重构的核心约定）:
 //   宿主负责机制: 读语言包清单 / 认身份 / 作用域门 / 资源路由 / 日后接管-还原。
 //   语言包负责数据: packs/<lang>/{manifest.json, books, db, audio}。
 //   语言策略负责行为: ILanguageStrategy（每语言一个 ~150 行的类）。
 //
-// v0.1.0 只做**只读**的三件事，不补丁游戏、不写任何文件:
-//   1. 扫描 packs/*/manifest.json，打印注册表与槽位预算；
-//   2. 每秒（节流）读一次内存词表 / 书名字段，按 SHA-256 指纹判定当前语言；
-//   3. 身份不一致（内存 vs 落盘 vs 注册表）时 fail-closed，取消激活并记日志。
-//
-// 这样先能在游戏里验证"身份识别 + 路由"这一层是对的，再往上接补丁。
-// 把补丁接进来之前，本 DLL 对游戏是零影响的。
+// 当前版本在身份门通过后接管固定的游戏补丁点；语言差异只来自
+// ILanguageStrategy，队列和 UI 状态由宿主统一还原。
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -25,7 +20,7 @@ using UnityEngine;
 
 namespace WcpHost
 {
-    [BepInPlugin("dev.hanserdesu.wcphost", "WCP Host", "0.1.0")]
+    [BepInPlugin("dev.hanserdesu.wcphost", "WCP Host", "0.2.0")]
     public class WcpHostPlugin : BaseUnityPlugin
     {
         internal static ManualLogSource Log;
@@ -37,19 +32,22 @@ namespace WcpHost
         private ResourceRouter _router;
         private BookRegistry _registry;
         private StrategyRegistry _strategies;
+        private HostRuntime _runtime;
+        private Harmony _harmony;
         private float _nextProbe;
         private string _lastReported = "";
         private const float ProbeInterval = 1.0f;
 
         internal static WcpHostPlugin Instance { get { return _instance; } }
         internal ResourceRouter Router { get { return _router; } }
-        // 阶段 2 的补丁协调器从这里取得当前策略；身份层未激活时始终为 null。
+        internal BookRegistry Registry { get { return _registry; } }
+        internal HostRuntime Runtime { get { return _runtime; } }
+        // 补丁协调器从这里取得当前策略；身份层未激活时始终为 null。
         internal ILanguageStrategy ActiveStrategy
         {
             get
             {
-                if (_router == null || _strategies == null || !_router.IsActive) return null;
-                return _strategies.ForProfile(_router.ActiveProfileId);
+                return _runtime == null ? null : _runtime.ActiveStrategy;
             }
         }
 
@@ -70,7 +68,11 @@ namespace WcpHost
                 _registry = BookRegistry.Load(root);
                 _router = new ResourceRouter(_registry);
                 _strategies = StrategyRegistry.Load(_registry);
+                _runtime = new HostRuntime(this, _registry, _router, _strategies);
                 ReportRegistry(root);
+                _harmony = new Harmony("dev.hanserdesu.wcphost");
+                HostPatches.Install(_harmony);
+                Log.LogInfo("WcpHost: 固定 Harmony 接线已安装");
             }
             catch (Exception e)
             {
@@ -114,7 +116,11 @@ namespace WcpHost
 
         private void Update()
         {
-            if (!_enabled.Value || _router == null) return;
+            if (!_enabled.Value || _router == null)
+            {
+                if (_runtime != null) _runtime.OnDisabled();
+                return;
+            }
             if (Time.realtimeSinceStartup < _nextProbe) return;
             _nextProbe = Time.realtimeSinceStartup + ProbeInterval;
 
@@ -122,11 +128,13 @@ namespace WcpHost
             try
             {
                 state = Evaluate();
+                if (_runtime != null) _runtime.Tick();
             }
             catch (Exception e)
             {
                 // fail-closed: 判定出错一律取消激活，绝不猜测
                 _router.SetActive(null);
+                if (_runtime != null) _runtime.SetInactive();
                 state = "ERR " + e.GetType().Name + ": " + e.Message;
             }
             if (state != _lastReported)
@@ -136,7 +144,27 @@ namespace WcpHost
             }
         }
 
-        // 身份判定：内存词表 / 内存书名 / 落盘书名 三者一致，且指纹命中注册表，才激活。
+        internal void RefreshIdentity()
+        {
+            if (!_enabled.Value || _router == null) return;
+            try
+            {
+                string state = Evaluate();
+                if (state != _lastReported)
+                {
+                    _lastReported = state;
+                    Log.LogInfo("WcpHost: " + state);
+                }
+            }
+            catch (Exception e)
+            {
+                _router.SetActive(null);
+                if (_runtime != null) _runtime.SetInactive();
+                Log.LogWarning("WcpHost: 刷新身份失败，已关闭接管: " + e.Message);
+            }
+        }
+
+        // 身份判定：内存词表 / 内存书名 / 落盘书名 / 选中槽位词表四者一致，且指纹命中注册表，才激活。
         // 任一环节读不到或对不上 → 返回"未激活"。这条门是从现有插件的 fail-closed 门搬来的。
         private string Evaluate()
         {
@@ -147,31 +175,64 @@ namespace WcpHost
 
             if (words == null || words.Count == 0)
             {
-                _router.SetActive(null);
+                if (_runtime != null) _runtime.SetInactive();
+                else _router.SetActive(null);
                 return "未激活 · 内存词表为空";
             }
             if (string.IsNullOrEmpty(memName))
             {
-                _router.SetActive(null);
+                if (_runtime != null) _runtime.SetInactive();
+                else _router.SetActive(null);
                 return "未激活 · 内存书名为空";
             }
             if (string.IsNullOrEmpty(diskName))
             {
-                _router.SetActive(null);
+                if (_runtime != null) _runtime.SetInactive();
+                else _router.SetActive(null);
                 return "未激活 · 落盘书名读不到（读档中？）";
             }
             if (diskName != memName)
             {
-                _router.SetActive(null);
+                if (_runtime != null) _runtime.SetInactive();
+                else _router.SetActive(null);
                 return "未激活 · 内存书名(" + memName + ") ≠ 落盘书名(" + diskName + ") — 正在切书";
+            }
+
+            int slot = GameAdapter.SlotOfBookName(memName);
+            if (slot <= 0)
+            {
+                if (_runtime != null) _runtime.SetInactive();
+                else _router.SetActive(null);
+                return "未激活 · 书名不是受支持的自定义槽位: " + memName;
             }
 
             BookProfile p = _registry.Match(words);
             if (p == null)
             {
-                _router.SetActive(null);
+                if (_runtime != null) _runtime.SetInactive();
+                else _router.SetActive(null);
                 return "未激活 · 词表 " + words.Count + " 条未命中任何语言包 — 非受管词书";
             }
+
+            IList<string> slotWords = GameAdapter.SlotWords(slot);
+            BookProfile slotProfile = _registry.Match(slotWords);
+            if (slotProfile == null || slotProfile.Id != p.Id)
+            {
+                if (_runtime != null) _runtime.SetInactive();
+                else _router.SetActive(null);
+                return "未激活 · 内存词表与持久化槽位词表指纹不一致 — 正在读档/切书";
+            }
+
+            LanguageManifest manifest = _registry.ByProfileId(p.Id);
+            if (manifest == null)
+            {
+                if (_runtime != null) _runtime.SetInactive();
+                else _router.SetActive(null);
+                return "未激活 · 注册表没有 profile: " + p.Id;
+            }
+
+            if (_runtime != null) _runtime.SetIdentity(manifest, words);
+            else _router.SetActive(p.Id);
 
             if (_router.ActiveProfileId != p.Id)
             {
@@ -179,7 +240,20 @@ namespace WcpHost
                 return "已激活 · " + p.Language + " / " + p.Id +
                        "（" + words.Count + " 词，槽 " + p.ObservedSlot + "）";
             }
-            return _lastReported;
+            return "已激活 · " + p.Language + " / " + p.Id +
+                   "（" + words.Count + " 词，槽 " + slot +
+                   (ActiveStrategy == null ? "，策略缺失" : "，策略已载入") + "）";
+        }
+
+        private void OnDestroy()
+        {
+            try
+            {
+                if (_runtime != null) _runtime.OnDisabled();
+                if (_harmony != null) _harmony.UnpatchSelf();
+            }
+            catch (Exception) { }
+            if (_instance == this) _instance = null;
         }
     }
 }

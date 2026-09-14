@@ -1,0 +1,249 @@
+// WCP Host — 固定 Harmony 接线
+//
+// 补丁表只描述游戏机制，不包含语言名称。所有补丁入口都先经过当前
+// identity gate；策略缺失时只让该功能降级，不让游戏方法被拦截。
+using System;
+using System.Collections.Generic;
+using System.Reflection;
+using HarmonyLib;
+
+namespace WcpHost
+{
+    internal static class HostPatches
+    {
+        internal static void Install(Harmony harmony)
+        {
+            if (harmony == null) return;
+            PatchBookChoose(harmony);
+            PatchGenericSceneHooks(harmony);
+            PatchDisplay(harmony);
+            PatchDictionary(harmony);
+            PatchAudio(harmony);
+            PatchSelectionAndRefresh(harmony);
+        }
+
+        private static void PatchBookChoose(Harmony harmony)
+        {
+            PatchOne(harmony, "WordChooseButtonS10", "SonBookChoose",
+                AccessTools.Method(typeof(HostPatches), "BookChoosePrefix"),
+                AccessTools.Method(typeof(HostPatches), "BookChoosePostfix"));
+            PatchOne(harmony, "WordChooseButtonS10", "MakeCertainChange",
+                null, AccessTools.Method(typeof(HostPatches), "RefreshPostfix"));
+        }
+
+        private static void PatchGenericSceneHooks(Harmony harmony)
+        {
+            string[] prefixTypes = new string[] {
+                "InitializeManagerS2", "WordListManagerS7", "S3ScoreShow",
+                "LifeAndScoreManagerS15", "showWordS17", "RandomButtonInvoker",
+                "MultipleChoiceGenerator", "MultipleChoiceGeneratorS9", "SetS8Data" };
+            string[] postfixTypes = new string[] {
+                "ChooseWordManager", "InitializeManagerS2", "updateNewLearnWord",
+                "WordListManagerS7", "SetS8Data", "ButtonEquivalence", "S7NumberAdd",
+                "ColorInputFieldS17", "MultipleChoiceGenerator", "RandomButtonInvoker",
+                "clickChangeImageSource" };
+            string[] sceneMethods = new string[] { "Awake", "Start" };
+            string[] postfixMethods = new string[] {
+                "Awake", "Start", "FightList", "setFightWord", "setAsFightWord",
+                "setAsNewLearnWord", "setAsNewReviewWord", "SwitchSelfChosenMode",
+                "UpdateThis", "ResetTestListQuick", "ResetTestListQuick_FreeChoose",
+                "ResetExtraReviewList", "ResetExtraReviewList_FreeChoose",
+                "ResetExtraStudyList", "ResetExtraStudyList_FreeChoose",
+                "ResetDailyStudyList", "ResetDailyReviewList",
+                "Get_TodayNewLearnWordForFight", "Get_TodayNewReviewWordForFight",
+                "GetNewWord", "InvokeRandomButton", "StartQuickTest" };
+            for (int i = 0; i < prefixTypes.Length; i++)
+                PatchSet(harmony, prefixTypes[i], sceneMethods,
+                    AccessTools.Method(typeof(HostPatches), "EnforcePrefix"), true);
+            for (int i = 0; i < postfixTypes.Length; i++)
+                PatchSet(harmony, postfixTypes[i], postfixMethods,
+                    AccessTools.Method(typeof(HostPatches), "EnforcePostfix"), false);
+            PatchOne(harmony, "SetS8Data", "SetAsLearnedTest", null,
+                AccessTools.Method(typeof(HostPatches), "EnforcePostfix"));
+            PatchOne(harmony, "MultipleChoiceGeneratorS9", "Start",
+                AccessTools.Method(typeof(HostPatches), "EnforcePrefix"), null);
+            PatchOne(harmony, "MultipleChoiceGeneratorS9", "GenerateOptions",
+                AccessTools.Method(typeof(HostPatches), "EnforcePrefix"), null);
+        }
+
+        private static void PatchDisplay(Harmony harmony)
+        {
+            PatchOne(harmony, "MultipleChoiceGenerator", "GenerateOptions", null,
+                AccessTools.Method(typeof(HostPatches), "MultipleChoicePostfix"));
+            PatchOne(harmony, "MultipleChoiceGeneratorS9", "GenerateOptions", null,
+                AccessTools.Method(typeof(HostPatches), "MultipleChoiceS9Postfix"));
+            PatchOne(harmony, "SetInputFieldValueS8", "ShowTheWord", null,
+                AccessTools.Method(typeof(HostPatches), "ShowTheWordPostfix"));
+        }
+
+        private static void PatchDictionary(Harmony harmony)
+        {
+            string[] types = new string[] { "DatabaseManagerS8", "S8checkWordMeaning",
+                "ButtonTextTransfer" };
+            for (int i = 0; i < types.Length; i++)
+                PatchOne(harmony, types[i], "OnSearchButtonClick", null,
+                    AccessTools.Method(typeof(HostPatches), "DictionaryPostfix"));
+            string[] answerMethods = new string[] { "ShowAnswer", "ShowAnswerForStudy",
+                "ShowAnswerNoAutoVoice" };
+            for (int i = 0; i < answerMethods.Length; i++)
+                PatchOne(harmony, "showTheAnswerS8", answerMethods[i], null,
+                    AccessTools.Method(typeof(HostPatches), "AnswerPostfix"));
+        }
+
+        private static void PatchAudio(Harmony harmony)
+        {
+            PatchOne(harmony, "VocabularyAudioPlayer", "PlayWordAudio",
+                AccessTools.Method(typeof(HostPatches), "WordAudioPrefix"), null);
+            PatchOne(harmony, "SoundTheWordS8", "OnButton1Click",
+                AccessTools.Method(typeof(HostPatches), "SentenceTtsPrefix"), null);
+        }
+
+        private static void PatchSelectionAndRefresh(Harmony harmony)
+        {
+            PatchOne(harmony, "PageController", "SetThis",
+                AccessTools.Method(typeof(HostPatches), "EnforcePrefix"), null);
+            PatchOne(harmony, "GoToAllS9", "ArrayToAll", null,
+                AccessTools.Method(typeof(HostPatches), "EnforcePostfix"));
+            PatchOne(harmony, "SwitchCurrentArrayS9", "SwitchThis", null,
+                AccessTools.Method(typeof(HostPatches), "EnforcePostfix"));
+            PatchOne(harmony, "ChooseWordManager", "AddWordsToSelfChosenList", null,
+                AccessTools.Method(typeof(HostPatches), "EnforcePostfix"));
+            PatchOne(harmony, "SetInputFieldValueS8", "changeKnownFuzzUnknownTimes", null,
+                AccessTools.Method(typeof(HostPatches), "EnforcePostfix"));
+        }
+
+        private static void BookChoosePrefix(object __instance, object[] __args)
+        {
+            WcpHostPlugin plugin = WcpHostPlugin.Instance;
+            if (plugin != null && plugin.Runtime != null)
+                plugin.Runtime.PrepareBookChoose(__instance, __args);
+        }
+
+        private static void BookChoosePostfix(object __instance, object[] __args)
+        {
+            WcpHostPlugin plugin = WcpHostPlugin.Instance;
+            if (plugin != null && plugin.Runtime != null)
+                plugin.Runtime.FinishBookChoose(__instance, __args);
+        }
+
+        private static void RefreshPostfix()
+        {
+            WcpHostPlugin plugin = WcpHostPlugin.Instance;
+            if (plugin != null) plugin.RefreshIdentity();
+        }
+
+        private static void EnforcePrefix()
+        {
+            WcpHostPlugin plugin = WcpHostPlugin.Instance;
+            if (plugin != null && plugin.Runtime != null) plugin.Runtime.EnforceNow();
+        }
+
+        private static void EnforcePostfix()
+        {
+            WcpHostPlugin plugin = WcpHostPlugin.Instance;
+            if (plugin != null && plugin.Runtime != null) plugin.Runtime.EnforceNow();
+        }
+
+        private static void MultipleChoicePostfix(object __instance)
+        {
+            WcpHostPlugin plugin = WcpHostPlugin.Instance;
+            if (plugin != null && plugin.Runtime != null)
+                plugin.Runtime.PostMultipleChoice(__instance);
+        }
+
+        private static void MultipleChoiceS9Postfix(object __instance)
+        {
+            WcpHostPlugin plugin = WcpHostPlugin.Instance;
+            if (plugin != null && plugin.Runtime != null)
+                plugin.Runtime.PostMultipleChoiceS9(__instance);
+        }
+
+        private static void ShowTheWordPostfix(object __instance)
+        {
+            WcpHostPlugin plugin = WcpHostPlugin.Instance;
+            if (plugin != null && plugin.Runtime != null)
+                plugin.Runtime.PostShowTheWord(__instance);
+        }
+
+        private static void DictionaryPostfix(object __instance)
+        {
+            WcpHostPlugin plugin = WcpHostPlugin.Instance;
+            if (plugin != null && plugin.Runtime != null)
+                plugin.Runtime.PostDictionary(__instance);
+        }
+
+        private static void AnswerPostfix(object __instance)
+        {
+            WcpHostPlugin plugin = WcpHostPlugin.Instance;
+            if (plugin != null && plugin.Runtime != null)
+                plugin.Runtime.PostAnswer(__instance);
+        }
+
+        private static bool WordAudioPrefix(object __instance)
+        {
+            WcpHostPlugin plugin = WcpHostPlugin.Instance;
+            return plugin == null || plugin.Runtime == null ||
+                   plugin.Runtime.PrefixWordAudio(__instance);
+        }
+
+        private static bool SentenceTtsPrefix(object __instance)
+        {
+            WcpHostPlugin plugin = WcpHostPlugin.Instance;
+            if (plugin == null || plugin.Runtime == null) return true;
+            return !plugin.Runtime.BlockEnglishSentenceTts(__instance);
+        }
+
+        private static void PatchSet(Harmony harmony, string typeName, string[] names,
+                                     MethodInfo patch, bool prefix)
+        {
+            Type type = AccessTools.TypeByName(typeName);
+            if (type == null) return;
+            List<MethodInfo> methods = AccessTools.GetDeclaredMethods(type);
+            for (int i = 0; i < methods.Count; i++)
+            {
+                MethodInfo method = methods[i];
+                if (!NameIn(method.Name, names) || method.IsAbstract || patch == null) continue;
+                try
+                {
+                    HarmonyMethod hm = new HarmonyMethod(patch);
+                    if (prefix) harmony.Patch(method, hm, null);
+                    else harmony.Patch(method, null, hm);
+                }
+                catch (Exception e)
+                {
+                    if (WcpHostPlugin.Log != null)
+                        WcpHostPlugin.Log.LogWarning("WcpHost: patch 失败 " + typeName + "." +
+                            method.Name + ": " + e.Message);
+                }
+            }
+        }
+
+        private static void PatchOne(Harmony harmony, string typeName, string methodName,
+                                     MethodInfo prefix, MethodInfo postfix)
+        {
+            Type type = AccessTools.TypeByName(typeName);
+            if (type == null) return;
+            MethodInfo target = AccessTools.Method(type, methodName);
+            if (target == null) return;
+            try
+            {
+                harmony.Patch(target,
+                    prefix == null ? null : new HarmonyMethod(prefix),
+                    postfix == null ? null : new HarmonyMethod(postfix));
+            }
+            catch (Exception e)
+            {
+                if (WcpHostPlugin.Log != null)
+                    WcpHostPlugin.Log.LogWarning("WcpHost: patch 失败 " + typeName + "." +
+                        methodName + ": " + e.Message);
+            }
+        }
+
+        private static bool NameIn(string name, string[] names)
+        {
+            for (int i = 0; i < names.Length; i++)
+                if (name == names[i]) return true;
+            return false;
+        }
+    }
+}

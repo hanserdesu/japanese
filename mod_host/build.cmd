@@ -1,7 +1,6 @@
 @echo off
 rem Build WCP unified host (BepInEx 5, C#5 via NETFX csc).
-rem v0.1.0 is READ-ONLY: loads packs/*/manifest.json, identifies the active
-rem language by fingerprint, logs slot budget. No game patches, no writes.
+rem v0.2.0: manifest identity gate plus shared host patches and scoped runtime.
 rem Override game dir with WCP_GAME_DIR; WCP_NO_DEPLOY=1 builds without deploying.
 setlocal
 set HERE=%~dp0
@@ -26,7 +25,10 @@ set REFS=/r:"%GAME%\BepInEx\core\BepInEx.dll" ^
  /r:"%MGD%\Assembly-CSharp.dll" ^
  /r:"%MGD%\Assembly-CSharp-firstpass.dll" ^
  /r:"%MGD%\UnityEngine.dll" ^
+ /r:"%MGD%\UnityEngine.AudioModule.dll" ^
  /r:"%MGD%\UnityEngine.CoreModule.dll" ^
+ /r:"%MGD%\UnityEngine.UnityWebRequestModule.dll" ^
+ /r:"%MGD%\UnityEngine.UnityWebRequestAudioModule.dll" ^
  /r:"%MGD%\UnityEngine.UIModule.dll" ^
  /r:"%MGD%\UnityEngine.UI.dll" ^
  /r:"%MGD%\UnityEngine.TextRenderingModule.dll" ^
@@ -41,6 +43,10 @@ set REFS=/r:"%GAME%\BepInEx\core\BepInEx.dll" ^
  "%HERE%Core\StrategyContext.cs" ^
  "%HERE%StrategyLoader.cs" ^
  "%HERE%GameAdapter.cs" ^
+ "%HERE%TakeoverScope.cs" ^
+ "%HERE%HostRuntime.cs" ^
+ "%HERE%SentenceAudioService.cs" ^
+ "%HERE%HostPatches.cs" ^
  "%HERE%Host.cs"
 if errorlevel 1 (echo BUILD FAILED & exit /b 1)
 echo BUILD OK

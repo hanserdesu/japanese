@@ -234,7 +234,11 @@ def check_registry_drift(manifests):
 
 def check_host_language_agnostic():
     print("\n[5] 宿主语言无关性（补丁点不随语言增长）")
-    srcs = sorted(HOST.rglob("*.cs"))
+    # strategies/ is the explicit L2 extension point; its language-specific
+    # strings are the payload behavior being loaded by the language-agnostic
+    # host, not a host branch. Keep the scan focused on L0/L1 mechanism code.
+    srcs = sorted(p for p in HOST.rglob("*.cs")
+                  if not ({"strategies", "tests"} & set(p.relative_to(HOST).parts)))
     if not srcs:
         fail("5.0", f"找不到宿主源码: {HOST}")
         return

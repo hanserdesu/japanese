@@ -33,6 +33,7 @@ set REFS=/r:"%GAME%\BepInEx\core\BepInEx.dll" ^
  /r:"%MGD%\Unity.TextMeshPro.dll"
 "%CSC%" /nologo /noconfig /nostdlib+ /target:library /langversion:5 /optimize+ /codepage:65001 %REFS% ^
  /out:"%HERE%WcpHost.dll" ^
+ "%HERE%AssemblyInfo.cs" ^
  "%HERE%Core\Json.cs" ^
  "%HERE%Core\Manifest.cs" ^
  "%HERE%Core\ResourceRouter.cs" ^

@@ -380,9 +380,9 @@ v1.7.2 / v1.7.3 两次补漏："游戏内切书"与"基线读不到时 ES3 返�
 验收：德语包（纯拉丁）与法语包同时安装，法语词书下点例句 ▶ 播放的是法语音频。
 **不动游戏 DB，不动运行态协议。**
 
-### 阶段 2 — 抽宿主
+### 阶段 2 — 抽宿主（进行中）
 1. 新建 `WcpHost.dll`：合并三套补丁点 + 反射适配层。
-2. 语言策略实现 `ILanguageStrategy`，编成 `WcpPack.<Lang>.dll`。
+2. 语言策略实现 `ILanguageStrategy`，编成 `WcpPack.<Lang>.dll`（JA 已落地，FR/RU/DE 待迁移）。
 3. 注册表外置到 `packs\*/manifest.json`。
 4. 保留作用域门与接管协议，接管键加 `es3_prefix`。
 
@@ -473,7 +473,7 @@ v1.7.2 / v1.7.3 两次补漏："游戏内切书"与"基线读不到时 ES3 返�
 | `mod_host/Core/Json.cs` | 极简 JSON 解析器（C#5，无外部依赖；游戏只带 netstandard，没有 Newtonsoft） | 已编译 |
 | `mod_host/Core/Manifest.cs` | `BookProfile` / `LanguageManifest` / `BookRegistry`；指纹算法与 `BookProfiles.cs` 逐字节一致 | 已编译 |
 | `mod_host/Core/ResourceRouter.cs` | `(lang, kind, key)` → 物理路径；未激活一律返回 `null`，**不回退到别的语言** | 已编译 |
-| `mod_host/Core/ILanguageStrategy.cs` | 语言策略接口，5 个方法逐条注明现有 fork 版本里的对应行号 | 已编译 |
+| `mod_host/Core/ILanguageStrategy.cs` | 语言策略接口与可选 pack 绑定扩展，逐条注明现有 fork 版本里的对应行号 | 已编译 |
 | `mod_host/GameAdapter.cs` | 反射封装；字段/方法消失只记日志不抛异常（沿用它 L 段的约定） | 已编译 |
 | `mod_host/Host.cs` | 宿主插件 v0.1.0：**只读**——加载注册表、按指纹认身份、fail-closed | 已编译 |
 | `mod_host/build.cmd` | 构建脚本，已实作编译通过（`WCP_NO_DEPLOY=1` 时不部署） | BUILD OK |
@@ -481,7 +481,7 @@ v1.7.2 / v1.7.3 两次补漏："游戏内切书"与"基线读不到时 ES3 返�
 | `tools/arch_check.py` | §5 验收的机检实现，退出码 0 = 无 FAIL | 已运行 |
 | `tools/gen_bookprofiles.py` | 从清单生成 `BookProfiles.cs`（7 份副本收敛为同一生成物，sha 一致） | 已运行 |
 | `tools/privatize_audio.py` | 共享音频按语言分流到 `packs/<lang>/audio/`（copy 不 move、幂等、默认 dry-run） | dry-run 已验证 |
-| `mod_host/tests/RegistryTest.cs` (+`run_registry_test.cmd`) | 身份层回归：游戏外编译运行，输入是真实 packs 与真实存档 | 15 PASS / exit 0 |
+| `mod_host/tests/RegistryTest.cs` (+`run_registry_test.cmd`) | 身份与策略回归：游戏外引用同一 `WcpHost.dll`，输入是真实 packs 与真实存档 | 全部通过 / exit 0 |
 
 `WcpHost.dll`（19,456 字节，sha256 `0eb83646…`）已构建并于第三轮**部署到游戏目录**，
 `packs/{ja,fr,ru}/manifest.json` 同步部署到 `LocalLow/WCP/packs/`（部署件与源逐字节一致，
@@ -566,21 +566,37 @@ Harmony 行为，也不部署到游戏目录。
   的 pack 相对目录，再生成绝对路径；未激活、空 key 和 `..` 越界路径一律返回
   `null`。此前音频路由会把 `audio/word/` 当作当前工作目录，这是一个实际的
   可用性 bug。
-- **策略装载边界落地。** 新增 `mod_host/StrategyLoader.cs`：只从当前 pack 内
-  的 `strategy.assembly` 反射加载 `ILanguageStrategy`，并校验类型和 language
-  码；缺失或不匹配只阻止该策略，不影响其它清单的身份层。当前四个 manifest
-  尚未附带 `WcpPack.<Lang>.dll`，因此实测为身份层 4/4、策略 0/4，这是预期的
-  未完成边界，不把旧 fork 冒充成新策略。
+- **策略装载边界落地。** 新增 `mod_host/StrategyLoader.cs` 与
+  `Core/StrategyContext.cs`：只从当前 pack 内的 `strategy.assembly` 反射加载
+  `ILanguageStrategy`，校验类型和 language 码，并把 manifest 已校验的资源绝对路径
+  注入实现 `IPackBoundStrategy` 的策略；缺失或不匹配只阻止该策略，不影响其它清单
+  的身份层。
 - **回归测试去除三语言硬编码。** `RegistryTest` 已覆盖当前 1–4 个语言包、四槽
   指纹矩阵、未激活 fail-closed、pack 内资源路由和越界拒绝；德语加入后不再因
   “必须正好 3 个包”产生假失败。
 - **四语言验收纳入。** `arch_check.py` 已能从 `D:\German\output\import` 复算
   德语 3,488 词指纹，并检查德语自愈探针；德语生成模板已修正残留的法语探针。
 
-本轮静态结果：`RegistryTest` 全部通过；`WcpHost.dll` 编译通过；四份 manifest
-身份、指纹、槽位和 pack 路由检查通过。未完成/未声称的仍是：策略 DLL 的实际
-实现与 Harmony 接线、宿主新 DLL/德语 manifest 的游戏目录部署，以及游戏内四语言
-切换和音频行为。
+本轮结果：`RegistryTest` 全部通过，其中包含真实加载 `packs/ja/WcpPack.Ja.dll`、
+嵌套译文括号回归、pack 内 `pron` 查询、假名音频回查和未收录词 fail-closed；
+`WcpHost.dll` 与 JA 策略 DLL 均编译通过；日语 pack 的 7,922 条释义、30,894 条例句
+已物化为独立资源。未完成/未声称的仍是：宿主 Harmony 接线、FR/RU/DE 策略迁移、
+宿主新 DLL/德语 manifest 的游戏目录部署，以及游戏内四语言切换和音频行为。
+
+### 9.7 第五轮执行结果（2026-09-14，本轮）
+
+- `IPackBoundStrategy` + `StrategyContext` 将策略与资源路径解耦；策略只能使用当前
+  manifest 解析后的 `MeaningDbPath` 等路径，不能猜测其它语言目录。
+- 新增 `mod_host/strategies/JapaneseStrategy.cs` 与 `build_ja.cmd`。策略迁移了日语
+  句子键提取、假名题干、汉字选项、假名到汉字音频回查和本地 `pron` 查词；句子提取
+  修复中文译文嵌套全角括号导致的旧 `rfind('（')` 契约漂移。
+- 新增 `tools/build_pack_ja.py`，从已校验的 `jp_db_payload` 生成 `meaning.sqlite`、
+  `sentences.json`、`repair.tsv` 和日语词书副本；不访问、不修改游戏目录数据库。
+- `RegistryTest` 现在引用与游戏相同的 `WcpHost.dll`，并实测装载 JA 策略；为离线 SQLite
+  回归只复制测试所需的游戏 provider/native sqlite 到临时目录，不部署任何 DLL。
+- 本轮验证：宿主 BUILD OK；JA 策略 BUILD OK；`RegistryTest` 全部通过；身份/指纹/路由
+  静态检查均通过，`arch_check.py` 的唯一预期 FAIL 是游戏目录仍是旧版 `WcpHost.dll`，
+  因本轮明确没有部署。
 
 ---
 

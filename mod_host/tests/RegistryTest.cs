@@ -1,12 +1,12 @@
-// RegistryTest — 在游戏外验证身份层（不需要 Unity，不需要启动游戏）。
+// RegistryTest — 在游戏外验证身份/策略层（不启动游戏）。
 //
-// 覆盖范围: 宿主 Core/*.cs 的**机制**部分
+// 覆盖范围: 与游戏相同的 WcpHost.dll 中的机制部分，以及可加载的 pack 策略
 //   · packs/<lang>/manifest.json 解析（Json.cs）
 //   · 注册表加载 / 去重 / 槽位预算（Manifest.cs）
 //   · 指纹算法与真实存档词表的一致性（BookRegistry.FingerprintOf）
 //   · 负面识别：非受管词表一律不命中（汇成一个语言包都不认）
 //
-// 不覆盖: Unity 侧胶水（GameAdapter 反射、Host.Update 的每秒判定）。那部分
+// 不覆盖: Unity 侧胶水（GameAdapter 反射、Host.Update 的每秒判定）和 Harmony 补丁。那部分
 // 必须在游戏里跑才作数 —— 本测试的作用是把"机制错了"排除掉，让实机只剩
 // "接线对不对"这一个变量。
 //
@@ -66,6 +66,41 @@ internal static class RegistryTest
         Check(strategies.LoadedCount + strategies.Errors.Count == reg.Manifests.Count,
               "策略装载结果覆盖全部语言包",
               "已装载 " + strategies.LoadedCount + "，告警 " + strategies.Errors.Count);
+
+        LanguageManifest jaManifest = reg.ByLanguage("ja");
+        ILanguageStrategy ja = jaManifest == null ? null :
+            strategies.ForProfile(jaManifest.Profile.Id);
+        Check(ja != null, "日语策略从 pack 程序集实际装载", "");
+        if (ja != null)
+        {
+            try
+            {
+                string nested = ja.ExtractSentenceKey(
+                    "<b>例句：うちの旦那。（我家的那位（丈夫）。）</b>");
+                Check(nested == "うちの旦那。", "日语例句切分拒绝嵌套译文括号", nested);
+
+                string meaning, phonic;
+                bool found = ja.ProvideMeaning("歯医者", out meaning, out phonic);
+                Check(found && !string.IsNullOrEmpty(meaning) && !string.IsNullOrEmpty(phonic),
+                      "日语策略读取 pack 内 pron", "meaning=" + meaning + " phonic=" + phonic +
+                      " error=" + StrategyError(ja));
+                if (found)
+                {
+                    string stem = ja.StemDisplay("歯医者", null);
+                    Check(stem == phonic, "日语题干使用 pack 读音", stem);
+                    Check(ja.AudioLookupForm(stem, "歯医者") == "歯医者",
+                          "日语假名音频回查还原词形", stem);
+                    Check(!string.IsNullOrEmpty(ja.OptionDisplay("歯医者", meaning)),
+                          "日语选项保留本地释义", "");
+                }
+                Check(!ja.ProvideMeaning("__not_a_managed_japanese_word__", out meaning, out phonic),
+                      "日语策略对未收录词 fail-closed", "");
+            }
+            catch (Exception e)
+            {
+                Check(false, "日语策略行为调用未抛异常", ExceptionSummary(e));
+            }
+        }
 
         Console.WriteLine("\n== 资源路由回归（pack 内路径 + fail-closed） ==");
         ResourceRouter router = new ResourceRouter(reg);
@@ -158,5 +193,33 @@ internal static class RegistryTest
                           Path.DirectorySeparatorChar;
         string fullPath = Path.GetFullPath(path);
         return fullPath.StartsWith(fullRoot, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string ExceptionSummary(Exception e)
+    {
+        try
+        {
+            return e.GetType().FullName + ": " + e.Message +
+                   (string.IsNullOrEmpty(e.StackTrace) ? "" : " @" + e.StackTrace);
+        }
+        catch (Exception)
+        {
+            return e.GetType().FullName;
+        }
+    }
+
+    private static string StrategyError(ILanguageStrategy strategy)
+    {
+        try
+        {
+            System.Reflection.PropertyInfo property = strategy.GetType().GetProperty("LastLoadError");
+            if (property == null) return "<none>";
+            object value = property.GetValue(strategy, null);
+            return value == null ? "<none>" : value.ToString();
+        }
+        catch (Exception)
+        {
+            return "<diagnostic-unavailable>";
+        }
     }
 }

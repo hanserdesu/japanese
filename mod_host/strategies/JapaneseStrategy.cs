@@ -27,10 +27,13 @@ namespace WcpPack.Ja
             new Dictionary<string, PronRecord>(StringComparer.Ordinal);
         private StrategyContext _context;
         private bool _pronLoadAttempted;
+        private string _pronLoadError;
 
         public string Language { get { return "ja"; } }
 
         public IList<string> RepairProbes { get { return Probes; } }
+
+        public string LastLoadError { get { return _pronLoadError; } }
 
         public void BindPack(StrategyContext context)
         {
@@ -40,6 +43,7 @@ namespace WcpPack.Ja
             _context = context;
             _pron.Clear();
             _pronLoadAttempted = false;
+            _pronLoadError = null;
         }
 
         public string ExtractSentenceKey(string renderedText)
@@ -162,11 +166,12 @@ namespace WcpPack.Ja
                     }
                 }
             }
-            catch (Exception)
+            catch (Exception e)
             {
                 // A missing/corrupt pack is a strategy miss, never a reason to
                 // fall back to the shared game database or another language.
                 _pron.Clear();
+                _pronLoadError = e.GetType().FullName + ": " + e.Message;
             }
         }
 
@@ -277,15 +282,14 @@ namespace WcpPack.Ja
             for (int i = 1; i < value.Length - 1; i++)
             {
                 if (value[i] != '（' || !BalancedTail(value, i)) continue;
-                string prefix = value.Substring(0, i).TrimEnd();
+                string prefix = value.Substring(0, i).Trim();
                 string suffix = value.Substring(i + 1, value.Length - i - 2);
                 if (!HasJapaneseScript(prefix) || HasKana(suffix)) continue;
                 candidates.Add(i);
                 if (EndsSentence(prefix)) return prefix;
             }
             if (candidates.Count > 0)
-                return value.Substring(candidates[0]).Length == 0
-                    ? value : value.Substring(0, candidates[0]).TrimEnd();
+                return value.Substring(0, candidates[0]).Trim();
             return value;
         }
 

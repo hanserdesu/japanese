@@ -479,8 +479,13 @@ v1.7.2 / v1.7.3 两次补漏："游戏内切书"与"基线读不到时 ES3 返�
 | `mod_host/build.cmd` | 构建脚本，已实作编译通过（`WCP_NO_DEPLOY=1` 时不部署） | BUILD OK |
 | `packs/{ja,fr,ru}/manifest.json` | 三份语言包清单，字段值全部来自实测 | 已复算验证 |
 | `tools/arch_check.py` | §5 验收的机检实现，退出码 0 = 无 FAIL | 已运行 |
+| `tools/gen_bookprofiles.py` | 从清单生成 `BookProfiles.cs`（7 份副本收敛为同一生成物，sha 一致） | 已运行 |
+| `tools/privatize_audio.py` | 共享音频按语言分流到 `packs/<lang>/audio/`（copy 不 move、幂等、默认 dry-run） | dry-run 已验证 |
+| `mod_host/tests/RegistryTest.cs` (+`run_registry_test.cmd`) | 身份层回归：游戏外编译运行，输入是真实 packs 与真实存档 | 15 PASS / exit 0 |
 
-`WcpHost.dll`（19,456 字节）已构建，**未部署到游戏目录** —— 骨架阶段不该动游戏安装。
+`WcpHost.dll`（19,456 字节，sha256 `0eb83646…`）已构建并于第三轮**部署到游戏目录**，
+`packs/{ja,fr,ru}/manifest.json` 同步部署到 `LocalLow/WCP/packs/`（部署件与源逐字节一致，
+`arch_check.py` 8.2/8.3 机检）。宿主 v0.1.0 是只读识别层，未接管任何游戏行为。
 
 ### 9.2 首次 `arch_check.py` 运行结果
 
@@ -515,13 +520,38 @@ PASS 4.2: Russian  项目注册表（sha256=767adff6）登记齐全
 - 这正是宿主方案要消掉的东西：注册表改成从 `packs/*/manifest.json` 读之后，
   加语言不再需要碰任何现有语言的代码。`arch_check.py` [4] 会一直盯着这条。
 
-### 9.4 下一步（按风险从低到高，未开始）
+### 9.4 下一步（按风险从低到高）
 
 1. **阶段 1**：音频目录按语言私有化（改路径 + 迁移文件 + 安装器支持 `--lang`）。
    不动 DB、不动运行态协议，却是唯一能让"新增拉丁语系语言就串音"归零的改动。
 2. 把 `BookProfiles.cs` 换成从 manifest 读（消掉 §9.3 的两条 FAIL）。
 3. **阶段 2**：把三个插件的补丁点搬进宿主，语言差异搬进 `ILanguageStrategy`。
 4. 部署 `WcpHost.dll` 进游戏，验证 v0.1.0 的识别与作用域门（需游戏关闭）。
+
+### 9.5 第三轮执行结果（2026-09-14，用户批准后）
+
+上表 4 项中 **2 项完成、1 项半程、1 项未动**：
+
+- **[2] 注册表收敛 → 完成。** `gen_bookprofiles.py --write` 从三份清单生成单一
+  `BookProfiles.cs`，JA/FR/RU 全部 7 份副本 sha 一致（`04afa538…`）。
+  `arch_check.py` [4] 的 2 条 FAIL 清零，现在 **0 FAIL / 0 WARN**。
+  语义等价已先验证：生成物与俄语原版条目集合、方法体逐行一致（仅注释差异）。
+- **[4] 部署 + 游戏外回归 → 完成。** `RegistryTest.exe` 用真实 `MyBook.es3`：
+  3 槽指纹与清单逐一对上、空槽 fail-closed、唯一性矩阵无歧义，15 PASS。
+  编译耗时 4 分钟是杀软对新生成未签名 exe 的首扫，非代码问题（复跑同慢，结果一致）。
+- **[1] 阶段 1 → 半程。** JA 例句插件已加 pack 优先 + legacy 回退并部署
+  （pack 目录不存在时行为与旧版完全等价）；`privatize_audio.py` dry-run 验证：
+  三语言例句 md5 **交集为 0**（隔离假设成立）、JA 56,661 / FR 24,328 / RU 13,876、
+  冲突 0、孤儿 9,588（英语原生）。**`--write` 被真实写入者阻塞**：俄语项目的
+  `gen_sentence_audio_ru.py` 仍在往共享 `sentence_audio/` 写（08:37 采样 12s +56 文件），
+  批量分流必须等它停。
+  附带发现：JA 词表插件**没有自己的音频目录解析**——它只 Harmony 修
+  `PlayWordAudio` 的假名↔汉字形，播放走游戏原生 `vocabulary/`，
+  所以"pack 优先"对它不适用，单词音频的 pack 化归宿主接管（阶段 2）。
+- **[3] 阶段 2 → 未动。**
+
+回滚：删 `BepInEx/plugins/WcpHost.dll` 与 `LocalLow/WCP/packs/` 即回到部署前状态；
+JA 例句插件的新 DLL 在 pack 目录为空时与旧版行为一致，无需回滚。
 
 ---
 

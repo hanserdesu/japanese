@@ -301,9 +301,32 @@ def check_build_artifacts():
     deployed = pathlib.Path("E:/Steam/steamapps/common/WCP-WordGirlgriend/"
                             "BepInEx/plugins/WcpHost.dll")
     if deployed.exists():
-        warn("8.2", f"宿主已部署到游戏目录（{deployed}）—— 骨架阶段本应只在本地构建")
+        # 已部署是合法状态（阶段 1 起）；此时改为校验部署件与本地构建一致
+        if dll.exists():
+            a = hashlib.sha256(dll.read_bytes()).hexdigest()
+            b = hashlib.sha256(deployed.read_bytes()).hexdigest()
+            if a == b:
+                ok("8.2", f"已部署且与本地构建一致（sha256={a[:16]}…）")
+            else:
+                fail("8.2", "已部署的 WcpHost.dll 与本地构建不一致——重新部署或重编译")
+        else:
+            warn("8.2", f"宿主已部署到游戏目录但本地无构建产物（{deployed}）")
     else:
-        ok("8.2", "未部署到游戏目录（骨架阶段预期状态）")
+        ok("8.2", "未部署到游戏目录")
+    # packs 清单：部署一致性（LocalLow/WCP/packs/<lang>/manifest.json）
+    ll_packs = pathlib.Path(os.path.expanduser(
+        "~/AppData/LocalLow/WCP/packs"))
+    if ll_packs.is_dir():
+        for mf in sorted((ROOT / "packs").glob("*/manifest.json")):
+            dep = ll_packs / mf.parent.name / "manifest.json"
+            if dep.exists():
+                if hashlib.sha256(mf.read_bytes()).hexdigest() == \
+                        hashlib.sha256(dep.read_bytes()).hexdigest():
+                    ok("8.3", f"packs/{mf.parent.name}/manifest.json 已部署且一致")
+                else:
+                    fail("8.3", f"packs/{mf.parent.name}/manifest.json 部署件与源不一致")
+            else:
+                warn("8.3", f"packs/{mf.parent.name}/manifest.json 本地有、未部署")
 
 
 def main():

@@ -97,6 +97,10 @@
 - 会话级坑（2026-09-11 实测）：PowerShell stdout 捕获可能整个坏掉（连 echo 都
   空）→ 只用 bash；bash PATH 缺 coreutils（ls/head/dirname 挂），需要时先
   `export PATH="/c/Users/hanserdesu/.workbuddy/binaries/PortableGit/versions/1.2.0/usr/bin:$PATH"`
+- 坑（2026-09-14 新增）：① **同一文件的多个 Edit 并行发会写竞争丢改动**（5 落 2）
+  → 同文件编辑必须串行；② **新编译未签名 exe 首跑被杀软拖 ~4 分钟且短暂锁
+  exe 文件**（上次的"文件锁"就是它）→ 编译产物放 `%TEMP%`，耐心等首扫；
+  ③ cmd 里写中文 rem 会因 ANSI 读取碎成乱码命令 → build.cmd 只用 ASCII。
 
 ## 工作方式约定
 

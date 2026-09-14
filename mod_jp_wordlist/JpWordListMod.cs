@@ -171,6 +171,10 @@ namespace JpWordList
         // Enabled 配置可在游戏中修改。关闭后仍需撤销此前由插件落盘的共享队列，
         // 否则切到其它词书的那个瞬间可能读到日语残留。
         private static bool _disabledCleanupDone;
+        // 其它受管语言词书正在激活时暂缓还原 (跨插件写序竞争守卫)。
+        // 根因: 切到另一本受管词书的瞬间, 对方插件可能已经重建了共享队列;
+        // 本插件随后的切书还原会把旧基线盖回去 (RU->JP 串词的直接来源)。
+        private static bool _deferredRestoreLogged;
 
         // 发音修正: 本地单词音频按「汉字形」命名(全部.mp3/歯医者.mp3), 而题干会被改写成假名
         // (ぜんぶ/しかいしゃ)。VocabularyAudioPlayer 用的是 text1.text, 查 <假名>.mp3 必然落空
@@ -365,6 +369,7 @@ namespace JpWordList
         private static void Pre()
         {
             if (!IsEnabled()) return;
+            DeferredRestoreCheck();
             // 场景补丁比 1 秒轮询更早触发, 顺手把跨词书守卫跑掉(一次性, 见 CrossBookGuard)
             try { CrossBookGuard(); }
             catch (Exception e) { Warn("跨词书守卫异常: " + e.Message); }
@@ -375,6 +380,7 @@ namespace JpWordList
         private static void Post()
         {
             if (!IsEnabled()) return;
+            DeferredRestoreCheck();
             try { CrossBookGuard(); }
             catch (Exception e) { Warn("跨词书守卫异常: " + e.Message); }
             try { Enforce(); }
@@ -415,6 +421,11 @@ namespace JpWordList
                 {
                     Enforce();
                 }
+                else if (OtherRestoreDeferred())
+                {
+                    // 对方受管词书已激活: 此时把我们的旧基线写回去只会
+                    // 覆盖对方刚建好的队列。轮询会在窗口关闭后继续还原。
+                }
                 else
                 {
                     // 离开受管词书: 不管本次会话有没有动过这些队列, 只要存档里留着接管记录就还原。
@@ -438,6 +449,7 @@ namespace JpWordList
             _disabledCleanupDone = false;
             if (Time.unscaledTime < _nextPoll) return;
             _nextPoll = Time.unscaledTime + 1f;
+            DeferredRestoreCheck();
             try { CrossBookGuard(); }
             catch (Exception e) { Warn("跨词书守卫异常: " + e.Message); }
             try { Enforce(); }
@@ -1595,6 +1607,67 @@ namespace JpWordList
             return 0;
         }
 
+        // 当前激活的词书是否属于其它受管语言 (指纹识别, 与具体槽位无关)。
+        // 判定失败一律返回 false -> 还原路径保持旧行为; 误判方向的代价
+        // 是多还原一次 (无害), 而不是漏盖对方的队列。
+        private static bool OtherManagedBookActive()
+        {
+            try
+            {
+                if (!BookReady()) return false;
+                string name = MyParameters.ChosenBook_Para;
+                if (string.IsNullOrEmpty(name)) return false;
+                List<string> book = MyParameters.ChosenBook_List;
+                if (book == null || book.Count < 5) return false;
+                BookProfile memoryProfile = BookProfiles.Match(book);
+                if (memoryProfile == null || memoryProfile.Language == BookProfiles.Japanese)
+                    return false;
+                int idx = SelfBookIndexOf(name);
+                if (idx <= 0) return false;
+                BookProfile slotProfile = SlotProfile(idx);
+                return slotProfile != null && slotProfile.Id == memoryProfile.Id;
+            }
+            catch (Exception) { return false; }
+        }
+
+        private static bool OtherRestoreDeferred()
+        {
+            try
+            {
+                if (BookState() == 1) return false;
+                if (!OtherManagedBookActive()) return false;
+                if (!_deferredRestoreLogged)
+                {
+                    _deferredRestoreLogged = true;
+                    Warn("检测到其它受管词书激活, 还原推迟到其重建完成后");
+                }
+                return true;
+            }
+            catch (Exception) { return false; }
+        }
+
+        // 其它受管词书离开时, 它自己的切书还原负责恢复游戏原状;
+        // 这里只需在窗口关闭后让被暂缓的还原自然重试。
+        private static void DeferredRestoreCheck()
+        {
+            try
+            {
+                if (!IsEnabled() || !BookReady()) return;
+                if (BookState() == 1) return;
+                if (OtherManagedBookActive())
+                {
+                    if (!_deferredRestoreLogged)
+                    {
+                        _deferredRestoreLogged = true;
+                        Warn("检测到其它受管词书激活, 暂缓共享队列还原");
+                    }
+                    return;
+                }
+                _deferredRestoreLogged = false;
+            }
+            catch (Exception) { }
+        }
+
         // MyBook.es3 里那份本书释义字典。游戏只在 SelfBookMeaningConnectIf 为真时才读它,
         // 那开关实测是关的, 所以这里自己读一份(按词书序号缓存, 换书才重读)。
         private static Dictionary<string, string> BookDict()
@@ -1684,7 +1757,13 @@ namespace JpWordList
             if (BookState() != 1) return;
             if (!BaselineLists.ContainsKey(key))
             {
-                BaselineLists[key] = LoadBaselineList(key);
+                List<string> snap = LoadBaselineList(key);
+                if (BaselineFromOtherManagedBook(snap))
+                {
+                    // 基线属于其它受管词书 (上一本切换时被还原竞争盖进来的残留): 记为空。
+                    snap = new List<string>();
+                }
+                BaselineLists[key] = snap;
                 PersistBaselineList(key, BaselineLists[key]);
                 MarkOwned(OwnedListKey, key);
             }
@@ -1698,7 +1777,12 @@ namespace JpWordList
             if (BookState() != 1) return;
             if (!BaselineArrays.ContainsKey(key))
             {
-                BaselineArrays[key] = LoadBaselineArray(key);
+                string[] snap = LoadBaselineArray(key);
+                if (BaselineFromOtherManagedBook(snap))
+                {
+                    snap = new string[0];
+                }
+                BaselineArrays[key] = snap;
                 PersistBaselineArray(key, BaselineArrays[key]);
                 MarkOwned(OwnedArrayKey, key);
             }
@@ -1817,6 +1901,32 @@ namespace JpWordList
             return found;
         }
 
+        // 与 BaselineBelongsToOwnedBook 相反方向: 内容能否指纹命中**其它**受管语言。
+        // 命中 = 这是上一本受管词书的残留 (还原竞争盖进来的), 还原时必须当空处理,
+        // 绝不能在离开本书时把它恢复出去。识别不出 -> false, 保持保守旧行为。
+        private static bool BaselineFromOtherManagedBook(IList<string> words)
+        {
+            try
+            {
+                if (words == null || words.Count == 0) return false;
+                List<string> list = new List<string>(words);
+                if (BookProfiles.Match(list) != null) return false;   // 完整命中 = 自己
+                string prefix = BookProfiles.FingerprintOf(list);
+                if (string.IsNullOrEmpty(prefix)) return false;
+                for (int i = 0; i < BookProfiles.All.Length; i++)
+                {
+                    BookProfile p = BookProfiles.All[i];
+                    if (p.Language == BookProfiles.Japanese) continue;
+                    string fp = p.Fingerprint;
+                    if (!string.IsNullOrEmpty(fp) && fp.Length >= prefix.Length &&
+                        fp.StartsWith(prefix, StringComparison.Ordinal))
+                        return true;
+                }
+                return false;
+            }
+            catch (Exception) { return false; }
+        }
+
         private static HashSet<string> OwnedBookWords(int slot)
         {
             try
@@ -1896,6 +2006,7 @@ namespace JpWordList
         // 返回「本轮未完成的测试是否已被结束」。
         private static bool RestoreSharedFields()
         {
+            if (OtherRestoreDeferred()) return false;   // 竞争守卫
             bool acted;
             bool cleared = RestoreQueues(out acted);
             if (!acted) return false;   // 没接管过任何队列: 别的词书原样不动, 不写它的存档
@@ -1934,6 +2045,11 @@ namespace JpWordList
                     RestoreList(key, new List<string>());
                     clearedAny = true;
                 }
+                else if (BaselineFromOtherManagedBook(value))
+                {
+                    RestoreList(key, new List<string>());
+                    clearedAny = true;
+                }
                 else RestoreList(key, value);
             }
 
@@ -1947,6 +2063,11 @@ namespace JpWordList
                 if (!BaselineArrays.TryGetValue(key, out value) || value == null)
                     value = LoadBaselineArrayFromDisk(key);
                 if (value == null || BaselineBelongsToOwnedBook(value))
+                {
+                    RestoreArray(key, new string[0]);
+                    clearedAny = true;
+                }
+                else if (BaselineFromOtherManagedBook(value))
                 {
                     RestoreArray(key, new string[0]);
                     clearedAny = true;
@@ -1996,6 +2117,12 @@ namespace JpWordList
             List<string> ownedArrs = LoadStringList(OwnedArrayKey);
             if (ownedLists.Count == 0 && ownedArrs.Count == 0) return;   // 没接管过, 不动
 
+            if (OtherRestoreDeferred())
+            {
+                _crossBookGuardDone = false;   // 下轮 Pre/Post/轮询再试
+                return;
+            }
+
             // 走和「游戏内切书」同一套还原逻辑, 两条路不会各自漂移。
             bool ended = RestoreSharedFields();
             Warn("跨词书守卫: 已还原插件接管前的测试队列" +
@@ -2013,7 +2140,14 @@ namespace JpWordList
                 List<string> ownedLists = LoadStringList(OwnedListKey);
                 List<string> ownedArrs = LoadStringList(OwnedArrayKey);
                 if (ownedLists.Count > 0 || ownedArrs.Count > 0)
+                {
+                    if (OtherRestoreDeferred())
+                    {
+                        _disabledCleanupDone = false;   // 窗口关闭后重试
+                        return;
+                    }
                     RestoreSharedFields();
+                }
                 _disabledCleanupDone = true;
             }
             catch (Exception e)

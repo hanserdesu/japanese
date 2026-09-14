@@ -715,6 +715,19 @@ namespace JpWordList
 
         private static void FixField(string key, ref List<string> field, int minKeep, bool preferLearned)
         {
+            if (field == null || field.Count == 0)
+            {
+                // 战斗入口后续会直接按索引取词。游戏初始化/切书时若暂时给出
+                // null 或空表，不能把它原样留到 GenerateOptions；其它每日/额外
+                // 队列为空可能是合法的“今天没有词”，仍保持只读。
+                if (key != "S7TestWordList_Para") return;
+                List<string> rebuilt = RebuildWithFallback(field, minKeep, minKeep, preferLearned);
+                if (rebuilt == null) return;
+                field = rebuilt;
+                SaveField(key, rebuilt);
+                Warn("战斗词表为空/未初始化, 已用本书词补足 " + rebuilt.Count + " 个");
+                return;
+            }
             List<string> fixedList = Filter(field, minKeep, preferLearned);
             if (fixedList == null) return;
             field = fixedList;

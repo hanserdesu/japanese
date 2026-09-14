@@ -115,6 +115,10 @@ namespace WcpBookName
         // 只在日语词书里做, 且写入前先记账, 离开日语词书时由
         // RestoreWordSide() 原样还回去 —— 否则英语词书的发音设置面板
         // 会被一起改成 JP(这就是跨词书冲突的来源)。
+        private readonly Dictionary<TMP_Text, string> _labelWritten =
+            new Dictionary<TMP_Text, string>();
+        private string _lastVoiceLabel;
+
         internal void ForceJpLabels(Component c)
         {
             if (c == null) return;
@@ -135,6 +139,7 @@ namespace WcpBookName
                 if (!_labelBackup.ContainsKey(texts[i]))
                     _labelBackup[texts[i]] = s;
                 texts[i].text = vLabel;
+                _labelWritten[texts[i]] = vLabel;
             }
         }
 
@@ -225,7 +230,10 @@ namespace WcpBookName
         internal static string ToCosmeticIfManaged(string label)
         {
             var plugin = Instance;
-            if (plugin == null) return label;
+            // Harmony 的选书钩子在配置关闭后仍会运行；关闭插件时必须连
+            // 这条静态显示路径也停掉，否则点击选书会再次写入装饰名。
+            if (plugin == null || !plugin.isActiveAndEnabled ||
+                plugin._enabled == null || !plugin._enabled.Value) return label;
             int slot = Names.SlotOfCanonicalText(label);
             if (slot < 0 || !plugin.CurrentSlotIs(slot)) return label;
             BookProfile profile = plugin.SlotProfile(slot);
@@ -326,6 +334,8 @@ namespace WcpBookName
             BookProfile managedBook = SelectedManagedBook();
             bool isManaged = managedBook != null;
             string vLabel = isManaged ? VoiceLabelFor(managedBook) : null;
+            if (_lastVoiceLabel != vLabel) RestoreWordSide();
+            _lastVoiceLabel = vLabel;
             _lastJpBook = isManaged;
             var all = Resources.FindObjectsOfTypeAll(typeof(TMP_Text));
             for (int i = 0; i < all.Length; i++)
@@ -353,6 +363,7 @@ namespace WcpBookName
                     if (!_labelBackup.ContainsKey(t))
                         _labelBackup[t] = s;
                     t.text = vLabel;
+                    _labelWritten[t] = vLabel;
                     Log.LogInfo("Label: " + s + " -> " + vLabel);
                 }
             }
@@ -384,10 +395,13 @@ namespace WcpBookName
                 for (int i = 0; i < keys.Count; i++)
                 {
                     var t = keys[i];
-                    if (t != null && (t.text == "JP" || t.text == "FR")) t.text = _labelBackup[t];
+                    string written;
+                    if (t != null && _labelWritten.TryGetValue(t, out written) &&
+                        t.text == written) t.text = _labelBackup[t];
                 }
                 _labelBackup.Clear();
             }
+            _labelWritten.Clear();
         }
 
         private void RestoreHiddenNodes()
@@ -438,7 +452,7 @@ namespace WcpBookName
                         StringComparison.OrdinalIgnoreCase) >= 0) continue;
                 if (path.IndexOf("mainMenuButtonBut",
                         StringComparison.OrdinalIgnoreCase) >= 0) continue;
-                if (!LabelIsJp(b)) continue;
+                if (!LabelIsManaged(b)) continue;
                 if (!IsSwitchLike(b, nm)) continue;
                 if (_hiddenSwitch.Contains(b.gameObject))
                 {
@@ -451,7 +465,7 @@ namespace WcpBookName
             }
         }
 
-        private static bool LabelIsJp(Button b)
+        private static bool LabelIsManaged(Button b)
         {
             var tmps = b.GetComponentsInChildren<TMP_Text>(true);
             for (int i = 0; i < tmps.Length; i++)
@@ -459,7 +473,8 @@ namespace WcpBookName
                 var t = tmps[i];
                 if (t == null) continue;
                 string txt = (t.text ?? string.Empty).Trim();
-                if (txt == "JP" || txt == "FR") return true;
+                for (int j = 0; j < BookProfiles.All.Length; j++)
+                    if (txt == VoiceLabelFor(BookProfiles.All[j])) return true;
             }
             return false;
         }

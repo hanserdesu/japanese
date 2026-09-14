@@ -363,6 +363,9 @@ LocalLow\WCP\
    └─ jpmod_downloads\            ← 安装器下载缓存
 ```
 
+`jpmod_downloads` 不按安装时间戳重建，完整资源、Gitee 已完成分片和未完成的 `.download` 文件都会跨运行保留；
+`jpmod_audio_stage_<stamp>_<guid>` 则是一次安装专用的解压临时目录，解压中断后可以重新创建，不承担下载续传职责。
+
 **规约（新语言必须遵守）**：
 
 | 资源 | 命名规约 | 为什么 |
@@ -578,10 +581,13 @@ WCP日语词书安装包/                          ← 用户只解压这一层
 
 **音频不在主包内**：`payload/manifest.json` 里 `skip_audio: true`，
 主包体积约 27.5 MB。安装时从 `release-manifest.json` 的 `download_routes`
-探测 Gitee/GitHub 路由：Gitee Release 下载分卷并合并，GitHub Release 下载两份**整包**：
+探测 Gitee/GitHub 路由：Gitee Release 下载分卷并合并，GitHub Release 下载两份**整包**；
+每个未完成分片或整包都会留在 `jpmod_downloads`，下一次运行优先使用 HTTP Range 续传：
 `wcp-japanese-audio-words.zip`（约 394 MB）与 `wcp-japanese-audio-sentences.zip`（约 2.06 GB），
-两种路由都带 SHA-256 校验、实时百分比/速度显示、多线程解压、失败复用已校验资源。
-> 旧版文档写「远程**分卷**下载」——`[实测]` 当前是**两个整包**，不是分卷，措辞需按实现改写。
+两种路由都带 SHA-256 校验、实时百分比/速度显示、多线程解压、失败复用已校验资源；
+若服务端不支持 Range，则安全地从头传输并保留校验机制。清单记录 `expanded_size`，
+安装器以“两份压缩缓存 + 解压临时目录 + 最终音频 + 1 GB 安全余量”估算峰值空间，
+避免把只够放下载包的空间误判为足够。
 
 **安装器其余必须复刻的行为**：自动扫描 Steam 全部库目录并跳过不存在的盘符；
 多有效副本时交互选择；安装前备份到 `wcp\jpmod_backups\<stamp>\`；
@@ -893,7 +899,7 @@ cmd /c "cd /d D:\Japanese\mod_sentence_audio && build.cmd"
 `bundled_bepinex`, `plugins[]`, `auto_import`, `size_mb`。
 
 **`support/release-manifest.json`**（音频资产账本）：
-`version`, `built`, `base_urls[]`（旧版兼容）、`download_routes[]`（Gitee 分卷/GitHub 整包）、`assets[]`（`kind`/`name`/`size`/`sha256`/`parts[]`）。
+`version`, `built`, `base_urls[]`（旧版兼容）、`download_routes[]`（Gitee 分卷/GitHub 整包）、`assets[]`（`kind`/`name`/`size`/`expanded_size`/`sha256`/`parts[]`）。
 
 **`<lang>_db_payload/` 离线自愈补丁包**（四件）：
 - `jp_pron.tsv`：`word \t ukPhonic \t usPhonic \t meaning`

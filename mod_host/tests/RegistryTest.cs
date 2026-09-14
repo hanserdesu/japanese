@@ -50,6 +50,8 @@ internal static class RegistryTest
         Check(reg.Errors.Count == 0, "注册表加载无告警", "");
         Check(reg.Manifests.Count >= 1 && reg.Manifests.Count <= 4,
               "加载 1..4 个语言包", "实际 " + reg.Manifests.Count);
+        CheckDuplicateWordCountIsAllowed();
+        CheckDuplicateEs3PrefixIsRejected();
 
         for (int i = 0; i < reg.Manifests.Count; i++)
         {
@@ -193,6 +195,108 @@ internal static class RegistryTest
                           Path.DirectorySeparatorChar;
         string fullPath = Path.GetFullPath(path);
         return fullPath.StartsWith(fullRoot, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static void CheckDuplicateWordCountIsAllowed()
+    {
+        string root = Path.Combine(Path.GetTempPath(),
+            "wcphost_registry_" + Guid.NewGuid().ToString("N"));
+        try
+        {
+            Directory.CreateDirectory(Path.Combine(root, "aa"));
+            Directory.CreateDirectory(Path.Combine(root, "bb"));
+            File.WriteAllText(Path.Combine(root, "aa", "manifest.json"),
+                SyntheticManifest("profile-aa", "aa", "1", 1));
+            File.WriteAllText(Path.Combine(root, "bb", "manifest.json"),
+                SyntheticManifest("profile-bb", "bb", "2", 2));
+
+            BookRegistry synthetic = BookRegistry.Load(root);
+            Check(synthetic.Errors.Count == 0 && synthetic.Manifests.Count == 2,
+                  "不同指纹但同词数的语言包都能注册",
+                  "清单 " + synthetic.Manifests.Count + "，告警 " + synthetic.Errors.Count);
+        }
+        catch (Exception e)
+        {
+            Check(false, "同词数注册回归未抛异常", ExceptionSummary(e));
+        }
+        finally
+        {
+            try
+            {
+                if (Directory.Exists(root)) Directory.Delete(root, true);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine("  WARN  清理注册表临时目录失败: " + e.Message);
+            }
+        }
+    }
+
+    private static void CheckDuplicateEs3PrefixIsRejected()
+    {
+        string root = Path.Combine(Path.GetTempPath(),
+            "wcphost_registry_prefix_" + Guid.NewGuid().ToString("N"));
+        try
+        {
+            Directory.CreateDirectory(Path.Combine(root, "aa"));
+            Directory.CreateDirectory(Path.Combine(root, "bb"));
+            File.WriteAllText(Path.Combine(root, "aa", "manifest.json"),
+                SyntheticManifestWithPrefix("profile-aa", "aa", "3", 1, "shared"));
+            File.WriteAllText(Path.Combine(root, "bb", "manifest.json"),
+                SyntheticManifestWithPrefix("profile-bb", "bb", "4", 2, "shared"));
+
+            BookRegistry synthetic = BookRegistry.Load(root);
+            Check(synthetic.Manifests.Count == 1 && synthetic.Errors.Count == 1,
+                  "重复 ES3 前缀的语言包被拒绝",
+                  "清单 " + synthetic.Manifests.Count + "，告警 " + synthetic.Errors.Count);
+        }
+        catch (Exception e)
+        {
+            Check(false, "重复 ES3 前缀回归未抛异常", ExceptionSummary(e));
+        }
+        finally
+        {
+            try
+            {
+                if (Directory.Exists(root)) Directory.Delete(root, true);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine("  WARN  清理前缀临时目录失败: " + e.Message);
+            }
+        }
+    }
+
+    private static string SyntheticManifest(string id, string language,
+                                            string fingerprintTail, int slot)
+    {
+        return SyntheticManifestWithPrefix(id, language, fingerprintTail, slot, language);
+    }
+
+    private static string SyntheticManifestWithPrefix(string id, string language,
+                                                      string fingerprintTail, int slot,
+                                                      string es3Prefix)
+    {
+        string fingerprint = new string('0', 63) + fingerprintTail;
+        return "{\n" +
+            "  \"schema\": 1,\n" +
+            "  \"profile_id\": \"" + id + "\",\n" +
+            "  \"language\": \"" + language + "\",\n" +
+            "  \"display_name\": \"synthetic\",\n" +
+            "  \"word_count\": 5,\n" +
+            "  \"fingerprint_sha256\": \"" + fingerprint + "\",\n" +
+            "  \"observed_slot\": " + slot + ",\n" +
+            "  \"es3_prefix\": \"" + es3Prefix + "\",\n" +
+            "  \"strategy\": {\"assembly\": \"Pack.dll\", \"type\": \"Pack.Type\"},\n" +
+            "  \"resources\": {\n" +
+            "    \"books\": [\"book.xlsx\"],\n" +
+            "    \"meaning_db\": \"meaning.sqlite\",\n" +
+            "    \"sentence_table\": \"sentences.json\",\n" +
+            "    \"repair\": \"repair.tsv\",\n" +
+            "    \"word_audio\": \"audio/word/\",\n" +
+            "    \"sentence_audio\": \"audio/sentence/\"\n" +
+            "  }\n" +
+            "}";
     }
 
     private static string ExceptionSummary(Exception e)

@@ -111,8 +111,8 @@ namespace WcpHost
 
         private void EnforceList(string fieldName, HashSet<string> allowed)
         {
-            IList<string> current = GameAdapter.ToWordList(
-                GameAdapter.StaticField("MyParameters", fieldName));
+            object raw = GameAdapter.StaticField("MyParameters", fieldName);
+            IList<string> current = GameAdapter.ToWordList(raw);
             if (current == null) return;
 
             List<string> filtered = Filter(current, allowed);
@@ -125,9 +125,10 @@ namespace WcpHost
             bool changed = !Same(current, filtered);
             if (!changed) return;
             if (minimum > 0 && filtered.Count < minimum) return;
-            CaptureList(fieldName, current);
-            GameAdapter.SetStaticField("MyParameters", fieldName, filtered);
-            GameAdapter.Es3Save(fieldName, new List<string>(filtered));
+            if (!CaptureList(fieldName, current)) return;
+            object replacement = ListValueForField(raw, filtered);
+            GameAdapter.SetStaticField("MyParameters", fieldName, replacement);
+            GameAdapter.Es3Save(fieldName, replacement);
         }
 
         private void EnforceArray(string fieldName, HashSet<string> allowed)
@@ -137,7 +138,7 @@ namespace WcpHost
             if (current == null) return;
             List<string> filtered = Filter(current, allowed);
             if (Same(current, filtered)) return;
-            CaptureArray(fieldName, current);
+            if (!CaptureArray(fieldName, current)) return;
             string[] value = filtered.ToArray();
             if (raw is string[])
                 GameAdapter.SetStaticField("MyParameters", fieldName, value);
@@ -151,12 +152,12 @@ namespace WcpHost
         private void AlignTestQueue(HashSet<string> allowed)
         {
             if (!IsLearnedTest()) return;
-            List<string> pool = GameAdapter.ToWordList(
-                GameAdapter.StaticField("MyParameters", "allTestWordsS10_Para")) as List<string>;
+            object poolRaw = GameAdapter.StaticField("MyParameters", "allTestWordsS10_Para");
+            List<string> pool = GameAdapter.ToWordList(poolRaw) as List<string>;
             if (pool == null)
             {
                 IList<string> any = GameAdapter.ToWordList(
-                    GameAdapter.StaticField("MyParameters", "allTestWordsS10_Para"));
+                    poolRaw);
                 if (any == null) return;
                 pool = new List<string>(any);
             }
@@ -167,90 +168,117 @@ namespace WcpHost
             List<string> expected = new List<string>();
             for (int i = progress; i < pool.Count; i++) expected.Add(pool[i]);
 
-            IList<string> current = GameAdapter.ToWordList(
-                GameAdapter.StaticField("MyParameters", "S8needToLearnWordList_Para"));
+            object needRaw = GameAdapter.StaticField("MyParameters", "S8needToLearnWordList_Para");
+            IList<string> current = GameAdapter.ToWordList(needRaw);
             if (current == null || current.Count == 0 || current[0] != pool[progress] ||
                 !ContainsOnly(current, allowed))
             {
                 List<string> old = current == null ? new List<string>() : new List<string>(current);
-                CaptureList("S8needToLearnWordList_Para", old);
-                GameAdapter.SetStaticField("MyParameters", "S8needToLearnWordList_Para", expected);
-                GameAdapter.Es3Save("S8needToLearnWordList_Para", expected);
+                if (!CaptureList("S8needToLearnWordList_Para", old)) return;
+                object replacement = ListValueForField(needRaw, expected);
+                GameAdapter.SetStaticField("MyParameters", "S8needToLearnWordList_Para", replacement);
+                GameAdapter.Es3Save("S8needToLearnWordList_Para", replacement);
             }
         }
 
-        private void CaptureList(string fieldName, IList<string> current)
+        private static object ListValueForField(object raw, IList<string> values)
         {
-            if (_ownedLists.Contains(fieldName)) return;
-            _ownedLists.Add(fieldName);
-            _listBaselines[fieldName] = current == null
-                ? new List<string>() : new List<string>(current);
-            PersistOwned();
-            GameAdapter.Es3Save(Key("bak_" + fieldName),
-                _listBaselines[fieldName].ToArray());
+            if (raw is string[])
+                return new List<string>(values).ToArray();
+            return new List<string>(values);
         }
 
-        private void CaptureArray(string fieldName, string[] current)
+        private bool CaptureList(string fieldName, IList<string> current)
         {
-            if (_ownedArrays.Contains(fieldName)) return;
+            if (_ownedLists.Contains(fieldName)) return true;
+            List<string> baseline = current == null ? new List<string>() : new List<string>(current);
+            if (!GameAdapter.Es3Save(Key("bak_" + fieldName), baseline.ToArray())) return false;
+            _ownedLists.Add(fieldName);
+            if (!GameAdapter.Es3Save(Key("owned_lists"), ToArray(_ownedLists)))
+            {
+                _ownedLists.Remove(fieldName);
+                return false;
+            }
+            _listBaselines[fieldName] = baseline;
+            return true;
+        }
+
+        private bool CaptureArray(string fieldName, string[] current)
+        {
+            if (_ownedArrays.Contains(fieldName)) return true;
+            string[] baseline = current == null ? new string[0] : (string[])current.Clone();
+            if (!GameAdapter.Es3Save(Key("bak_" + fieldName), baseline)) return false;
             _ownedArrays.Add(fieldName);
-            _arrayBaselines[fieldName] = current == null
-                ? new string[0] : (string[])current.Clone();
-            PersistOwned();
-            GameAdapter.Es3Save(Key("bak_" + fieldName),
-                (string[])_arrayBaselines[fieldName].Clone());
+            if (!GameAdapter.Es3Save(Key("owned_arrays"), ToArray(_ownedArrays)))
+            {
+                _ownedArrays.Remove(fieldName);
+                return false;
+            }
+            _arrayBaselines[fieldName] = baseline;
+            return true;
         }
 
         private void RestoreOwned(string prefix)
         {
             if (string.IsNullOrEmpty(prefix)) return;
-            string[] lists = LoadOwned(prefix + "_owned_lists");
-            string[] arrays = LoadOwned(prefix + "_owned_arrays");
+            HashSet<string> lists = new HashSet<string>(LoadOwned(prefix + "_owned_lists"), StringComparer.Ordinal);
+            HashSet<string> arrays = new HashSet<string>(LoadOwned(prefix + "_owned_arrays"), StringComparer.Ordinal);
+            bool local = _manifest != null && _manifest.Profile.Es3Prefix == prefix;
+            if (local)
+            {
+                lists.UnionWith(_ownedLists);
+                arrays.UnionWith(_ownedArrays);
+            }
             // An inactive host must be completely read-only when it has no
             // ownership marker.  Writing empty marker arrays on every probe
             // races legacy language plugins while they switch books.
-            if (lists.Length == 0 && arrays.Length == 0) return;
-            for (int i = 0; i < lists.Length; i++)
+            if (lists.Count == 0 && arrays.Count == 0) return;
+            HashSet<string> pendingLists = new HashSet<string>(StringComparer.Ordinal);
+            HashSet<string> pendingArrays = new HashSet<string>(StringComparer.Ordinal);
+            bool restoredPool = false;
+            foreach (string field in lists)
             {
-                string field = lists[i];
-                string[] baseline = GameAdapter.Es3Load(prefix + "_bak_" + field,
-                    typeof(string[]), null, null) as string[];
-                RestoreList(field, baseline == null ? new List<string>() :
-                    new List<string>(baseline));
+                if (Array.IndexOf(ListFields, field) < 0) continue;
+                List<string> baseline = null;
+                if (local) _listBaselines.TryGetValue(field, out baseline);
+                if (baseline == null)
+                {
+                    string[] saved = GameAdapter.Es3Load(prefix + "_bak_" + field,
+                        typeof(string[]), null, null) as string[];
+                    if (saved != null) baseline = new List<string>(saved);
+                }
+                if (baseline == null || !RestoreList(field, baseline)) pendingLists.Add(field);
+                else if (field == "allTestWordsS10_Para") restoredPool = true;
             }
-            for (int i = 0; i < arrays.Length; i++)
+            foreach (string field in arrays)
             {
-                string field = arrays[i];
-                string[] baseline = GameAdapter.Es3Load(prefix + "_bak_" + field,
+                if (Array.IndexOf(ArrayFields, field) < 0) continue;
+                string[] baseline = null;
+                if (local) _arrayBaselines.TryGetValue(field, out baseline);
+                if (baseline == null) baseline = GameAdapter.Es3Load(prefix + "_bak_" + field,
                     typeof(string[]), null, null) as string[];
-                RestoreArray(field, baseline == null ? new string[0] : baseline);
+                if (baseline == null || !RestoreArray(field, baseline)) pendingArrays.Add(field);
             }
-            MarkNoTestIfUnsafe();
-            GameAdapter.Es3Save(prefix + "_owned_lists", new string[0]);
-            GameAdapter.Es3Save(prefix + "_owned_arrays", new string[0]);
+            if (restoredPool) MarkNoTestIfUnsafe();
+            GameAdapter.Es3Save(prefix + "_owned_lists", ToArray(pendingLists));
+            GameAdapter.Es3Save(prefix + "_owned_arrays", ToArray(pendingArrays));
         }
 
-        private void RestoreList(string fieldName, List<string> value)
+        private bool RestoreList(string fieldName, List<string> value)
         {
             object current = GameAdapter.StaticField("MyParameters", fieldName);
             object replacement;
             if (current is string[]) replacement = value.ToArray();
             else replacement = value;
             GameAdapter.SetStaticField("MyParameters", fieldName, replacement);
-            GameAdapter.Es3Save(fieldName, replacement);
+            return GameAdapter.Es3Save(fieldName, replacement);
         }
 
-        private void RestoreArray(string fieldName, string[] value)
+        private bool RestoreArray(string fieldName, string[] value)
         {
             GameAdapter.SetStaticField("MyParameters", fieldName,
                 (string[])value.Clone());
-            GameAdapter.Es3Save(fieldName, (string[])value.Clone());
-        }
-
-        private void PersistOwned()
-        {
-            GameAdapter.Es3Save(Key("owned_lists"), ToArray(_ownedLists));
-            GameAdapter.Es3Save(Key("owned_arrays"), ToArray(_ownedArrays));
+            return GameAdapter.Es3Save(fieldName, (string[])value.Clone());
         }
 
         private string Key(string suffix)

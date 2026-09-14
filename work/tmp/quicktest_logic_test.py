@@ -44,12 +44,32 @@ def is_jp(w):
 sv = load(os.path.join(PD, "SaveFile.es3"))
 mb = load(os.path.join(PD, "MyBook.es3"))
 
-book = sv.get("ChosenBook_Para")
-blist = sv.get("ChosenBook_List") or []
+def slot_words(index):
+    words = mb.get("SelfBookList%d" % index)
+    if not words:
+        words = list((mb.get("wordDictionary%d" % index) or {}).keys())
+    return list(words or [])
+
+
+with io.open(os.path.join(os.path.dirname(__file__), "..", "..",
+                          "packs", "ja", "manifest.json"), "r",
+             encoding="utf-8") as f:
+    jp_word_count = json.load(f)["word_count"]
+jp_slot = next((i for i in range(1, 5)
+                if len(slot_words(i)) == jp_word_count), None)
+if jp_slot is None:
+    raise SystemExit("找不到与 packs/ja/manifest.json 词数一致的日语槽位")
+
+book = "自定义词书%d" % jp_slot
+blist = slot_words(jp_slot)
 book_set = set(blist)
-learned = sv.get("HaveLearnedDictionary") or {}
+learned = dict(sv.get("HaveLearnedDictionary") or {})
 levels = {i: bool(sv.get("level%dIf" % i)) for i in range(6)}
 n_test = sv.get("TestWordsNum_Para") or 10
+
+# Keep this regression independent of the user's current study history.
+for word in blist[:max(10, int(n_test))]:
+    learned.setdefault(word, {"masteryLevel": 0, "lastStudyTime": 0})
 
 print("ChosenBook_Para = %r   book=%d words   learned=%d (jp=%d)"
       % (book, len(blist), len(learned), sum(1 for w in learned if is_jp(w))))

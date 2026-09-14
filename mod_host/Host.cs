@@ -118,7 +118,14 @@ namespace WcpHost
         {
             if (!_enabled.Value || _router == null)
             {
-                if (_runtime != null) _runtime.OnDisabled();
+                try
+                {
+                    if (_runtime != null) _runtime.OnDisabled();
+                }
+                finally
+                {
+                    RemoveFeaturePatches();
+                }
                 return;
             }
             if (Time.realtimeSinceStartup < _nextProbe) return;

@@ -25,6 +25,18 @@ function Download-WithProgress([string]$uri, [string]$destination, [string]$disp
     $response = $null
     $inputStream = $null
     $outputStream = $null
+    $resumeFrom = [int64]0
+    if (Test-Path -LiteralPath $destination) {
+        $existing = Get-Item -LiteralPath $destination
+        $resumeFrom = [int64]$existing.Length
+        if ($resumeFrom -gt $expectedSize) {
+            Remove-Item -LiteralPath $destination -Force
+            $resumeFrom = [int64]0
+        } elseif ($resumeFrom -eq $expectedSize) {
+            Write-Host "发现完整的未完成缓存：$displayName，将直接校验。" -ForegroundColor DarkGray
+            return
+        }
+    }
     try {
         $request = [Net.WebRequest]::Create($uri)
         $request.Method = 'GET'
@@ -33,13 +45,27 @@ function Download-WithProgress([string]$uri, [string]$destination, [string]$disp
         $request.UserAgent = 'WCP-Japanese-Installer/1.2.2'
         $request.Proxy = [Net.WebRequest]::DefaultWebProxy
         if ($request.Proxy) { $request.Proxy.Credentials = [Net.CredentialCache]::DefaultCredentials }
+        $resumeRequested = $resumeFrom -gt 0 -and $request -is [Net.HttpWebRequest]
+        if ($resumeRequested) {
+            $request.AddRange($resumeFrom)
+            Write-Host "检测到 $displayName 的未完成缓存，将从 $resumeFrom 字节继续下载。" -ForegroundColor DarkGray
+        }
         $response = $request.GetResponse()
-        $total = [int64]$response.ContentLength
-        if ($total -le 0) { $total = $expectedSize }
+        $statusCode = if ($response -is [Net.HttpWebResponse]) { [int]$response.StatusCode } else { 200 }
+        $resumeAccepted = $resumeRequested -and $statusCode -eq 206
+        if ($resumeRequested -and -not $resumeAccepted) {
+            Write-Host '下载服务器未接受断点请求，已从头重新传输本文件。' -ForegroundColor DarkYellow
+            $resumeFrom = [int64]0
+        }
+        $contentLength = [int64]$response.ContentLength
+        $total = if ($contentLength -gt 0) {
+            if ($resumeAccepted) { $resumeFrom + $contentLength } else { $contentLength }
+        } else { $expectedSize }
         $inputStream = $response.GetResponseStream()
-        $outputStream = [IO.File]::Open($destination, [IO.FileMode]::Create, [IO.FileAccess]::Write, [IO.FileShare]::None)
+        $fileMode = if ($resumeAccepted) { [IO.FileMode]::Append } else { [IO.FileMode]::Create }
+        $outputStream = [IO.File]::Open($destination, $fileMode, [IO.FileAccess]::Write, [IO.FileShare]::None)
         $buffer = New-Object byte[] (1024 * 1024)
-        $downloaded = [int64]0
+        $downloaded = $resumeFrom
         $watch = [Diagnostics.Stopwatch]::StartNew()
         $lastUpdate = [datetime]::MinValue
         while (($read = $inputStream.Read($buffer, 0, $buffer.Length)) -gt 0) {
@@ -1034,7 +1060,9 @@ function Download-VerifiedAsset($asset) {
         $downloaded = $false
         $errors = New-Object System.Collections.Generic.List[string]
         $seenUrls = New-Object System.Collections.Generic.HashSet[string]([StringComparer]::OrdinalIgnoreCase)
+        $routeIndex = 0
         foreach ($route in $downloadRoutes) {
+            $routeIndex++
             $parts = @($asset.parts | Where-Object { $_ })
             $isPartsRoute = ([string]$route.Mode).ToLowerInvariant() -eq 'parts'
             if ($isPartsRoute -and $parts.Count -eq 0) {
@@ -1050,12 +1078,13 @@ function Download-VerifiedAsset($asset) {
                 continue
             }
             Write-Host "已选择下载路由：$($route.Name)（$($probe.Method)，HTTP $($probe.StatusCode)）" -ForegroundColor DarkCyan
-            $tmp = "$target.part"
-            Remove-Item -LiteralPath $tmp -Force -ErrorAction SilentlyContinue
+            $tmp = if ($isPartsRoute) { "$target.part" } else { "$target.route{0:D2}.download" -f $routeIndex }
+            if ($isPartsRoute) { Remove-Item -LiteralPath $tmp -Force -ErrorAction SilentlyContinue }
+            $partPaths = @()
             $routeSucceeded = $false
+            $keepTmpForResume = $false
             try {
                 if ($isPartsRoute) {
-                    $partPaths = @()
                     $partIndex = 0
                     foreach ($part in $parts) {
                         $partIndex++
@@ -1078,6 +1107,7 @@ function Download-VerifiedAsset($asset) {
                             }
                             $partActualHash = Get-Sha256 $partTmp
                             if ($partActualHash -ne ([string]$part.sha256).ToLowerInvariant()) {
+                                Remove-Item -LiteralPath $partTmp -Force -ErrorAction SilentlyContinue
                                 throw "分卷 $($part.name) SHA-256 不符（实际 $partActualHash）"
                             }
                             Move-Item -LiteralPath $partTmp -Destination $partTarget -Force
@@ -1090,6 +1120,7 @@ function Download-VerifiedAsset($asset) {
                 }
                 $actualSize = (Get-Item -LiteralPath $tmp).Length
                 if ($actualSize -ne [int64]$asset.size) {
+                    $keepTmpForResume = $actualSize -lt [int64]$asset.size
                     $errors.Add("$($route.Name)：下载长度不符（实际 $actualSize / 期望 $($asset.size) 字节）")
                     continue
                 }
@@ -1105,11 +1136,13 @@ function Download-VerifiedAsset($asset) {
                     $routeSucceeded = $true
                     break
                 }
+                Remove-Item -LiteralPath $tmp -Force -ErrorAction SilentlyContinue
                 $errors.Add("$($route.Name)：SHA-256 不符（实际 $actualHash）")
             } catch {
+                $keepTmpForResume = $keepTmpForResume -or (Test-Path -LiteralPath $tmp)
                 $errors.Add("$($route.Name)：$($_.Exception.GetType().Name)")
             } finally {
-                if (-not $routeSucceeded) {
+                if (-not $routeSucceeded -and -not $keepTmpForResume) {
                     Remove-Item -LiteralPath $tmp -Force -ErrorAction SilentlyContinue
                 }
             }
@@ -1125,6 +1158,26 @@ function Download-VerifiedAsset($asset) {
 $wordAsset = $release.assets | Where-Object { $_.kind -eq 'word_audio' } | Select-Object -First 1
 $sentenceAsset = $release.assets | Where-Object { $_.kind -eq 'sentence_audio' } | Select-Object -First 1
 if (-not $wordAsset -or -not $sentenceAsset) { Fail 'Release 清单没有完整的单词和例句音频资源。' }
+$compressedBytes = [int64]0
+$expandedBytes = [int64]0
+foreach ($asset in @($release.assets)) {
+    if ($asset.size) { $compressedBytes += [int64]$asset.size }
+    if ($asset.expanded_size) {
+        $expandedBytes += [int64]$asset.expanded_size
+    } elseif ($asset.size) {
+        # Older manifests did not record the expanded ZIP size. The archive
+        # sizes are a conservative fallback for the preflight estimate.
+        $expandedBytes += [int64]$asset.size
+    }
+}
+$safetyBytes = 1GB
+$requiredBytes = $compressedBytes + (2 * $expandedBytes) + $safetyBytes
+$downloadDriveName = [IO.Path]::GetPathRoot($data).TrimEnd('\').Substring(0, 1)
+$downloadDrive = Get-PSDrive -Name $downloadDriveName
+if ($downloadDrive.Free -lt $requiredBytes) {
+    Fail "磁盘空间不足：下载缓存、解压临时目录和最终音频同时存在时，预计至少需要 $([Math]::Ceiling($requiredBytes / 1GB)) GB；$($downloadDriveName): 当前仅剩 $([Math]::Round($downloadDrive.Free / 1GB, 2)) GB。缓存位置：$data\jpmod_downloads"
+}
+Write-Host "磁盘空间检查通过：$($downloadDriveName): 剩余 $([Math]::Round($downloadDrive.Free / 1GB, 2)) GB，预计峰值需要 $([Math]::Round($requiredBytes / 1GB, 2)) GB。" -ForegroundColor DarkGray
 $wordZip = Download-VerifiedAsset $wordAsset
 $sentenceZip = Download-VerifiedAsset $sentenceAsset
 Write-Step '音频资源下载并校验完成，正在解压。'

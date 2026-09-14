@@ -63,7 +63,7 @@ namespace WcpHost
             if (string.Equals(_activeProfileId, next, StringComparison.Ordinal))
             {
                 _activeWords = words;
-                if (IsActive) _scope.Enforce();
+                if (IsActive && ActiveStrategy != null) _scope.Enforce();
                 return;
             }
 
@@ -78,14 +78,16 @@ namespace WcpHost
             }
 
             _router.SetActive(manifest.Profile.Id);
-            _scope.Enter(manifest, _activeWords);
-            EnsureServices();
             if (ActiveStrategy == null)
                 WcpHostPlugin.Log.LogWarning("WcpHost: 当前语言包没有可用策略，保留身份但不接管行为: " +
                     manifest.Profile.Id);
             else
+            {
+                _scope.Enter(manifest, _activeWords);
+                EnsureServices();
                 WcpHostPlugin.Log.LogInfo("WcpHost: 接管语言包 " + manifest.Profile.Language +
                     " / " + manifest.Profile.Id);
+            }
             _leftOnce = false;
         }
 
@@ -109,7 +111,7 @@ namespace WcpHost
 
         internal void Tick()
         {
-            if (!IsActive) return;
+            if (!IsActive || ActiveStrategy == null) return;
             EnsureServices();
             try { _scope.Enforce(); }
             catch (Exception e) { Warn("运行态队列校正失败: " + e.Message); }
@@ -117,7 +119,7 @@ namespace WcpHost
             catch (Exception e) { Warn("书名/UI 扫描失败: " + e.Message); }
             try
             {
-                if (ActiveStrategy != null) _sentenceAudio.Tick();
+                _sentenceAudio.Tick();
             }
             catch (Exception e) { Warn("例句按钮扫描失败: " + e.Message); }
         }
@@ -269,7 +271,7 @@ namespace WcpHost
 
         internal void EnforceNow()
         {
-            if (IsActive) _scope.Enforce();
+            if (IsActive && ActiveStrategy != null) _scope.Enforce();
         }
 
         internal string CurrentWord(string displayed)

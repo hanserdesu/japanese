@@ -137,9 +137,9 @@ def check_manifests():
 
 
 def check_identity_uniqueness(manifests):
-    print("\n[2] 身份唯一性（profile_id / 指纹 / 语言 / 槽位）")
+    print("\n[2] 身份唯一性（profile_id / 指纹 / 语言 / 槽位 / ES3前缀）")
     for field, label in (("profile_id", "profile_id"), ("language", "language"),
-                         ("fingerprint_sha256", "指纹"), ("word_count", "词数")):
+                         ("fingerprint_sha256", "指纹"), ("es3_prefix", "ES3前缀")):
         vals = [m[field] for m in manifests]
         dup = {v for v in vals if vals.count(v) > 1}
         if dup:

@@ -30,7 +30,9 @@ GITEE_URL_TEMPLATE = os.environ.get(
     'WCP_GITEE_URL_TEMPLATE',
     f'{GITEE_REPO}/releases/download/{RESOURCE_TAG}/{{name}}',
 )
-GITEE_PART_SIZE = 90 * 1024 * 1024
+# Stay below the strict 50 MB single-file quota so the same parts can be
+# uploaded even when a Gitee account applies repository-style limits.
+GITEE_PART_SIZE = 45 * 1024 * 1024
 
 
 def sha256(path):
@@ -77,6 +79,11 @@ def split_file(source, target_dir):
     return parts
 
 
+def zip_uncompressed_size(path):
+    with zipfile.ZipFile(path) as archive:
+        return sum(info.file_size for info in archive.infolist())
+
+
 def build_core():
     subprocess.run([sys.executable, str(ROOT / 'tools' / 'build_installer_payload.py'),
                     '--skip-audio'], check=True)
@@ -106,7 +113,9 @@ def main():
     gitee_parts = RELEASE / 'gitee-parts'
     for kind, path in (('word_audio', word_zip), ('sentence_audio', sentence_zip)):
         assets.append({'kind': kind, 'name': path.name,
-                       'size': path.stat().st_size, 'sha256': sha256(path),
+                       'size': path.stat().st_size,
+                       'expanded_size': zip_uncompressed_size(path),
+                       'sha256': sha256(path),
                        'parts': split_file(path, gitee_parts)})
     release_manifest = {
         'version': RESOURCE_TAG,

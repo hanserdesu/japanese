@@ -193,6 +193,8 @@ namespace WcpHost
                 try
                 {
                     LanguageManifest m = LanguageManifest.Load(mp);
+                    // word_count is only a fast Match prefilter, not an identity key:
+                    // two different books may legitimately contain the same number of words.
                     for (int j = 0; j < r._manifests.Count; j++)
                     {
                         BookProfile old = r._manifests[j].Profile;
@@ -202,10 +204,10 @@ namespace WcpHost
                             throw new FormatException("language 重复: " + m.Profile.Language);
                         if (old.Fingerprint == m.Profile.Fingerprint)
                             throw new FormatException("fingerprint 重复: " + m.Profile.Fingerprint);
-                        if (old.WordCount == m.Profile.WordCount)
-                            throw new FormatException("word_count 重复: " + m.Profile.WordCount);
                         if (old.ObservedSlot == m.Profile.ObservedSlot)
                             throw new FormatException("observed_slot 重复: " + m.Profile.ObservedSlot);
+                        if (old.Es3Prefix == m.Profile.Es3Prefix)
+                            throw new FormatException("es3_prefix 重复: " + m.Profile.Es3Prefix);
                     }
                     r._manifests.Add(m);
                 }

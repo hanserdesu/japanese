@@ -37,14 +37,38 @@
 - **`wcpFullEng.db` 是单文件单主键（`word`）**，多语言同写会跨语言覆盖
   （法语 1,638/8,116 与英语同形）。按语言分表不可行 → 正解是宿主自服务。
 - **槽位硬上限 4**（`_slotProfiles[4]` + 硬编码「自定义词书一~四」）。
-  每语言合并成一本书占一槽 → **最多 4 语言共存**。
-  `日语词库(猫条版).xlsx` 7,922 词 = 1 本书 = 1 槽 = 1 指纹；
-  `JLPT_N1..N5N4/IT用语` 是合并前源片段，不单独占槽。
-- **`BookProfiles.cs` 副本已漂移**：JA 单份共享（`build.cmd` 引
-  `..\mod_book_name\BookProfiles.cs`），FR/RU 各 3 份。
+  **槽位占用的唯一权威是存档，不是目录** —— `MyBook.es3` 的 `SelfBookList1..4`。
+  实测 2026-09-14：槽1=7922(ja) 槽2=8116(fr) 槽3=8451(ru) 槽4=空
+  → **三语已共存，剩 1 槽**。
+- **一个语言包可以含多个 xlsx 分册**：日语单册；法语/俄语各 3 册（A1A2+B1+B2），
+  **`fingerprint_sha256` 是对全部分册并集去重后算的**（已复算验证）。
+  `JLPT_N1..N5N4/IT用语` 是合并前源片段，不列入 books、不占槽。
+- **`BookProfiles.cs` 跨项目不同步（真问题）**：JA 与 FR 项目的注册表都缺俄语条目
+  （sha256 `a7f3dd58`，只有 ja/fr），RU 项目的齐全（`767adff6`，三条）。
+  → 每加一种语言，其它语言项目的 3 个 DLL 都得重编译。项目内多份副本本身逐字节一致。
+  JA 是单份共享（`build.cmd` 引 `..\mod_book_name\BookProfiles.cs`），FR/RU 各 3 份。
 - **运行态是全局单例**（`allTestWordsS10_Para` / `S8needToLearnWordList_Para` /
   `exmplesentences`）→ 多语言只能资源共存、运行态串行；
   接管-还原协议（JP 的 v1.7.2/1.7.3）要提升为宿主级，ES3 键加 `<lang>_` 前缀。
+
+## 阶段 0.5 已交付（2026-09-14）
+
+- `packs/{ja,fr,ru}/manifest.json` — 语言包清单，字段值全部实测。
+  schema 见 `ARCHITECTURE-UNIFIED.md` §2.2。
+- `mod_host/` — 宿主骨架，**已编译通过**（`WcpHost.dll` 19,456 字节，未部署）：
+  `Core/{Json,Manifest,ResourceRouter,ILanguageStrategy}.cs` + `GameAdapter.cs`
+  + `Host.cs`(v0.1.0，只读：载注册表/按指纹认身份/fail-closed) + `build.cmd`。
+- `tools/arch_check.py` — 设计文档 §5 验收的机检实现，退出码 0 = 无 FAIL。
+  首次运行 2 FAIL = 注册表漂移；**每次改动后都跑它**。
+
+### 不可让步的三条技术约定
+
+1. **指纹算法一个字都不能改**：`SHA-256` over「`Trim().Normalize(FormC)` →
+   `StringComparer.Ordinal` 排序 → `'\n'` 连接 → UTF-8」。改了则已导入词书全部失配。
+2. **路由未激活时返回 `null`，绝不回退到别的语言**（RU 现有代码回退 `vocabulary/`
+   是绕过隔离的缺陷，接入宿主时必须去掉）。
+3. **编译只能用 PowerShell 工具跑 `build.cmd`**（Bash 拒 `csc.exe`）；
+   骨架/开发阶段设 `WCP_NO_DEPLOY=1`，别动游戏安装。
 - **跨语言复刻契约在 `D:/Japanese/IMPLEMENTATION.md`**（2026-09-14 重写过）。
   三条容易漏的：① 例句音频文件名 = `md5(ExtractJa 剥离结果)`，`ExtractJa` 有 8 步语义
   （含 `\n` 截断、**取最后一个 `（` 切尾**、必须含假名/汉字码点）；② `vocabulary/` 与

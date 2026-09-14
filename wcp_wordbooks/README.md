@@ -10,9 +10,9 @@
 
 只需要下载主 Release 里的一个安装包：
 
-[下载 WCP 日语词书一键安装包 v1.2.2](https://github.com/hanserdesu/japanese/releases/tag/wcp-jp-v1.2.2)
+[优先从 Gitee 下载 WCP 日语词书一键安装包 v1.2.2](https://gitee.com/cat-stripe/code-warehouse-for-cat-stripes/releases/tag/wcp-jp-v1.2.2)；[GitHub Release 备用](https://github.com/hanserdesu/japanese/releases/tag/wcp-jp-v1.2.2)
 
-不要单独下载资源 Release。安装器会先探测国内 Gitee，再回退到 GitHub 下载单词音频和例句音频，并检查文件是否完整；Gitee 资源采用自动合并的分卷，下载中断后会保留缓存并在下次运行时断点续传。
+不要单独下载资源 Release。安装器会先探测国内 Gitee，再回退到 GitHub 下载单词音频和例句音频，并检查文件是否完整；Gitee 分片分布在主仓库和两个资源仓库中，安装器会自动合并，下载中断后会保留缓存并在下次运行时断点续传。
 
 ### 安装包会做什么？
 

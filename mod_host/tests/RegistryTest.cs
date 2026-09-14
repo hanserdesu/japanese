@@ -1,0 +1,122 @@
+// RegistryTest — 在游戏外验证身份层（不需要 Unity，不需要启动游戏）。
+//
+// 覆盖范围: 宿主 Core/*.cs 的**机制**部分
+//   · packs/<lang>/manifest.json 解析（Json.cs）
+//   · 注册表加载 / 去重 / 槽位预算（Manifest.cs）
+//   · 指纹算法与真实存档词表的一致性（BookRegistry.FingerprintOf）
+//   · 负面识别：非受管词表一律不命中（汇成一个语言包都不认）
+//
+// 不覆盖: Unity 侧胶水（GameAdapter 反射、Host.Update 的每秒判定）。那部分
+// 必须在游戏里跑才作数 —— 本测试的作用是把"机制错了"排除掉，让实机只剩
+// "接线对不对"这一个变量。
+//
+// 用法: tests\run_registry_test.cmd  [packsRoot] [MyBook.es3]
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Text;
+using WcpHost;
+
+internal static class RegistryTest
+{
+    private static int _fail;
+
+    private static void Check(bool ok, string label, string detail)
+    {
+        Console.WriteLine((ok ? "  PASS  " : "  FAIL  ") + label +
+                          (string.IsNullOrEmpty(detail) ? "" : "   " + detail));
+        if (!ok) _fail++;
+    }
+
+    private static int Main(string[] args)
+    {
+        try { Console.OutputEncoding = Encoding.UTF8; }
+        catch (Exception) { }
+
+        string packsRoot = args.Length > 0 ? args[0] : @"D:\Japanese\packs";
+        string es3 = args.Length > 1 ? args[1] : Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+            @"AppData\LocalLow\WCP\wcp\MyBook.es3");
+
+        Console.WriteLine("packs = " + packsRoot);
+        Console.WriteLine("存档  = " + es3);
+        Console.WriteLine();
+
+        BookRegistry reg = BookRegistry.Load(packsRoot);
+        Console.WriteLine("加载语言包 = " + reg.Manifests.Count +
+                          "，加载告警 = " + reg.Errors.Count);
+        for (int i = 0; i < reg.Errors.Count; i++)
+            Console.WriteLine("   告警: " + reg.Errors[i]);
+        Check(reg.Errors.Count == 0, "注册表加载无告警", "");
+        Check(reg.Manifests.Count == 3, "加载 3 个语言包", "实际 " + reg.Manifests.Count);
+
+        for (int i = 0; i < reg.Manifests.Count; i++)
+        {
+            BookProfile p = reg.Manifests[i].Profile;
+            Console.WriteLine(string.Format("   [{0}] {1} 词={2} 槽={3} 指纹={4}…",
+                p.Language, p.Id, p.WordCount, p.ObservedSlot, p.Fingerprint.Substring(0, 12)));
+        }
+
+        string budgetDetail;
+        bool budgetOk = reg.SlotBudgetOk(out budgetDetail);
+        Check(budgetOk, "槽位预算 ≤ 4", budgetDetail);
+
+        if (!File.Exists(es3))
+        {
+            Console.WriteLine("\n找不到存档，槽位回归跳过。结果: " +
+                              (_fail == 0 ? "机制部分通过" : _fail + " 条 FAIL"));
+            return _fail == 0 ? 0 : 1;
+        }
+
+        string text = File.ReadAllText(es3, Encoding.UTF8).TrimStart('\uFEFF');
+        Dictionary<string, object> root = Json.AsDict(Json.Parse(text));
+
+        Console.WriteLine("\n== 槽位回归（真实存档词表 -> Match） ==");
+        int matched = 0, empty = 0;
+        for (int slot = 1; slot <= 4; slot++)
+        {
+            List<string> words = Json.StrList(Json.Sub(root, "SelfBookList" + slot), "value");
+            if (words.Count == 0)
+            {
+                empty++;
+                Check(reg.Match(words) == null, "槽 " + slot + " 空 -> 不匹配受管词书", "");
+                continue;
+            }
+            BookProfile p = reg.Match(words);
+            if (p == null)
+            {
+                Check(false, "槽 " + slot + " 命中语言包", words.Count + " 词 -> null");
+                continue;
+            }
+            matched++;
+            string fp = BookRegistry.FingerprintOf(words);
+            Check(fp == p.Fingerprint, "槽 " + slot + " 指纹与清单一致",
+                p.Language + "/" + p.Id +
+                "  声明=" + p.Fingerprint.Substring(0, 12) +
+                " 实算=" + fp.Substring(0, 12));
+        }
+        Check(matched == 3, "3 个非空槽位全部命中", "实际 " + matched);
+        Check(empty == 1, "1 个空槽位", "实际 " + empty);
+
+        Console.WriteLine("\n== 唯一性矩阵（一个槽的词表只能命中一个语言包） ==");
+        for (int slot = 1; slot <= 4; slot++)
+        {
+            List<string> words = Json.StrList(Json.Sub(root, "SelfBookList" + slot), "value");
+            if (words.Count == 0) continue;
+            int hits = 0;
+            string who = "";
+            for (int i = 0; i < reg.Manifests.Count; i++)
+                if (reg.Manifests[i].Matches(words))
+                {
+                    hits++;
+                    who += reg.Manifests[i].Profile.Language + " ";
+                }
+            Check(hits == 1, "槽 " + slot + " 唯一命中",
+                hits + " 个 (" + who.Trim() + ")");
+        }
+
+        Console.WriteLine();
+        Console.WriteLine("结果: " + (_fail == 0 ? "全部通过" : _fail + " 条 FAIL"));
+        return _fail == 0 ? 0 : 1;
+    }
+}

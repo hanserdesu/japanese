@@ -1,7 +1,17 @@
 // Shared identity registry for the portable WCP word-book plugins.
-// French copy of D:/Japanese/mod_book_name/BookProfiles.cs. Keep the registry
-// content in sync with the Japanese one; each project deploys its own plugins
-// and the matching game install reads whichever DLL carries the profile.
+//
+// 生成物 — 不要手改。
+//   事实来源: D:/Japanese/packs/<lang>/manifest.json
+//   重新生成: python tools/gen_bookprofiles.py --write
+//   漂移检查: python tools/gen_bookprofiles.py --check
+//
+// 以前这份注册表在 4 个项目里各有一份手抄副本（法语/俄语项目内部还各 3 份），
+// 加一种语言就得同步改 N 处 —— 2026-09-14 实测漂移: 日语与法语项目的副本
+// 只登记 ja+fr，缺 ru。改成从清单生成后，「加一种语言」只需要新增一个
+// packs/<lang>/manifest.json，不必重编译任何现有语言的 DLL。
+//
+// FingerprintOf 必须与 mod_host/Core/Manifest.cs 逐字节一致。
+
 using System;
 using System.Collections.Generic;
 using System.Security.Cryptography;
@@ -32,16 +42,19 @@ namespace WcpBookProfiles
     {
         internal const string Japanese = "ja";
         internal const string French = "fr";
+        internal const string Russian = "ru";
 
         // Fingerprints are SHA256 over the sorted full word-form set, so a book
-        // matches in any custom slot. Registering the Japanese book here as well
-        // lets the FR plugin positively identify (and therefore never touch) it.
+        // matches in any custom slot. Registering every managed book here lets a
+        // plugin positively identify — and therefore never touch — the others'.
         internal static readonly BookProfile[] All = new BookProfile[]
         {
             new BookProfile("catbar-jlpt-complete", Japanese, "日语词库(猫条版)", 7922,
                 "6d7a51c0c5d30dd63d8a6e3412bce1cf2419554fb8487cf5c8a205e43ac41663"),
             new BookProfile("catbar-french-cefr-complete", French, "法语词库(猫条版)", 8116,
-                "376af2eae0292052cefb4cb0d673f48a5ca480a38e25a6bf5353998caea17e9d")
+                "376af2eae0292052cefb4cb0d673f48a5ca480a38e25a6bf5353998caea17e9d"),
+            new BookProfile("catbar-russian-cefr-complete", Russian, "俄语词库(猫条版)", 8451,
+                "dfecb0ab75e9b3ef75aedd47c677d68594b060bfbb84cc6bd94efd7888f4b74e"),
         };
 
         internal static BookProfile Match(IList<string> words)

@@ -30,7 +30,10 @@ namespace SentenceAudioMod
         internal static ManualLogSource Log;
         private static SentenceAudioPlugin Instance;
         private const float ScanInterval = 0.3f;
+        // legacy 共享目录（回退用）: LocalLow\WCP\wcp\sentence_audio
         private const string AudioDirName = "sentence_audio";
+        // 阶段 1 资源命名空间化: 私有目录 LocalLow\WCP\packs\<lang>\audio\sentence
+        private const string PackLangCode = "ja";
 
         private AudioSource _audio;
         private ConfigEntry<bool> _enabled;
@@ -41,6 +44,7 @@ namespace SentenceAudioMod
         private float _diagDeadline;
         private float _nextScan;
         private string _audioDir;
+        private string _packAudioDir;
         private readonly Dictionary<Button, ReadBtnState> _readStates =
             new Dictionary<Button, ReadBtnState>();
         private bool _gameButtonsActive;
@@ -115,8 +119,15 @@ namespace SentenceAudioMod
                 "显示例句旁的 ▶ 朗读按钮。");
             _audioDir = Path.Combine(Application.persistentDataPath,
                 AudioDirName);
+            // 阶段 1: 私有 pack 目录优先, legacy 共享目录回退。
+            // 迁移未完成时两处都查, 行为与旧版一致; 迁移完成后只走私有目录,
+            // 别的语言的路径串就不再出现在本插件的读取域里。
+            string packsRoot = Path.Combine(
+                Path.GetDirectoryName(Application.persistentDataPath), "packs");
+            _packAudioDir = Path.Combine(packsRoot, PackLangCode, "audio", "sentence");
             Log.LogInfo(string.Format(
-                "WCP Sentence Audio 1.0.0 loaded, audio dir = {0}", _audioDir));
+                "WCP Sentence Audio 1.1.0 loaded, pack dir = {0} (存在={1}), legacy dir = {2}",
+                _packAudioDir, Directory.Exists(_packAudioDir), _audioDir));
             var bepRoot = Paths.BepInExRootPath;
             try
             {
@@ -264,8 +275,8 @@ namespace SentenceAudioMod
                     string file = null;
                     if (ja != null)
                     {
-                        string p = Path.Combine(_audioDir, Md5(ja) + ".mp3");
-                        if (File.Exists(p)) { file = p; hits++; }
+                        string p = AudioFile(ja);
+                        if (p != null) { file = p; hits++; }
                     }
                     Log.LogInfo(string.Format("  [{0}] ja='{1}' audio={2}",
                         i, ja == null ? "<none>" : (ja.Length > 40 ? ja.Substring(0, 40) : ja),
@@ -542,13 +553,23 @@ namespace SentenceAudioMod
             catch (Exception) { return null; }
         }
 
+        // 例句音频定位: pack 私有目录优先, 回退 legacy 共享目录。
+        // 返回 null = 两处都没有这个文件(此时不显示 ▶ 按钮)。
+        private string AudioFile(string ja)
+        {
+            string name = Md5(ja) + ".mp3";
+            string p = Path.Combine(_packAudioDir, name);
+            if (File.Exists(p)) return p;
+            p = Path.Combine(_audioDir, name);
+            return File.Exists(p) ? p : null;
+        }
+
         // 由例句文本(或 TMP 富文本)定位本地日语 mp3
         private string LocalAudio(string raw)
         {
             string ja = ExtractJa(raw);
             if (ja == null) return null;
-            string p = Path.Combine(_audioDir, Md5(ja) + ".mp3");
-            return File.Exists(p) ? p : null;
+            return AudioFile(ja);
         }
 
         // 标签 "读例句N" -> "JPN", 其余文字(如快捷键号)保留
@@ -657,8 +678,7 @@ namespace SentenceAudioMod
                 string file = null;
                 if (ja != null)
                 {
-                    string p = Path.Combine(_audioDir, Md5(ja) + ".mp3");
-                    if (File.Exists(p)) file = p;
+                    file = AudioFile(ja);
                 }
                 GameObject btn;
                 if (!_buttons.TryGetValue(tmp, out btn) || btn == null)

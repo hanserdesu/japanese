@@ -16,7 +16,8 @@ OUT = ROOT / 'output'
 SA = wcp_paths.streaming_assets()
 FULL = wcp_paths.full_db()
 ONLY = wcp_paths.only_db()
-VOC = Path.home() / 'AppData' / 'LocalLow' / 'WCP' / 'vocabulary'
+VOC = (Path.home() / 'AppData' / 'LocalLow' / 'WCP' /
+       'packs' / 'ja' / 'audio' / 'word')
 
 print('=' * 60)
 print('[1] 例句产出: 词覆盖与条数')
@@ -106,7 +107,7 @@ empty2 = [w for w in need if w in pron2 and not (pron2[w] or '').strip()]
 print(f'  ukPhonic 为空: {len(empty2)}')
 con.close()
 
-print('[6] 音频目录 (vocabulary)')
+print('[6] 音频目录 (packs/ja/audio/word)')
 if VOC.exists():
     files = list(VOC.glob('*.mp3')) + list(VOC.glob('*.wav'))
     names = {f.stem for f in files}

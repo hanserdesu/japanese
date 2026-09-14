@@ -33,7 +33,7 @@ internal static class RegistryTest
         try { Console.OutputEncoding = Encoding.UTF8; }
         catch (Exception) { }
 
-        string packsRoot = args.Length > 0 ? args[0] : @"D:\Japanese\packs";
+        string packsRoot = args.Length > 0 ? args[0] : @"D:\ATooManyLanguage\Japanese\packs";
         string es3 = args.Length > 1 ? args[1] : Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
             @"AppData\LocalLow\WCP\wcp\MyBook.es3");
@@ -48,10 +48,12 @@ internal static class RegistryTest
         for (int i = 0; i < reg.Errors.Count; i++)
             Console.WriteLine("   告警: " + reg.Errors[i]);
         Check(reg.Errors.Count == 0, "注册表加载无告警", "");
-        Check(reg.Manifests.Count >= 1 && reg.Manifests.Count <= 4,
-              "加载 1..4 个语言包", "实际 " + reg.Manifests.Count);
+        Check(reg.Manifests.Count >= 1,
+              "至少加载 1 个语言包", "实际 " + reg.Manifests.Count);
         CheckDuplicateWordCountIsAllowed();
         CheckDuplicateEs3PrefixIsRejected();
+        CheckMultipleUnassignedPacksAreAllowed();
+        CheckHostGenericStrategy();
 
         for (int i = 0; i < reg.Manifests.Count; i++)
         {
@@ -161,8 +163,8 @@ internal static class RegistryTest
                 "  声明=" + p.Fingerprint.Substring(0, 12) +
                 " 实算=" + fp.Substring(0, 12));
         }
-        Check(matched == reg.Manifests.Count, "所有非空槽位全部命中",
-              "命中 " + matched + "/语言包 " + reg.Manifests.Count);
+        Check(matched + empty == 4, "所有存档槽位完成识别",
+              "非空命中 " + matched + "，空 " + empty);
         Check(empty + matched == 4, "槽位总数为 4", "空 " + empty + " + 命中 " + matched);
 
         Console.WriteLine("\n== 唯一性矩阵（一个槽的词表只能命中一个语言包） ==");
@@ -263,6 +265,90 @@ internal static class RegistryTest
             catch (Exception e)
             {
                 Console.WriteLine("  WARN  清理前缀临时目录失败: " + e.Message);
+            }
+        }
+    }
+
+    private static void CheckMultipleUnassignedPacksAreAllowed()
+    {
+        string root = Path.Combine(Path.GetTempPath(),
+            "wcphost_registry_unassigned_" + Guid.NewGuid().ToString("N"));
+        try
+        {
+            Directory.CreateDirectory(Path.Combine(root, "aa"));
+            Directory.CreateDirectory(Path.Combine(root, "bb"));
+            File.WriteAllText(Path.Combine(root, "aa", "manifest.json"),
+                SyntheticManifest("profile-aa", "aa", "5", 0));
+            File.WriteAllText(Path.Combine(root, "bb", "manifest.json"),
+                SyntheticManifest("profile-bb", "bb", "6", 0));
+
+            BookRegistry synthetic = BookRegistry.Load(root);
+            string detail;
+            Check(synthetic.Errors.Count == 0 && synthetic.Manifests.Count == 2,
+                  "多个未分配槽位语言包可以注册",
+                  "清单 " + synthetic.Manifests.Count + "，告警 " + synthetic.Errors.Count);
+            Check(synthetic.SlotBudgetOk(out detail),
+                  "未分配槽位语言包不消耗槽位预算", detail);
+        }
+        catch (Exception e)
+        {
+            Check(false, "未分配槽位注册回归未抛异常", ExceptionSummary(e));
+        }
+        finally
+        {
+            try
+            {
+                if (Directory.Exists(root)) Directory.Delete(root, true);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine("  WARN  清理未分配槽位临时目录失败: " + e.Message);
+            }
+        }
+    }
+
+    private static void CheckHostGenericStrategy()
+    {
+        string root = Path.Combine(Path.GetTempPath(),
+            "wcphost_registry_host_strategy_" + Guid.NewGuid().ToString("N"));
+        try
+        {
+            Directory.CreateDirectory(Path.Combine(root, "xx"));
+            string manifest = SyntheticManifest("profile-xx", "xx", "7", 0)
+                .Replace("\"Pack.dll\"", "\"$host\"")
+                .Replace("\"Pack.Type\"", "\"WcpHost.GenericLanguageStrategy\"");
+            File.WriteAllText(Path.Combine(root, "xx", "manifest.json"), manifest);
+
+            BookRegistry synthetic = BookRegistry.Load(root);
+            StrategyRegistry strategies = StrategyRegistry.Load(synthetic);
+            ILanguageStrategy strategy = strategies.ForProfile("profile-xx");
+            Check(synthetic.Errors.Count == 0 && strategies.Errors.Count == 0 &&
+                  strategies.LoadedCount == 1,
+                  "资源包可复用宿主内置通用策略", "策略=" + strategies.LoadedCount);
+            Check(strategy != null && strategy.Language == "xx",
+                  "通用策略由 manifest 绑定语言码", strategy == null ? "null" : strategy.Language);
+            if (strategy != null)
+            {
+                Check(strategy.ExtractSentenceKey("hello（你好）") == "hello",
+                      "通用策略切除译文尾巴", strategy.ExtractSentenceKey("hello（你好）"));
+                string meaning, phonic;
+                Check(!strategy.ProvideMeaning("missing", out meaning, out phonic),
+                      "通用策略缺资源时 fail-closed", "");
+            }
+        }
+        catch (Exception e)
+        {
+            Check(false, "通用策略注册回归未抛异常", ExceptionSummary(e));
+        }
+        finally
+        {
+            try
+            {
+                if (Directory.Exists(root)) Directory.Delete(root, true);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine("  WARN  清理通用策略临时目录失败: " + e.Message);
             }
         }
     }

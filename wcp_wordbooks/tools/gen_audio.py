@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
-"""批量生成日语单词发音 MP3 -> 游戏 vocabulary 目录。
+"""批量生成日语单词发音 MP3 -> 日语 pack 的 word 音频目录。
 
-游戏按 `<单词文本>.mp3` / `.wav` 在
-%USERPROFILE%\\AppData\\LocalLow\\WCP\\vocabulary 查找本地音频,
+宿主按 `<单词文本>.mp3` / `.wav` 在
+%USERPROFILE%\\AppData\\LocalLow\\WCP\\packs\\ja\\audio\\word 查找本地音频。
 找不到才会回退内置 AI(英语向)TTS。日语词务必生成本地音频。
 
 特性: 断点续传(manifest), 并发限流, 失败重试, 分批(--limit)。
@@ -24,7 +24,8 @@ import edge_tts
 
 ROOT = Path(__file__).resolve().parent.parent
 OUT = ROOT / 'output'
-VOCAB_DIR = Path.home() / 'AppData' / 'LocalLow' / 'WCP' / 'vocabulary'
+VOCAB_DIR = (Path.home() / 'AppData' / 'LocalLow' / 'WCP' /
+             'packs' / 'ja' / 'audio' / 'word')
 MANIFEST = OUT / 'audio_manifest.json'
 
 VOICE = 'ja-JP-NanamiNeural'

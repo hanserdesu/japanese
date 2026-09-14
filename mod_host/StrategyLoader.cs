@@ -41,8 +41,13 @@ namespace WcpHost
         private void LoadOne(LanguageManifest manifest)
         {
             string id = manifest.Profile.Id;
+            Assembly assembly = null;
             string path = manifest.Resolve(manifest.StrategyAssembly);
-            if (string.IsNullOrEmpty(path) || !File.Exists(path))
+            if (string.Equals(manifest.StrategyAssembly, "$host", StringComparison.Ordinal))
+            {
+                assembly = typeof(StrategyRegistry).Assembly;
+            }
+            else if (string.IsNullOrEmpty(path) || !File.Exists(path))
             {
                 _errors.Add(id + ": 策略程序集不存在（当前仍可使用身份层）: " +
                             manifest.StrategyAssembly);
@@ -51,7 +56,7 @@ namespace WcpHost
 
             try
             {
-                Assembly assembly = Assembly.LoadFrom(path);
+                if (assembly == null) assembly = Assembly.LoadFrom(path);
                 Type type = assembly.GetType(manifest.StrategyType, false, false);
                 if (type == null)
                 {
@@ -69,6 +74,9 @@ namespace WcpHost
                     _errors.Add(id + ": 策略实例化失败: " + manifest.StrategyType);
                     return;
                 }
+                IPackBoundStrategy bound = strategy as IPackBoundStrategy;
+                if (bound != null)
+                    bound.BindPack(new StrategyContext(manifest));
                 if (!string.Equals(strategy.Language, manifest.Profile.Language,
                                    StringComparison.Ordinal))
                 {
@@ -77,9 +85,6 @@ namespace WcpHost
                                 strategy.Language + ")");
                     return;
                 }
-                IPackBoundStrategy bound = strategy as IPackBoundStrategy;
-                if (bound != null)
-                    bound.BindPack(new StrategyContext(manifest));
                 _byProfileId[id] = strategy;
             }
             catch (Exception e)

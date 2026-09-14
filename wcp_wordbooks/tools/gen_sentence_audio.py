@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""批量生成例句日语语音 -> 游戏 persistentDataPath/sentence_audio/<md5>.mp3
+"""批量生成例句日语语音 -> 日语 pack/audio/sentence/<md5>.mp3
 
 数据源: data/translations/sentences_master.json {word: [[ja, zh], ...]}
 文件名: md5(ja.encode('utf-8')).hexdigest()  — 与 BepInEx 插件
@@ -22,7 +22,7 @@ import edge_tts
 ROOT = Path(__file__).resolve().parent.parent
 MASTER = ROOT / 'data' / 'translations' / 'sentences_master.json'
 OUT_DIR = Path(os.path.expandvars(
-    r'%USERPROFILE%\AppData\LocalLow\WCP\wcp\sentence_audio'))
+    r'%USERPROFILE%\AppData\LocalLow\WCP\packs\ja\audio\sentence'))
 MANIFEST = OUT_DIR / 'manifest.json'
 VOICE = 'ja-JP-NanamiNeural'
 CONCURRENCY = 12

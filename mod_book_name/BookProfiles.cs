@@ -1,7 +1,7 @@
 // Shared identity registry for the portable WCP word-book plugins.
 //
 // 生成物 — 不要手改。
-//   事实来源: D:/Japanese/packs/<lang>/manifest.json
+//   事实来源: D:/ATooManyLanguage/Japanese/packs/<lang>/manifest.json
 //   重新生成: python tools/gen_bookprofiles.py --write
 //   漂移检查: python tools/gen_bookprofiles.py --check
 //
@@ -44,6 +44,7 @@ namespace WcpBookProfiles
         internal const string French = "fr";
         internal const string Russian = "ru";
         internal const string German = "de";
+        internal const string Cantonese = "yue";
 
         // Fingerprints are SHA256 over the sorted full word-form set, so a book
         // matches in any custom slot. Registering every managed book here lets a

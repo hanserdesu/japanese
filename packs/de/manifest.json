@@ -13,7 +13,13 @@
     "type": "WcpPack.De.GermanStrategy"
   },
   "resources": {
-    "books": ["books/德语A1.xlsx", "books/德语A2.xlsx", "books/德语A1A2.xlsx"],
+    "books": [
+      "books/德语A1.xlsx",
+      "books/德语A2.xlsx",
+      "books/德语A1A2.xlsx",
+      "books/德语B1.xlsx",
+      "books/德语B2.xlsx"
+    ],
     "meaning_db": "db/meaning.sqlite",
     "sentence_table": "db/sentences.json",
     "repair": "db/repair.tsv",

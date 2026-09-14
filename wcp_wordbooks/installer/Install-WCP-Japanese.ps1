@@ -848,7 +848,10 @@ Write-Step "已找到游戏目录：$game"
 $bepRoot = Join-Path $game 'BepInEx'
 $payload = Join-Path $PSScriptRoot 'payload'
 $plugins = Join-Path $payload 'plugins'
-$data = Join-Path $env:USERPROFILE 'AppData\LocalLow\WCP\wcp'
+$wcpRoot = Join-Path $env:USERPROFILE 'AppData\LocalLow\WCP'
+$data = Join-Path $wcpRoot 'wcp'
+$packsPayload = Join-Path $payload 'packs'
+$packsRoot = Join-Path $wcpRoot 'packs'
 New-Item -ItemType Directory -Force -Path $data | Out-Null
 $stamp = Get-Date -Format 'yyyyMMdd_HHmmss'
 $backup = Join-Path $data "jpmod_backups\$stamp"
@@ -1202,21 +1205,36 @@ Expand-ZipWithProgress $wordZip (Join-Path $audioStage 'vocabulary') '单词音�
 Write-Host '正在解压例句音频...'
 Expand-ZipWithProgress $sentenceZip (Join-Path $audioStage 'sentence_audio') '例句音频'
 Write-Step '音频解压完成，正在安装插件和词书文件。'
+$pluginNames = @('WcpHost.dll', 'CustomSlotsMod.dll', 'JpWordListMod.dll',
+    'BookNameMod.dll', 'SentenceAudioMod.dll')
 foreach ($name in @('MyBook.es3', 'SaveFile.es3')) {
     $src = Join-Path $data $name
     if (Test-Path -LiteralPath $src) { Copy-Item -LiteralPath $src -Destination (Join-Path $backup $name) }
 }
-foreach ($name in @('JpWordListMod.dll', 'BookNameMod.dll', 'SentenceAudioMod.dll')) {
+foreach ($name in $pluginNames) {
     $src = Join-Path $bepRoot "plugins\$name"
     if (Test-Path -LiteralPath $src) { Copy-Item -LiteralPath $src -Destination (Join-Path $backup $name) }
 }
 
 New-Item -ItemType Directory -Force -Path (Join-Path $bepRoot 'plugins') | Out-Null
-foreach ($name in @('JpWordListMod.dll', 'BookNameMod.dll', 'SentenceAudioMod.dll')) {
+foreach ($name in $pluginNames) {
     $src = Join-Path $plugins $name
     if (-not (Test-Path -LiteralPath $src)) { Fail "安装包缺少插件：$name" }
     Copy-Item -LiteralPath $src -Destination (Join-Path $bepRoot "plugins\$name") -Force
 }
+
+# The host consumes only the selected language pack.  Merge the bundled JA
+# pack without deleting any user-installed FR/RU/DE/other pack.
+$jaPackPayload = Join-Path $packsPayload 'ja'
+if (-not (Test-Path -LiteralPath (Join-Path $jaPackPayload 'manifest.json'))) {
+    Fail '安装包缺少 packs\ja\manifest.json。'
+}
+$jaPackTarget = Join-Path $packsRoot 'ja'
+New-Item -ItemType Directory -Force -Path $packsRoot | Out-Null
+if (Test-Path -LiteralPath $jaPackTarget) {
+    Copy-TreeNet $jaPackTarget (Join-Path $backup 'packs\ja') '备份旧日语资源包'
+}
+Copy-TreeNet $jaPackPayload $jaPackTarget '日语语言资源包'
 
 $bookDir = Join-Path $payload 'books'
 Get-ChildItem -LiteralPath $bookDir -File | ForEach-Object {
@@ -1227,10 +1245,10 @@ New-Item -ItemType Directory -Force -Path $repairDir | Out-Null
 Get-ChildItem -LiteralPath (Join-Path $payload 'jp_db_payload') -File | ForEach-Object {
     Copy-Item -LiteralPath $_.FullName -Destination (Join-Path $repairDir $_.Name) -Force
 }
-New-Item -ItemType Directory -Force -Path (Join-Path $env:USERPROFILE 'AppData\LocalLow\WCP\vocabulary') | Out-Null
-New-Item -ItemType Directory -Force -Path (Join-Path $data 'sentence_audio') | Out-Null
-Copy-TreeNet (Join-Path $audioStage 'vocabulary') (Join-Path $env:USERPROFILE 'AppData\LocalLow\WCP\vocabulary') 'words'
-Copy-TreeNet (Join-Path $audioStage 'sentence_audio') (Join-Path $data 'sentence_audio') 'sentences'
+$jaWordAudio = Join-Path $jaPackTarget 'audio\word'
+$jaSentenceAudio = Join-Path $jaPackTarget 'audio\sentence'
+Copy-TreeNet (Join-Path $audioStage 'vocabulary') $jaWordAudio '日语单词音频'
+Copy-TreeNet (Join-Path $audioStage 'sentence_audio') $jaSentenceAudio '日语例句音频'
 try {
     Remove-TreeNet $audioStage
     Write-Host '音频临时目录已清理。' -ForegroundColor DarkGray

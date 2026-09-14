@@ -132,8 +132,8 @@ namespace WcpHost
                 throw new FormatException("manifest 身份字段不完整");
             if (m.Profile.WordCount <= 0)
                 throw new FormatException("word_count 必须为正数: " + m.Profile.Id);
-            if (m.Profile.ObservedSlot < 1 || m.Profile.ObservedSlot > 4)
-                throw new FormatException("observed_slot 必须在 1..4: " + m.Profile.Id);
+            if (m.Profile.ObservedSlot < 0 || m.Profile.ObservedSlot > 4)
+                throw new FormatException("observed_slot 必须在 0..4（0=未分配槽位）: " + m.Profile.Id);
             if (m.Profile.Fingerprint == null || m.Profile.Fingerprint.Length != 64)
                 throw new FormatException("fingerprint_sha256 长度不是 64: " + m.Profile.Id);
             for (int i = 0; i < m.Profile.Fingerprint.Length; i++)
@@ -156,7 +156,11 @@ namespace WcpHost
                 RequireInside(m, m.Books[i], "books[" + i + "]");
             if (string.IsNullOrEmpty(m.StrategyAssembly) || string.IsNullOrEmpty(m.StrategyType))
                 throw new FormatException("strategy 未声明完整: " + m.Profile.Id);
-            RequireInside(m, m.StrategyAssembly, "strategy.assembly");
+            // $host selects the language-neutral strategy shipped by WcpHost.
+            // It is the resource-only extension point: a new pack can provide
+            // manifest/data/audio without copying a language DLL.
+            if (!string.Equals(m.StrategyAssembly, "$host", StringComparison.Ordinal))
+                RequireInside(m, m.StrategyAssembly, "strategy.assembly");
         }
 
         private static void RequireInside(LanguageManifest m, string relative, string field)
@@ -204,7 +208,8 @@ namespace WcpHost
                             throw new FormatException("language 重复: " + m.Profile.Language);
                         if (old.Fingerprint == m.Profile.Fingerprint)
                             throw new FormatException("fingerprint 重复: " + m.Profile.Fingerprint);
-                        if (old.ObservedSlot == m.Profile.ObservedSlot)
+                        if (m.Profile.ObservedSlot > 0 &&
+                            old.ObservedSlot == m.Profile.ObservedSlot)
                             throw new FormatException("observed_slot 重复: " + m.Profile.ObservedSlot);
                         if (old.Es3Prefix == m.Profile.Es3Prefix)
                             throw new FormatException("es3_prefix 重复: " + m.Profile.Es3Prefix);
@@ -248,7 +253,9 @@ namespace WcpHost
             return null;
         }
 
-        // 槽位预算：一个语言包 = 一个槽，游戏硬上限 4。
+        // 槽位预算：游戏硬上限是同时导入的自定义槽数，而不是 pack
+        // 注册表目录数。observed_slot=0 的 pack 是可随时导入到任一空槽的
+        // 候选包；实际槽位仍由 Host.Evaluate 读取的词表指纹决定。
         internal bool SlotBudgetOk(out string detail)
         {
             HashSet<int> used = new HashSet<int>();
@@ -257,8 +264,9 @@ namespace WcpHost
                 int s = _manifests[i].Profile.ObservedSlot;
                 if (s > 0) used.Add(s);
             }
-            detail = _manifests.Count + " 个语言包 / 4 槽，实测占用 " + used.Count + " 槽";
-            return _manifests.Count <= 4;
+            detail = _manifests.Count + " 个语言包 / 4 槽，注册表预分配 " +
+                     used.Count + " 槽（0=候选包）";
+            return used.Count <= 4;
         }
 
         // ── 指纹算法：必须与 mod_book_name/BookProfiles.cs 逐字节一致 ──

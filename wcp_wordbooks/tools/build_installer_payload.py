@@ -35,10 +35,17 @@ BOOK_FILES = ['JLPT_N5N4_初级.xlsx', 'JLPT_N3.xlsx', 'JLPT_N2.xlsx',
               '语法路线.xlsx']
 
 PLUGIN_FILES = {
+    # The host owns language selection, resource routing and game hooks.  Keep
+    # the legacy Japanese plugins in the package during the migration window,
+    # but ship the host and generic-slot UI as part of the actual installer.
+    'WcpHost.dll': ROOT.parent / 'mod_host' / 'WcpHost.dll',
+    'CustomSlotsMod.dll': ROOT.parent / 'mod_custom_slots' / 'CustomSlotsMod.dll',
     'JpWordListMod.dll': ROOT.parent / 'mod_jp_wordlist' / 'JpWordListMod.dll',
     'BookNameMod.dll': ROOT.parent / 'mod_book_name' / 'BookNameMod.dll',
     'SentenceAudioMod.dll': ROOT.parent / 'mod_sentence_audio' / 'SentenceAudioMod.dll',
 }
+
+PACK_SOURCE = ROOT.parent / 'packs' / 'ja'
 
 BEPINEX_ROOT_FILES = ['.doorstop_version', 'BepInEx-changelog.txt',
                       'doorstop_config.ini', 'winhttp.dll']
@@ -215,6 +222,35 @@ def zip_dir(src: Path, dst: Path):
     print(f'{dst.name}: {len(files)} 文件, {dst.stat().st_size / 1e6:.0f}MB')
 
 
+def stage_word_audio(words, target: Path):
+    """Stage only this language's word audio from its pack or old shared dir."""
+    private_source = PDA / 'packs' / 'ja' / 'audio' / 'word'
+    source = private_source if private_source.is_dir() else PDA / 'vocabulary'
+    if not source.is_dir():
+        raise FileNotFoundError(f'missing Japanese word audio source: {source}')
+    if target.exists():
+        shutil.rmtree(target)
+    target.mkdir(parents=True)
+    missing = []
+    copied = 0
+    for word in sorted(set(words)):
+        found = False
+        for suffix in ('.mp3', '.wav'):
+            src = source / f'{word}{suffix}'
+            if src.is_file() and src.stat().st_size > 1000:
+                shutil.copy2(src, target / src.name)
+                copied += 1
+                found = True
+                break
+        if not found:
+            missing.append(word)
+    if missing:
+        sample = ', '.join(missing[:8])
+        raise RuntimeError(
+            f'Japanese word audio incomplete: {len(missing)} missing; sample={sample}')
+    print(f'Japanese word audio staged: {copied} files -> {target}')
+
+
 def copy_windows_script(src: Path, dst: Path):
     """Copy user-facing scripts with Windows-safe encoding and line endings."""
     raw = src.read_bytes()
@@ -241,6 +277,7 @@ def main():
     PAYLOAD.mkdir(parents=True)
     (PAYLOAD / 'books').mkdir()
     (PAYLOAD / 'plugins').mkdir()
+    (PAYLOAD / 'packs').mkdir()
     (PAYLOAD / 'jp_db_payload').mkdir()
     (PAYLOAD / 'audio').mkdir()
     collect_bepinex_runtime()
@@ -261,6 +298,14 @@ def main():
         if not dll.exists():
             raise FileNotFoundError(f'missing plugin build: {dll}')
         shutil.copy2(dll, PAYLOAD / 'plugins' / name)
+
+    if not (PACK_SOURCE / 'manifest.json').exists():
+        raise FileNotFoundError(f'missing Japanese resource pack: {PACK_SOURCE}')
+    # Audio is published as separately hashed assets so the core installer
+    # stays small; the installer materializes it under this same pack later.
+    shutil.copytree(PACK_SOURCE, PAYLOAD / 'packs' / 'ja',
+                    ignore=shutil.ignore_patterns('audio'))
+    print(f'pack: {PACK_SOURCE} -> {PAYLOAD / "packs" / "ja"}')
     db_payload = ROOT / 'output' / 'jp_db_payload'
     for name in ('jp_pron.tsv', 'jp_sentences.tsv', 'jp_only_pron.tsv', 'manifest.json'):
         src = db_payload / name
@@ -299,8 +344,16 @@ def main():
 
     if not skip_audio:
         t0 = time.time()
-        zip_dir(PDA / 'vocabulary', PAYLOAD / 'audio' / 'words.zip')
-        zip_dir(PDA / 'wcp' / 'sentence_audio', PAYLOAD / 'audio' / 'sentences.zip')
+        from patch_local_db import collect
+        word_stage = PAYLOAD / 'audio' / 'word_stage'
+        stage_word_audio(collect().keys(), word_stage)
+        zip_dir(word_stage, PAYLOAD / 'audio' / 'words.zip')
+        shutil.rmtree(word_stage)
+        private_sentences = PDA / 'packs' / 'ja' / 'audio' / 'sentence'
+        legacy_sentences = PDA / 'wcp' / 'ja_sentence_audio'
+        sentence_source = (private_sentences if private_sentences.is_dir()
+                           else legacy_sentences)
+        zip_dir(sentence_source, PAYLOAD / 'audio' / 'sentences.zip')
         print(f'音频打包用时 {(time.time() - t0) / 60:.1f}min')
 
     total = sum(f.stat().st_size for f in PAYLOAD.rglob('*') if f.is_file())

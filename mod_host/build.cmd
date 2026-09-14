@@ -22,6 +22,8 @@ set REFS=/r:"%GAME%\BepInEx\core\BepInEx.dll" ^
  /r:"%MGD%\mscorlib.dll" ^
  /r:"%MGD%\System.dll" ^
  /r:"%MGD%\System.Core.dll" ^
+ /r:"%MGD%\System.Data.dll" ^
+ /r:"%MGD%\Mono.Data.Sqlite.dll" ^
  /r:"%MGD%\Assembly-CSharp.dll" ^
  /r:"%MGD%\Assembly-CSharp-firstpass.dll" ^
  /r:"%MGD%\UnityEngine.dll" ^
@@ -41,6 +43,7 @@ set REFS=/r:"%GAME%\BepInEx\core\BepInEx.dll" ^
  "%HERE%Core\ResourceRouter.cs" ^
  "%HERE%Core\ILanguageStrategy.cs" ^
  "%HERE%Core\StrategyContext.cs" ^
+ "%HERE%Core\GenericLanguageStrategy.cs" ^
  "%HERE%StrategyLoader.cs" ^
  "%HERE%GameAdapter.cs" ^
  "%HERE%TakeoverScope.cs" ^

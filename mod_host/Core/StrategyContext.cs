@@ -1,5 +1,6 @@
 // WCP Host Core — 策略资源上下文
 using System;
+using System.Collections.Generic;
 
 namespace WcpHost
 {
@@ -17,6 +18,7 @@ namespace WcpHost
         public string RepairPath { get; private set; }
         public string WordAudioDir { get; private set; }
         public string SentenceAudioDir { get; private set; }
+        public IList<string> RepairProbes { get; private set; }
 
         internal StrategyContext(LanguageManifest manifest)
         {
@@ -29,6 +31,9 @@ namespace WcpHost
             RepairPath = manifest.Resolve(manifest.Repair);
             WordAudioDir = manifest.Resolve(manifest.WordAudioDir);
             SentenceAudioDir = manifest.Resolve(manifest.SentenceAudioDir);
+            RepairProbes = manifest.RepairProbes == null
+                ? new List<string>().AsReadOnly()
+                : new List<string>(manifest.RepairProbes).AsReadOnly();
         }
     }
 }

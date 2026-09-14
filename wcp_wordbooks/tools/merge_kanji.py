@@ -4,7 +4,7 @@
 
 显示释义格式: 音:ア 訓:つ.ぐ｜亚；次之   (音/训取 kanjidic2 前3个)
 音频: 文件名 = <汉字>.mp3, 内容朗读 音读(片假名)+训读(平假名, 去点)
-      -> 存入游戏 vocabulary 目录。
+      -> 存入日语 pack 的 word 音频目录。
 """
 import asyncio
 import json
@@ -19,7 +19,8 @@ ROOT = Path(__file__).resolve().parent.parent
 OUT = ROOT / 'output'
 IMPORT = OUT / 'import'
 TDIR = ROOT / 'data' / 'translations'
-VOCAB_DIR = Path.home() / 'AppData' / 'LocalLow' / 'WCP' / 'vocabulary'
+VOCAB_DIR = (Path.home() / 'AppData' / 'LocalLow' / 'WCP' /
+             'packs' / 'ja' / 'audio' / 'word')
 KANJIBOOKS = OUT / 'kanji_books.json'
 MANIFEST = OUT / 'audio_manifest_kanji.json'
 

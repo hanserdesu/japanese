@@ -24,7 +24,7 @@ OUT = ROOT / 'output'
 PKG = OUT / 'installer_pkg' / 'WCP日语词书安装包'
 RELEASE = OUT / 'release'
 MAIN_TAG = 'wcp-jp-v1.2.2'
-RESOURCE_TAG = 'wcp-jp-resources-v1.0.0'
+RESOURCE_TAG = 'wcp-jp-resources-v1.1.0'
 GITEE_REPO = os.environ.get(
     'WCP_GITEE_REPO',
     'https://gitee.com/cat-stripe/code-warehouse-for-cat-stripes',
@@ -124,15 +124,28 @@ def build_core():
 def main():
     build_core()
     audio_root = Path.home() / 'AppData' / 'LocalLow' / 'WCP'
-    words = audio_root / 'vocabulary'
-    sentences = audio_root / 'wcp' / 'sentence_audio'
-    if not words.is_dir() or not sentences.is_dir():
+    legacy_sentences = audio_root / 'wcp' / 'ja_sentence_audio'
+    sentences = audio_root / 'packs' / 'ja' / 'audio' / 'sentence'
+    if not sentences.is_dir():
+        sentences = legacy_sentences
+    shared_words = audio_root / 'vocabulary'
+    private_words = audio_root / 'packs' / 'ja' / 'audio' / 'word'
+    if not (private_words.is_dir() or shared_words.is_dir()) or not sentences.is_dir():
         raise FileNotFoundError('本机单词音频或例句音频目录不存在')
     RELEASE.mkdir(parents=True, exist_ok=True)
     word_zip = RELEASE / 'wcp-japanese-audio-words.zip'
     sentence_zip = RELEASE / 'wcp-japanese-audio-sentences.zip'
     if '--reuse-audio' not in sys.argv or not word_zip.exists():
-        zip_tree(words, word_zip)
+        sys.path.insert(0, str(ROOT / 'tools'))
+        from build_installer_payload import stage_word_audio
+        from patch_local_db import collect
+        word_stage = RELEASE / '.japanese_word_audio_stage'
+        stage_word_audio(collect().keys(), word_stage)
+        try:
+            zip_tree(word_stage, word_zip)
+        finally:
+            if word_stage.exists():
+                shutil.rmtree(word_stage)
     else:
         print(f'reuse {word_zip.name}')
     if '--reuse-audio' not in sys.argv or not sentence_zip.exists():

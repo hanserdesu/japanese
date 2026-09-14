@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Set B 主题词书发音 MP3 生成 -> 游戏 vocabulary 目录。
+"""Set B 主题词书发音 MP3 生成 -> 日语 pack 的 word 音频目录。
 独立 manifest (audio_manifest_topic.json), 与 JLPT 主管线互不干扰。
 用法: py gen_audio_topic.py [--limit 400] [--retry-failed]
 """
@@ -17,7 +17,8 @@ import edge_tts
 
 ROOT = Path(__file__).resolve().parent.parent
 OUT = ROOT / 'output'
-VOCAB_DIR = Path.home() / 'AppData' / 'LocalLow' / 'WCP' / 'vocabulary'
+VOCAB_DIR = (Path.home() / 'AppData' / 'LocalLow' / 'WCP' /
+             'packs' / 'ja' / 'audio' / 'word')
 MANIFEST = OUT / 'audio_manifest_topic.json'
 
 VOICE = 'ja-JP-NanamiNeural'

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""语法路线书占位词音频 -> 游戏 vocabulary/<word>.mp3 + sentence_audio/<md5(ja)>.mp3
+"""语法路线书占位词音频 -> 日语 pack 的 word/sentence 音频目录
 
 单词音频: 朗读 读音(或语法名) + 第一条例句, 文件名 = 占位词全文 (游戏查 <单词>.mp3)。
 例句音频: 与 gen_sentence_audio.py 同目录同命名 (md5(ja)), SentenceAudioMod 直接命中。
@@ -20,8 +20,10 @@ import edge_tts
 
 from build_grammar_book import load_curriculum, build_route, load_content
 
-VOCAB_DIR = Path.home() / 'AppData' / 'LocalLow' / 'WCP' / 'vocabulary'
-SENT_DIR = Path.home() / 'AppData' / 'LocalLow' / 'WCP' / 'wcp' / 'sentence_audio'
+VOCAB_DIR = (Path.home() / 'AppData' / 'LocalLow' / 'WCP' /
+             'packs' / 'ja' / 'audio' / 'word')
+SENT_DIR = (Path.home() / 'AppData' / 'LocalLow' / 'WCP' /
+            'packs' / 'ja' / 'audio' / 'sentence')
 VOICE = 'ja-JP-NanamiNeural'
 CONCURRENCY = 8
 

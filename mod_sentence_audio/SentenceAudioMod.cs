@@ -1,6 +1,6 @@
 // WCP Sentence Audio — BepInEx 5 插件
 // 功能: 在 每日学习(DatabaseManagerS8) 与 词典查询(DatabaseManagerS17) 的
-// 例句旁挂 ▶ 按钮, 点击播放 sentence_audio/<md5(ja)>.mp3 (由
+// 例句旁挂 ▶ 按钮, 点击播放 packs/ja/audio/sentence/<md5(ja)>.mp3 (由
 // wcp_wordbooks/tools/gen_sentence_audio.py 生成, 文件名规则两端一致)。
 // 设计: 不 Harmony 补丁游戏方法, 每 0.3s 反射扫描 exmplesentences 数组,
 // 游戏更新导致类型变化时自动降级为不显示, 不影响原游戏逻辑。
@@ -30,9 +30,7 @@ namespace SentenceAudioMod
         internal static ManualLogSource Log;
         private static SentenceAudioPlugin Instance;
         private const float ScanInterval = 0.3f;
-        // legacy 共享目录（回退用）: LocalLow\WCP\wcp\sentence_audio
-        private const string AudioDirName = "sentence_audio";
-        // 阶段 1 资源命名空间化: 私有目录 LocalLow\WCP\packs\<lang>\audio\sentence
+        // 资源命名空间化: 只读取当前日语 pack 的 sentence 音频。
         private const string PackLangCode = "ja";
 
         private AudioSource _audio;
@@ -43,7 +41,6 @@ namespace SentenceAudioMod
         private float _diagAt;
         private float _diagDeadline;
         private float _nextScan;
-        private string _audioDir;
         private string _packAudioDir;
         private readonly Dictionary<Button, ReadBtnState> _readStates =
             new Dictionary<Button, ReadBtnState>();
@@ -117,17 +114,12 @@ namespace SentenceAudioMod
             _audio.spatialBlend = 0f;   // 2D, 无视听位置衰减
             _enabled = Config.Bind("General", "Enabled", true,
                 "显示例句旁的 ▶ 朗读按钮。");
-            _audioDir = Path.Combine(Application.persistentDataPath,
-                AudioDirName);
-            // 阶段 1: 私有 pack 目录优先, legacy 共享目录回退。
-            // 迁移未完成时两处都查, 行为与旧版一致; 迁移完成后只走私有目录,
-            // 别的语言的路径串就不再出现在本插件的读取域里。
             string packsRoot = Path.Combine(
                 Path.GetDirectoryName(Application.persistentDataPath), "packs");
             _packAudioDir = Path.Combine(packsRoot, PackLangCode, "audio", "sentence");
             Log.LogInfo(string.Format(
-                "WCP Sentence Audio 1.1.0 loaded, pack dir = {0} (存在={1}), legacy dir = {2}",
-                _packAudioDir, Directory.Exists(_packAudioDir), _audioDir));
+                "WCP Sentence Audio 1.2.0 loaded, pack dir = {0} (存在={1})",
+                _packAudioDir, Directory.Exists(_packAudioDir)));
             var bepRoot = Paths.BepInExRootPath;
             try
             {
@@ -553,14 +545,11 @@ namespace SentenceAudioMod
             catch (Exception) { return null; }
         }
 
-        // 例句音频定位: pack 私有目录优先, 回退 legacy 共享目录。
-        // 返回 null = 两处都没有这个文件(此时不显示 ▶ 按钮)。
+        // 例句音频定位只走日语 pack；缺失时不显示 ▶ 按钮，绝不猜测其它目录。
         private string AudioFile(string ja)
         {
             string name = Md5(ja) + ".mp3";
             string p = Path.Combine(_packAudioDir, name);
-            if (File.Exists(p)) return p;
-            p = Path.Combine(_audioDir, name);
             return File.Exists(p) ? p : null;
         }
 

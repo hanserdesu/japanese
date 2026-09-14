@@ -118,6 +118,7 @@ namespace JpWordList
         private static ConfigEntry<bool> _guardOtherLists;
         private static ConfigEntry<bool> _kanaStem;
         private static ConfigEntry<bool> _healDb;
+        private static ConfigEntry<bool> _allowLegacySharedDbWrites;
         private static readonly HashSet<string> Warned = new HashSet<string>();
         private static readonly Dictionary<string, string> LastSig = new Dictionary<string, string>();
 
@@ -231,7 +232,9 @@ namespace JpWordList
             _kanaStem = Config.Bind("General", "KanaQuestionStem", true,
                 "日语词书: 四选一题目显示假名读音, 选项显示「汉字写法 + 中文释义」。");
             _healDb = Config.Bind("General", "HealExampleDatabase", true,
-                "官方更新覆盖了例句库时, 用 LocalLow 的 jp_db_payload 补丁包自动重灌一次(写前备份, 可关)。");
+                "旧版兼容开关；只有同时启用 Legacy/AllowSharedDatabaseWrites 才会生效。");
+            _allowLegacySharedDbWrites = Config.Bind("Legacy", "AllowSharedDatabaseWrites", false,
+                "允许旧版日语插件写入游戏共享 wcpFullEng.db/wcpOnlyWord.db。默认关闭以保持语言资源隔离。");
             PatchAll();
         }
 
@@ -921,28 +924,39 @@ namespace JpWordList
             List<string> book = MyParameters.ChosenBook_List;
             if (jp && book != null)
             {
-                if (preferLearned)
-                {
-                    FillFromLearned(dest, seen, jp, bookSet, target);
-                    FillFromList(dest, seen, book, target);
-                }
-                else
-                {
-                    Dictionary<string, WordInfo> learned = MyParameters.HaveLearnedDictionary;
-                    for (int i = 0; i < book.Count && dest.Count < target; i++)
-                    {
-                        string w = book[i];
-                        if (string.IsNullOrEmpty(w)) continue;
-                        if (learned != null && learned.ContainsKey(w)) continue;
-                        if (seen.Add(w)) dest.Add(w);
-                    }
-                    FillFromList(dest, seen, book, target);
-                    FillFromLearned(dest, seen, jp, bookSet, target);
-                }
+                // 词池只能从当前词书补齐；全局 HaveLearnedDictionary 不能跨书供词。
+                FillFromBookProgress(dest, seen, book, preferLearned, target);
             }
             else
             {
-                FillFromLearned(dest, seen, jp, bookSet, target);
+                FillFromList(dest, seen, book, target);
+            }
+        }
+
+        private static void FillFromBookProgress(List<string> dest, HashSet<string> seen,
+            List<string> book, bool preferLearned, int target)
+        {
+            if (book == null) return;
+            Dictionary<string, WordInfo> learned = MyParameters.HaveLearnedDictionary;
+            List<string> learnedBook = new List<string>();
+            List<string> unlearnedBook = new List<string>();
+            for (int i = 0; i < book.Count; i++)
+            {
+                string w = book[i];
+                if (string.IsNullOrEmpty(w) || seen.Contains(w)) continue;
+                if (learned != null && learned.ContainsKey(w)) learnedBook.Add(w);
+                else unlearnedBook.Add(w);
+            }
+            if (preferLearned)
+            {
+                OrderByTestSetting(learnedBook, learned);
+                FillFromList(dest, seen, learnedBook, target);
+                FillFromList(dest, seen, unlearnedBook, target);
+            }
+            else
+            {
+                FillFromList(dest, seen, unlearnedBook, target);
+                FillFromList(dest, seen, learnedBook, target);
             }
         }
 
@@ -1614,20 +1628,27 @@ namespace JpWordList
         {
             try
             {
-                if (!BookReady()) return false;
+                // BookReady deliberately blocks writes while the game is
+                // loading.  The cross-book guard must still see the persisted
+                // target during that window, otherwise the old plugin can win
+                // one last write before MyParameters catches up.
+                string diskName = DiskBookName();
+                int diskIdx = SelfBookIndexOf(diskName);
+                if (diskIdx > 0 && IsOtherManagedProfile(SlotProfile(diskIdx)))
+                    return true;
+
                 string name = MyParameters.ChosenBook_Para;
                 if (string.IsNullOrEmpty(name)) return false;
-                List<string> book = MyParameters.ChosenBook_List;
-                if (book == null || book.Count < 5) return false;
-                BookProfile memoryProfile = BookProfiles.Match(book);
-                if (memoryProfile == null || memoryProfile.Language == BookProfiles.Japanese)
-                    return false;
                 int idx = SelfBookIndexOf(name);
                 if (idx <= 0) return false;
-                BookProfile slotProfile = SlotProfile(idx);
-                return slotProfile != null && slotProfile.Id == memoryProfile.Id;
+                return IsOtherManagedProfile(SlotProfile(idx));
             }
             catch (Exception) { return false; }
+        }
+
+        private static bool IsOtherManagedProfile(BookProfile profile)
+        {
+            return profile != null && profile.Language != BookProfiles.Japanese;
         }
 
         private static bool OtherRestoreDeferred()
@@ -2250,7 +2271,8 @@ private static float _dbHealAt = -1f;
 
 private static void TickDbHeal()
 {
-    if (_dbHealTried || _healDb == null || !_healDb.Value) return;
+    if (_dbHealTried || _healDb == null || !_healDb.Value ||
+        _allowLegacySharedDbWrites == null || !_allowLegacySharedDbWrites.Value) return;
     if (BookState() != 1) return;  // 只在受管日语词书实际载入后检查/写库
     if (_dbHealAt < 0f) { _dbHealAt = Time.unscaledTime + 8f; return; }   // 首次只排期, 避开加载
     if (Time.unscaledTime < _dbHealAt) return;

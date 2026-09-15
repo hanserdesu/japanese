@@ -8,12 +8,12 @@
 
 ## 普通用户怎么安装
 
-1. 下载 [WCP 日语词书一键安装包 v1.2.5](https://github.com/hanserdesu/japanese/releases/download/wcp-jp-v1.2.5/WCP-Japanese-OneClick-Installer-wcp-jp-v1.2.5.zip)（SHA-256 `c2b669ecc5fb99bcd8cec55f603cc6ef14f8806681da5043ad08b8b9e3466ad7`，发布页见 [wcp-jp-v1.2.5](https://github.com/hanserdesu/japanese/releases/tag/wcp-jp-v1.2.5)）。
+1. 下载 [WCP 日语词书一键安装包 v1.2.6](https://github.com/hanserdesu/japanese/releases/download/wcp-jp-v1.2.6/WCP-Japanese-OneClick-Installer-wcp-jp-v1.2.6.zip)（SHA-256 `189ef290c16aa3b12217cd163b50e19072b5ca6a415a16740656c10fbe76eabe`，发布页见 [wcp-jp-v1.2.6](https://github.com/hanserdesu/japanese/releases/tag/wcp-jp-v1.2.6)）。
 2. 解压安装包。
 3. 关闭万词破，双击解压后最外层的 `01_双击运行我.cmd`，不要进入 `support` 文件夹。
 4. 等待安装器完成，然后重新启动游戏。安装窗口会一直保留，请点击右上角 X 关闭；按 Enter 不会关闭窗口。
 
-**正在使用 v1.2.1 或更早版本的用户直接下载 v1.2.5 覆盖安装即可**，无需先卸载。v1.2.5 相比 v1.2.1 的改进：
+**正在使用 v1.2.1 或更早版本的用户直接下载 v1.2.6 覆盖安装即可**，无需先卸载。v1.2.6 相比 v1.2.1 的改进（含 v1.2.5 全部改进）：
 
 - 解压/写入失败时显示具体原因（哪个文件、什么错误），不再只报「发生一个或多个错误」。
 - 解压与文件写入遇到临时占用（最常见为杀毒软件实时扫描锁定音频文件）时自动重试，显著降低安装失败率。
@@ -63,7 +63,7 @@ v1.2.5 起安装器自带反馈通道：
 
 **音频下载失败：** 检查网络和磁盘空间后重新运行安装器，已完成校验的资源会复用，未完成的分片或整包会保留在 `%USERPROFILE%\AppData\LocalLow\WCP\wcp\jpmod_downloads` 中并支持断点续传；安装器会自动在 Gitee / GitHub 路由间切换。
 
-**安装失败提示「发生一个或多个错误」：** 请升级到 v1.2.5。旧版安装器（v1.2.4 及更早）会把真实原因藏在内层异常里；v1.2.5 起会显示具体错误并在失败时自动打开反馈页面。
+**安装失败提示「发生一个或多个错误」：** 请升级到 v1.2.6。旧版安装器（v1.2.5 及更早）会把真实原因藏在内层异常里；v1.2.6 起会显示具体错误并在失败时自动打开反馈页面。
 
 **游戏启动后没有插件效果：** 确认游戏已完全退出后再安装，并检查游戏目录中是否存在 `BepInEx` 文件夹。安装器运行结束后要重新启动游戏。
 

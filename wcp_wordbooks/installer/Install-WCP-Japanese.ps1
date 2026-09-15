@@ -749,7 +749,27 @@ function Write-InstallerErrorLog([string]$text) {
     try {
         $logPath = Get-InstallerErrorLogPath
         New-Item -ItemType Directory -Force -Path (Split-Path -Parent $logPath) | Out-Null
-        [IO.File]::AppendAllText($logPath, ("[{0}] {1}`r`n" -f (Get-Date -Format 'yyyy-MM-dd HH:mm:ss'), $text), (New-Object Text.UTF8Encoding($false)))
+        $line = "[{0}] {1}`r`n" -f (Get-Date -Format 'yyyy-MM-dd HH:mm:ss'), $text
+        $exists = [IO.File]::Exists($logPath)
+        if ($exists) {
+            $head = New-Object byte[] 3
+            $fs = [IO.File]::Open($logPath, [IO.FileMode]::Open, [IO.FileAccess]::Read)
+            try {
+                if ($fs.Length -ge 3) { $null = $fs.Read($head, 0, 3) }
+            } finally {
+                $fs.Dispose()
+            }
+            $hasBom = ($head[0] -eq 0xEF -and $head[1] -eq 0xBB -and $head[2] -eq 0xBF)
+            if (-not $hasBom) {
+                # 旧版安装器写的是无 BOM UTF-8；run-installer 的 Get-Content
+                # 按 ANSI 解码会把中文读成乱码进反馈 Issue。先补 BOM 一次性升级。
+                $oldText = [IO.File]::ReadAllText($logPath, [Text.Encoding]::UTF8)
+                [IO.File]::WriteAllText($logPath, $oldText, (New-Object Text.UTF8Encoding($true)))
+            }
+        }
+        # 必须带 BOM：run-installer.ps1 用 Get-Content -Tail 读这个文件，
+        # PS 5.1 对无 BOM 文件按系统 ANSI/GBK 解码，中文会变乱码进反馈 Issue。
+        [IO.File]::AppendAllText($logPath, $line, (New-Object Text.UTF8Encoding($true)))
     } catch { }
 }
 
@@ -1163,6 +1183,8 @@ function Test-DownloadRoute([string]$uri) {
         $headError = "HTTP $statusCode"
     } catch {
         $headError = $_.Exception.GetType().Name
+        $headMsg = $_.Exception.Message
+        if ($headMsg) { $headError = $headError + ': ' + $headMsg }
     } finally {
         if ($headResponse) { $headResponse.Dispose() }
     }
@@ -1201,11 +1223,14 @@ function Test-DownloadRoute([string]$uri) {
             Error = "HEAD $headError; HTTP $statusCode"
         }
     } catch {
+        $rangeErr = $_.Exception.GetType().Name
+        $rangeMsg = $_.Exception.Message
+        if ($rangeMsg) { $rangeErr = $rangeErr + ': ' + $rangeMsg }
         return [pscustomobject]@{
             Success = $false
             StatusCode = 0
             Method = 'HEAD/GET range'
-            Error = "HEAD $headError; $($_.Exception.GetType().Name)"
+            Error = "HEAD $headError; $rangeErr"
         }
     } finally {
         if ($rangeStream) { $rangeStream.Dispose() }

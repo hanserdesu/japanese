@@ -23,8 +23,10 @@ ROOT = Path(__file__).resolve().parent.parent
 OUT = ROOT / 'output'
 PKG = OUT / 'installer_pkg' / 'WCP日语词书安装包'
 RELEASE = OUT / 'release'
-MAIN_TAG = 'wcp-jp-v1.2.2'
-RESOURCE_TAG = 'wcp-jp-resources-v1.0.0'
+# 宿主升级（0.3.0：词池只从当前词书重建 + 旧词表插件让位）之后必须换新 tag，
+# 免得同一个 tag 下的 Release 资源被静默替换。可用环境变量覆盖。
+MAIN_TAG = os.environ.get('WCP_MAIN_TAG', 'wcp-jp-v1.2.3')
+RESOURCE_TAG = 'wcp-jp-resources-v1.1.0'
 GITEE_REPO = os.environ.get(
     'WCP_GITEE_REPO',
     'https://gitee.com/cat-stripe/code-warehouse-for-cat-stripes',
@@ -32,6 +34,21 @@ GITEE_REPO = os.environ.get(
 GITEE_URL_TEMPLATE = os.environ.get(
     'WCP_GITEE_URL_TEMPLATE',
     f'{GITEE_REPO}/releases/download/{RESOURCE_TAG}/{{name}}',
+)
+# Gitee applies a repository-wide attachment quota. Keep the source release
+# as the primary domestic route, and place the remaining resource parts in
+# two small resource-only repositories. Each part carries its own URL so the
+# installer can span these repositories without changing the route contract.
+GITEE_WORDS_REPO = os.environ.get(
+    'WCP_GITEE_WORDS_REPO',
+    'https://gitee.com/cat-stripe/wcp-jp-audio-words',
+).rstrip('/')
+GITEE_SENTENCES_REPO = os.environ.get(
+    'WCP_GITEE_SENTENCES_REPO',
+    'https://gitee.com/cat-stripe/wcp-jp-audio-sentences',
+).rstrip('/')
+GITEE_PRIMARY_SENTENCE_PARTS = int(
+    os.environ.get('WCP_GITEE_PRIMARY_SENTENCE_PARTS', '22')
 )
 # Stay below the strict 50 MB single-file quota so the same parts can be
 # uploaded even when a Gitee account applies repository-style limits.
@@ -82,6 +99,28 @@ def split_file(source, target_dir):
     return parts
 
 
+def add_gitee_part_urls(parts, kind):
+    """Attach the domestic Release URL for each generated split part.
+
+    Gitee enforces a ~1 GB per-repository attachment quota, so the 32
+    sentence parts cannot live in one repository.  Actual placement
+    (verified 2026-09-15, 38/38 asset URLs reachable):
+      word parts 001-004            -> wcp-jp-audio-words
+      sentence parts 001-022        -> wcp-jp-audio-sentences
+      sentence parts 023-032        -> wcp-jp-audio-words (quota spill)
+    """
+    for index, part in enumerate(parts, start=1):
+        if kind == 'word_audio':
+            repo = GITEE_WORDS_REPO
+        elif index <= GITEE_PRIMARY_SENTENCE_PARTS:
+            repo = GITEE_SENTENCES_REPO
+        else:
+            repo = GITEE_WORDS_REPO
+        part['url_template'] = (
+            f'{repo}/releases/download/{RESOURCE_TAG}/{{name}}'
+        )
+
+
 def zip_uncompressed_size(path):
     with zipfile.ZipFile(path) as archive:
         return sum(info.file_size for info in archive.infolist())
@@ -95,15 +134,28 @@ def build_core():
 def main():
     build_core()
     audio_root = Path.home() / 'AppData' / 'LocalLow' / 'WCP'
-    words = audio_root / 'vocabulary'
-    sentences = audio_root / 'wcp' / 'sentence_audio'
-    if not words.is_dir() or not sentences.is_dir():
+    legacy_sentences = audio_root / 'wcp' / 'ja_sentence_audio'
+    sentences = audio_root / 'packs' / 'ja' / 'audio' / 'sentence'
+    if not sentences.is_dir():
+        sentences = legacy_sentences
+    shared_words = audio_root / 'vocabulary'
+    private_words = audio_root / 'packs' / 'ja' / 'audio' / 'word'
+    if not (private_words.is_dir() or shared_words.is_dir()) or not sentences.is_dir():
         raise FileNotFoundError('本机单词音频或例句音频目录不存在')
     RELEASE.mkdir(parents=True, exist_ok=True)
     word_zip = RELEASE / 'wcp-japanese-audio-words.zip'
     sentence_zip = RELEASE / 'wcp-japanese-audio-sentences.zip'
     if '--reuse-audio' not in sys.argv or not word_zip.exists():
-        zip_tree(words, word_zip)
+        sys.path.insert(0, str(ROOT / 'tools'))
+        from build_installer_payload import stage_word_audio
+        from patch_local_db import collect
+        word_stage = RELEASE / '.japanese_word_audio_stage'
+        stage_word_audio(collect().keys(), word_stage)
+        try:
+            zip_tree(word_stage, word_zip)
+        finally:
+            if word_stage.exists():
+                shutil.rmtree(word_stage)
     else:
         print(f'reuse {word_zip.name}')
     if '--reuse-audio' not in sys.argv or not sentence_zip.exists():
@@ -115,11 +167,13 @@ def main():
     assets = []
     gitee_parts = RELEASE / 'gitee-parts'
     for kind, path in (('word_audio', word_zip), ('sentence_audio', sentence_zip)):
+        parts = split_file(path, gitee_parts)
+        add_gitee_part_urls(parts, kind)
         assets.append({'kind': kind, 'name': path.name,
                        'size': path.stat().st_size,
                        'expanded_size': zip_uncompressed_size(path),
                        'sha256': sha256(path),
-                       'parts': split_file(path, gitee_parts)})
+                       'parts': parts})
     release_manifest = {
         'version': RESOURCE_TAG,
         'built': time.strftime('%Y-%m-%d %H:%M:%S'),

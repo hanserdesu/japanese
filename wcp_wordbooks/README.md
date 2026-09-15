@@ -10,7 +10,7 @@
 
 只需要下载主 Release 里的一个安装包：
 
-[下载 WCP 日语词书一键安装包 v1.2.6](https://github.com/hanserdesu/japanese/releases/download/wcp-jp-v1.2.6/WCP-Japanese-OneClick-Installer-wcp-jp-v1.2.6.zip)（发布页：[wcp-jp-v1.2.6](https://github.com/hanserdesu/japanese/releases/tag/wcp-jp-v1.2.6)）。正在使用 v1.2.1 或更早版本的用户直接覆盖安装即可，无需先卸载。
+[下载 WCP 日语词书一键安装包 v1.2.6.1](https://github.com/hanserdesu/japanese/releases/download/wcp-jp-v1.2.6.1/WCP-Japanese-OneClick-Installer-wcp-jp-v1.2.6.1.zip)（发布页：[wcp-jp-v1.2.6.1](https://github.com/hanserdesu/japanese/releases/tag/wcp-jp-v1.2.6.1)）。正在使用 v1.2.1 或更早版本的用户直接覆盖安装即可，无需先卸载。
 
 不要单独下载资源 Release。安装器会自动下载单词音频和例句音频（优先 Gitee 分片路由，失败自动切换 GitHub），下载后做 SHA-256 完整性校验，中断后保留缓存并断点续传。
 

@@ -37,9 +37,32 @@ import pathlib
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8")
 
-PACKS = pathlib.Path("D:/Japanese/packs")
-PROJECT_ROOTS = [pathlib.Path(p) for p in
-                 ("D:/Japanese", "D:/French", "D:/Russian", "D:/German")]
+ROOT = pathlib.Path(__file__).resolve().parents[1]
+INTEGRATION_ROOT = ROOT.parent
+PACKS = ROOT / "packs"
+
+
+def pack_roots():
+    """语言包的事实来源 = 所有 <项目>/packs 的并集。
+
+    语言包可以放在各自项目目录里（例如 Contonese/packs/yue）。只扫 Japanese/packs 会让
+    放在自己项目里的语言包悄悄消失：粤语包按设计就在 Contonese 项目内，注册表里因此
+    没有 catbar-cantonese-complete 条目，粤语词书永远匹配不上身份
+    （2026-09-15 实测：插件引用了 BookProfiles.Cantonese 常量，却匹配不到自己的书）。
+    """
+    roots = [PACKS]
+    for root in PROJECT_ROOTS:
+        cand = root / "packs"
+        if cand.exists() and cand != PACKS:
+            roots.append(cand)
+    return roots
+PROJECT_ROOTS = [
+    INTEGRATION_ROOT / "Japanese",
+    INTEGRATION_ROOT / "French",
+    INTEGRATION_ROOT / "Russian",
+    INTEGRATION_ROOT / "German",
+    INTEGRATION_ROOT / "Contonese",
+]
 
 # 语言代码 -> C# 常量名。未列出的语言回退成「首字母大写」。
 LANG_CONST = {
@@ -48,10 +71,24 @@ LANG_CONST = {
     "ko": "Korean", "zh": "Chinese", "en": "English",
 }
 
+# 插件源码引用、但当前不一定有已部署语言包的语言常量。
+#
+# 为什么必须有这一层：注册表只登记「已存在的 packs/*/manifest.json」，
+# 但每个语言的插件源码会**直接引用自己的语言常量**做身份判定，
+# 例如 Contonese/mod_yue_wordlist/YueWordListMod.cs 里的
+# `memoryProfile.Language != BookProfiles.Cantonese`。
+# 粤语包按设计放在 Contonese 项目内、且槽位未占用，因此 Java/packs 下没有
+# yue 清单 —— 早先版本只按清单生成常量，重新生成就把 `Cantonese` 常量
+# 抹掉了，粤语插件随即编译失败（2026-09-15 实测 CS0117 ×5）。
+# 常量与「是否注册了词书」是两件事：常量必须始终存在，注册表才按清单裁剪。
+CONST_ONLY = {
+    "yue": "Cantonese",
+}
+
 HEADER = """// Shared identity registry for the portable WCP word-book plugins.
 //
 // 生成物 — 不要手改。
-//   事实来源: D:/Japanese/packs/<lang>/manifest.json
+//   事实来源: D:/ATooManyLanguage/Japanese/packs/<lang>/manifest.json
 //   重新生成: python tools/gen_bookprofiles.py --write
 //   漂移检查: python tools/gen_bookprofiles.py --check
 //
@@ -153,7 +190,10 @@ BODY_TAIL = """
 
 def load_manifests():
     out = []
-    for f in sorted(PACKS.glob("*/manifest.json")):
+    files = []
+    for d in pack_roots():
+        files.extend(sorted(d.glob("*/manifest.json")))
+    for f in files:
         m = json.loads(f.read_text(encoding="utf-8"))
         need = ("profile_id", "language", "display_name", "word_count",
                 "fingerprint_sha256")
@@ -162,7 +202,7 @@ def load_manifests():
             raise SystemExit(f"清单 {f} 缺字段 {miss}")
         out.append(m)
     if not out:
-        raise SystemExit(f"没有找到任何清单: {PACKS}/*/manifest.json")
+        raise SystemExit("没有找到任何清单: <项目>/packs/*/manifest.json")
     langs = [m["language"] for m in out]
     dup = {x for x in langs if langs.count(x) > 1}
     if dup:
@@ -177,13 +217,23 @@ def load_manifests():
 
 def render(manifests):
     consts = []
+    # 常量的来源 = 已注册清单 ∪ 插件源码强制需要的语言。
+    langs = []
     for m in manifests:
-        name = LANG_CONST.get(m["language"], m["language"].capitalize())
-        consts.append('        internal const string %s = "%s";' % (name, m["language"]))
+        if m["language"] not in langs:
+            langs.append(m["language"])
+    for code in CONST_ONLY:
+        if code not in langs:
+            langs.append(code)
+    for code in langs:
+        name = (LANG_CONST.get(code) or CONST_ONLY.get(code)
+                or code.capitalize())
+        consts.append('        internal const string %s = "%s";' % (name, code))
 
     entries = []
     for m in manifests:
-        name = LANG_CONST.get(m["language"], m["language"].capitalize())
+        name = (LANG_CONST.get(m["language"]) or CONST_ONLY.get(m["language"])
+                or m["language"].capitalize())
         entries.append(
             '            new BookProfile("%s", %s, "%s", %d,\n                "%s"),'
             % (m["profile_id"], name, m["display_name"], m["word_count"],

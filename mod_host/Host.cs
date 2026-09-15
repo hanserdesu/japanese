@@ -1,4 +1,4 @@
-// WCP Host — 统一接入宿主（阶段 2，v0.2.0）
+// WCP Host — 统一接入宿主（阶段 2，v0.3.0）
 //
 // 职责边界（这是整个重构的核心约定）:
 //   宿主负责机制: 读语言包清单 / 认身份 / 作用域门 / 资源路由 / 日后接管-还原。
@@ -20,7 +20,7 @@ using UnityEngine;
 
 namespace WcpHost
 {
-    [BepInPlugin("dev.hanserdesu.wcphost", "WCP Host", "0.2.0")]
+    [BepInPlugin("dev.hanserdesu.wcphost", "WCP Host", "0.3.0")]
     public class WcpHostPlugin : BaseUnityPlugin
     {
         internal static ManualLogSource Log;
@@ -37,6 +37,7 @@ namespace WcpHost
         private bool _featuresInstalled;
         private float _nextProbe;
         private string _lastReported = "";
+        private string _markerLangs = null;
         private const float ProbeInterval = 1.0f;
 
         internal static WcpHostPlugin Instance { get { return _instance; } }
@@ -90,6 +91,62 @@ namespace WcpHost
             return Path.Combine(parent, "packs");
         }
 
+        // 语言资源隔离的运行时凭证: 只登记"宿主确实成功接管"的语言。
+        //
+        // 旧词表插件 (JpWordListMod / FrWordListMod …) 读到自己的语言在列时整场不打补丁,
+        // 运行时补丁因此只剩宿主一个所有者 —— 这是"俄语切日语后还出俄语"的根因修复:
+        // 两个插件争抢同一批补丁时"后写者胜", 上一本书的词会串进新书。
+        // 注册表为空/宿主停用时删除登记, 旧插件继续按旧模式工作。
+        private void RefreshManagedMarker()
+        {
+            try
+            {
+                List<string> langs = new List<string>();
+                List<string> notReady = new List<string>();
+                if (_enabled.Value && _registry != null)
+                {
+                    for (int i = 0; i < _registry.Manifests.Count; i++)
+                    {
+                        LanguageManifest m = _registry.Manifests[i];
+                        string code = m.Profile.Language;
+                        string missing;
+                        // 资源没装全的包不登记: 旧词表插件继续按旧模式兜底, 不会出现
+                        // "宿主说接管了、实际没有释义库"的空档。
+                        if (!m.ResourcesReady(out missing))
+                        {
+                            notReady.Add(code + " 缺 " + missing);
+                            continue;
+                        }
+                        if (!string.IsNullOrEmpty(code) && !langs.Contains(code)) langs.Add(code);
+                    }
+                }
+                string joined = string.Join(",", langs.ToArray()) + "|" +
+                                string.Join(",", notReady.ToArray());
+                if (joined == _markerLangs) return;
+                string dir = Paths.ConfigPath;
+                if (string.IsNullOrEmpty(dir)) return;
+                string file = Path.Combine(dir, "WcpHost.managed.txt");
+                if (langs.Count == 0)
+                {
+                    if (File.Exists(file)) File.Delete(file);
+                }
+                else
+                {
+                    File.WriteAllLines(file, langs.ToArray());
+                }
+                _markerLangs = joined;
+                Log.LogInfo("WcpHost: 受管语言登记 = [" + string.Join(",", langs.ToArray()) +
+                            "] -> " + file);
+                if (notReady.Count > 0)
+                    Log.LogWarning("WcpHost: 语言包资源未就绪, 本次不接管（旧插件继续兜底）: " +
+                                   string.Join("; ", notReady.ToArray()));
+            }
+            catch (Exception e)
+            {
+                Log.LogWarning("WcpHost: 受管语言登记失败（旧词表插件继续按旧模式打补丁）: " + e.Message);
+            }
+        }
+
         private void ReportRegistry(string root)
         {
             Log.LogInfo("WcpHost: packs 根 = " + root);
@@ -110,12 +167,15 @@ namespace WcpHost
                         _registry.Manifests.Count + "（缺失策略时仅保留身份层）");
             for (int i = 0; i < _registry.Errors.Count; i++)
                 Log.LogWarning("WcpHost: 语言包加载告警: " + _registry.Errors[i]);
+            for (int i = 0; i < _registry.Warnings.Count; i++)
+                Log.LogWarning("WcpHost: 语言包提示: " + _registry.Warnings[i]);
             for (int i = 0; i < _strategies.Errors.Count; i++)
                 Log.LogWarning("WcpHost: 策略加载告警: " + _strategies.Errors[i]);
         }
 
         private void Update()
         {
+            RefreshManagedMarker();
             if (!_enabled.Value || _router == null)
             {
                 try
@@ -151,6 +211,22 @@ namespace WcpHost
                 _lastReported = state;
                 Log.LogInfo("WcpHost: " + state);
             }
+        }
+
+        // 场景边界的强制校正: 玩家切书后 1 秒内的场景切换（战斗/测试/学习）
+        // 不能再读到上一门语言的队列，所以这里先按游戏当前状态重判身份，再执行隔离。
+        internal void EnforceNowForScene()
+        {
+            if (_enabled == null || !_enabled.Value || _router == null) return;
+            try
+            {
+                Evaluate();
+            }
+            catch (Exception e)
+            {
+                Log.LogWarning("WcpHost: 场景身份重判失败: " + e.Message);
+            }
+            if (_runtime != null) _runtime.EnforceNow();
         }
 
         // 身份判定：内存词表 / 内存书名 / 落盘书名 / 选中槽位词表四者一致，且指纹命中注册表，才激活。

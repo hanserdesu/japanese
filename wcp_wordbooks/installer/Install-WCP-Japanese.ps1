@@ -1235,6 +1235,20 @@ if (Test-Path -LiteralPath $jaPackTarget) {
     Copy-TreeNet $jaPackTarget (Join-Path $backup 'packs\ja') '备份旧日语资源包'
 }
 Copy-TreeNet $jaPackPayload $jaPackTarget '日语语言资源包'
+# 运行时补丁所有权登记：宿主（WcpHost）运行时也会写这份文件，安装阶段先写好，
+# 免得"装完第一次进游戏"仍是新旧两个词表插件同时打补丁 —— 后写者胜会把上一本书
+# 的词串进新书（"俄语切日语后还出俄语"）。只追加不覆盖：其它语言安装器登记过的
+# 语言保留，宿主启动后还会按"资源是否就绪"再校正一次。
+$managedMarker = Join-Path (Join-Path $bepRoot 'config') 'WcpHost.managed.txt'
+$managedLangs = @()
+if (Test-Path -LiteralPath $managedMarker) {
+    Copy-Item -LiteralPath $managedMarker -Destination (Join-Path $backup 'WcpHost.managed.txt') -Force
+    $managedLangs = @(Get-Content -LiteralPath $managedMarker | Where-Object { $_ -match '^[a-z]{2,3}$' })
+}
+if ($managedLangs -notcontains 'ja') { $managedLangs = @($managedLangs) + 'ja' }
+New-Item -ItemType Directory -Force -Path (Split-Path -Parent $managedMarker) | Out-Null
+[IO.File]::WriteAllLines($managedMarker, [string[]]$managedLangs, (New-Object System.Text.UTF8Encoding($false)))
+Write-Host ('已登记宿主接管语言：' + ($managedLangs -join ', ')) -ForegroundColor DarkGray
 
 $bookDir = Join-Path $payload 'books'
 Get-ChildItem -LiteralPath $bookDir -File | ForEach-Object {

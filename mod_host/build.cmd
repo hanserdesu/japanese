@@ -1,6 +1,6 @@
 @echo off
 rem Build WCP unified host (BepInEx 5, C#5 via NETFX csc).
-rem v0.2.0: manifest identity gate plus shared host patches and scoped runtime.
+rem v0.3.0: per-book pool isolation (BookPool) + shared host patches and scoped runtime.
 rem Override game dir with WCP_GAME_DIR; WCP_NO_DEPLOY=1 builds without deploying.
 setlocal
 set HERE=%~dp0
@@ -43,6 +43,8 @@ set REFS=/r:"%GAME%\BepInEx\core\BepInEx.dll" ^
  "%HERE%Core\ResourceRouter.cs" ^
  "%HERE%Core\ILanguageStrategy.cs" ^
  "%HERE%Core\StrategyContext.cs" ^
+ "%HERE%Core\BookPool.cs" ^
+ "%HERE%Core\GameLearnedStats.cs" ^
  "%HERE%Core\GenericLanguageStrategy.cs" ^
  "%HERE%StrategyLoader.cs" ^
  "%HERE%GameAdapter.cs" ^

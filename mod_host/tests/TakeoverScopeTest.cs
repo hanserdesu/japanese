@@ -33,6 +33,45 @@ internal static class TakeoverScopeTest
     private static int failures;
     private static void Check(bool value, string label)
     { Console.WriteLine((value ? "PASS " : "FAIL ") + label); if (!value) failures++; }
+
+    // ── 词池隔离用的桩: 六词词书 + 可控的学习进度 ──
+    private sealed class StatsStub : ILearnedStats
+    {
+        internal readonly HashSet<string> Learned = new HashSet<string>();
+        internal readonly Dictionary<string, int> Times = new Dictionary<string, int>();
+        public bool IsLearned(string word) { return Learned.Contains(word); }
+        public int TestTimes(string word) { int v; return Times.TryGetValue("t" + word, out v) ? v : 0; }
+        public int LastStudyTime(string word) { int v; return Times.TryGetValue("s" + word, out v) ? v : 0; }
+    }
+
+    private static string[] SixBook() { return new string[] { "b1", "b2", "b3", "b4", "b5", "b6" }; }
+
+    private static TakeoverScope SetupBook()
+    {
+        GameAdapter.Fields.Clear(); GameAdapter.Saved.Clear();
+        GameAdapter.FailKey = null; GameAdapter.FailSet = false; GameAdapter.Writes = 0;
+        var registry = new BookRegistry();
+        var manifest = new LanguageManifest { Profile = new BookProfile { Id = "test", Es3Prefix = "test" } };
+        registry.Manifests.Add(manifest);
+        WcpHostPlugin.Instance = new WcpHostPlugin { Registry = registry };
+        var scope = new TakeoverScope();
+        scope.Enter(manifest, SixBook());
+        return scope;
+    }
+
+    private static List<string> ReadPool(string field)
+    {
+        return GameAdapter.Fields[field] as List<string>;
+    }
+
+    private static bool NoForeign(IList<string> words, string[] book)
+    {
+        var allowed = new HashSet<string>(book);
+        for (int i = 0; i < words.Count; i++)
+            if (!allowed.Contains(words[i])) return false;
+        return true;
+    }
+
     private static TakeoverScope Setup()
     {
         GameAdapter.Fields.Clear(); GameAdapter.Saved.Clear(); GameAdapter.FailKey = null; GameAdapter.FailSet = false; GameAdapter.Writes = 0;
@@ -88,6 +127,65 @@ internal static class TakeoverScopeTest
         Check((bool)GameAdapter.Fields["testingIf_Para"], "array-only restore does not change test flags");
         scope = Setup(); GameAdapter.FailSet = true; scope.Enforce();
         Check(Original(), "field write failure does not persist takeover");
+
+        // ── 词池隔离（2026-09-15 复查: 法语战斗像英语 / 俄语切日语后仍出现俄语）──
+        scope = SetupBook();
+        GameAdapter.Fields["S7TestWordList_Para"] = new List<string> { "russian1", "russian2", "b1" };
+        scope.Enforce();
+        var pool = ReadPool("S7TestWordList_Para");
+        Check(pool != null && pool.Count >= 5 && NoForeign(pool, SixBook()),
+            "战斗词表被重建为本书词（外部语言残留清零）");
+
+        scope = SetupBook();
+        GameAdapter.Fields["S7TestWordList_Para"] =
+            new List<string> { "one", "two", "three", "four", "five" };
+        scope.Enforce();
+        pool = ReadPool("S7TestWordList_Para");
+        Check(pool != null && pool.Count >= 5 && NoForeign(pool, SixBook()),
+            "one..five 占位词被本书词替换");
+        Check(pool != null && !pool.Contains("one"), "占位词不会留在战斗词表里");
+
+        scope = SetupBook();
+        GameAdapter.Fields["S8HaveLearnedWordList_Para"] = new List<string> { "english", "b3" };
+        scope.Enforce();
+        var progress = ReadPool("S8HaveLearnedWordList_Para");
+        Check(progress != null && progress.Count == 1 && progress[0] == "b3",
+            "学习进度列表只过滤、不补词");
+
+        scope = SetupBook();
+        var clean = new List<string> { "b3", "b1", "b5", "b6", "b2" };
+        GameAdapter.Fields["S7TestWordList_Para"] = clean;
+        scope.Enforce();
+        Check(ReferenceEquals(clean, GameAdapter.Fields["S7TestWordList_Para"]),
+            "已干净的词池保持原对象（轮询不抖动）");
+
+        scope = SetupBook();
+        var stub = new StatsStub();
+        stub.Learned.Add("b4"); stub.Learned.Add("b6");
+        stub.Times["s" + "b4"] = 5; stub.Times["s" + "b6"] = 1;
+        TakeoverScope.StatsProvider = delegate { return stub; };
+        GameAdapter.Fields["S7TestWordList_Para"] = new List<string> { "english" };
+        scope.Enforce();
+        pool = ReadPool("S7TestWordList_Para");
+        Check(pool != null && pool.Count >= 5 && pool[0] == "b6" && pool[1] == "b4",
+            "补池优先本书已学词并按玩家排序设置排列");
+        TakeoverScope.StatsProvider = null;
+
+        scope = SetupBook();
+        var rebuilt = scope.RebuildPool("S7TestWordList_Para",
+            new List<string> { "russian1" }, 5);
+        Check(rebuilt != null && rebuilt.Count >= 5 && NoForeign(rebuilt, SixBook()),
+            "补池入口（AddWordsToSelfChosenList）只从本书重建");
+        Check(scope.RebuildPool("S8HaveLearnedWordList_Para",
+            new List<string> { "english" }, 5) == null, "进度字段不参与补池");
+
+        scope = SetupBook();
+        GameAdapter.Fields["S7TestWordList_Para"] = new List<string> { "russian1", "b2" };
+        scope.Enforce(); scope.Leave();
+        var restored = ReadPool("S7TestWordList_Para");
+        Check(restored != null && restored.Count == 2 && restored[0] == "russian1",
+            "离开词书后战斗词表还原为接管前内容");
+
         Console.WriteLine("Failures: " + failures); return failures == 0 ? 0 : 1;
     }
 }

@@ -42,6 +42,9 @@ namespace WcpHost
             _registry = registry;
             _router = router;
             _strategies = strategies;
+            // 学习进度来源: 只用于"本书已学"优先排序，词池本身永远只从本书构造。
+            TakeoverScope.StatsProvider = GameLearnedStats.FromGame;
+            TakeoverScope.WarnSink = Warn;
         }
 
         internal string ActiveProfileId { get { return _activeProfileId; } }
@@ -274,6 +277,63 @@ namespace WcpHost
             if (IsActive && ActiveStrategy != null) _scope.Enforce();
         }
 
+        // ── 战斗词池接管 ──
+        //
+        // ChooseWordManager.AddWordsToSelfChosenList 是游戏唯一的补池入口:
+        // 它从**全局** HaveLearnedDictionary 取词，补不满再塞 one..five 占位词。
+        // 受管词书下这条路必须被换掉: 由宿主用本书词池替代，并跳过原方法。
+        // 返回值 = true 表示交回游戏处理。
+        internal bool PrefixPool(ref List<string> list, int requested)
+        {
+            if (!IsActive || ActiveStrategy == null) return true;
+            try
+            {
+                List<string> rebuilt = _scope.RebuildPool("S7TestWordList_Para", list, requested);
+                if (rebuilt != null && !SameWords(list, rebuilt))
+                {
+                    list = rebuilt;
+                    GameAdapter.SetStaticField("MyParameters", "S7TestWordList_Para", rebuilt);
+                    GameAdapter.Es3Save("S7TestWordList_Para", rebuilt);
+                }
+                // 受管词书下补池一律由宿主负责: 即使本次没有变化，也不能让游戏
+                // 回退到全局词典或 one..five 占位词。
+                return false;
+            }
+            catch (Exception e)
+            {
+                Warn("战斗词池接管失败: " + e.Message);
+                return true;
+            }
+        }
+
+        // WordListManagerS7.Start 会从存档重新读一遍战斗词表（并在地毯式兜底里
+        // 塞 one..five）。宿主在场景边界再校正一次；若场景缓存已经是旧表，
+        // 就地刷新它，避免玩家在切书后的第一场战斗里看到上一门语言的词。
+        internal void PostFightListScene(object instance)
+        {
+            EnforceNow();
+            if (!IsActive || instance == null) return;
+            try
+            {
+                IList<string> pool = GameAdapter.ToWordList(
+                    GameAdapter.StaticField("MyParameters", "S7TestWordList_Para"));
+                if (pool == null || pool.Count == 0) return;
+                IList<string> withInfo = GameAdapter.ToWordList(
+                    GameAdapter.StaticField("MyParameters", "S7TestWordList_WithInfo"));
+                if (withInfo != null && withInfo.Count == pool.Count) return;
+
+                List<string> rebuilt = new List<string>(pool.Count);
+                for (int i = 0; i < pool.Count; i++) rebuilt.Add(pool[i] + "##0");
+                GameAdapter.SetStaticField("MyParameters", "S7TestWordList_WithInfo", rebuilt);
+                GameAdapter.SetInstanceField(instance, "maxPage", (pool.Count + 11) / 12);
+                InvokeNoArg(instance, "ShowWordList");
+            }
+            catch (Exception e)
+            {
+                Warn("战斗场景词表刷新失败: " + e.Message);
+            }
+        }
+
         internal string CurrentWord(string displayed)
         {
             string value = CurrentTestWord();
@@ -292,6 +352,22 @@ namespace WcpHost
         {
             EnsureServices();
             if (_audio != null) _audio.Play(file);
+        }
+
+        private static bool SameWords(IList<string> a, IList<string> b)
+        {
+            if (a == null || b == null || a.Count != b.Count) return false;
+            for (int i = 0; i < a.Count; i++)
+                if (!string.Equals(a[i], b[i], StringComparison.Ordinal)) return false;
+            return true;
+        }
+
+        private static void InvokeNoArg(object instance, string method)
+        {
+            if (instance == null) return;
+            MethodInfo info = instance.GetType().GetMethod(method,
+                BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+            if (info != null && info.GetParameters().Length == 0) info.Invoke(instance, null);
         }
 
         private void LeaveCurrent()

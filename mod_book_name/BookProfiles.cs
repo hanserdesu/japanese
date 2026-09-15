@@ -59,6 +59,8 @@ namespace WcpBookProfiles
                 "dfecb0ab75e9b3ef75aedd47c677d68594b060bfbb84cc6bd94efd7888f4b74e"),
             new BookProfile("catbar-german-complete", German, "德语词库(猫条版)", 8062,
                 "66bded175dee70d9fd18ac3e08e793b79b35e9fd750904367a16c6012dd1f70a"),
+            new BookProfile("catbar-cantonese-complete", Cantonese, "粤语词库(猫条版)", 384,
+                "0748ca590e7caf6c2d11e5062ee381e2a3e1ac84f943c561a4fed94568f0cb9e"),
         };
 
         internal static BookProfile Match(IList<string> words)

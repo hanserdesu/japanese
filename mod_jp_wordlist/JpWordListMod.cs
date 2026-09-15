@@ -105,7 +105,7 @@ using WcpBookProfiles;
 
 namespace JpWordList
 {
-    [BepInPlugin("dev.hanserdesu.jpwordlist", "WCP JP Word List", "1.7.6")]
+    [BepInPlugin("dev.hanserdesu.jpwordlist", "WCP JP Word List", "1.7.7")]
     public class JpWordListPlugin : BaseUnityPlugin
     {
         internal const string ReviewRangeType = "复习范围词";
@@ -119,6 +119,7 @@ namespace JpWordList
         private static ConfigEntry<bool> _kanaStem;
         private static ConfigEntry<bool> _healDb;
         private static ConfigEntry<bool> _allowLegacySharedDbWrites;
+        private static ConfigEntry<bool> _yieldToHost;
         private static readonly HashSet<string> Warned = new HashSet<string>();
         private static readonly Dictionary<string, string> LastSig = new Dictionary<string, string>();
 
@@ -235,11 +236,45 @@ namespace JpWordList
                 "旧版兼容开关；只有同时启用 Legacy/AllowSharedDatabaseWrites 才会生效。");
             _allowLegacySharedDbWrites = Config.Bind("Legacy", "AllowSharedDatabaseWrites", false,
                 "允许旧版日语插件写入游戏共享 wcpFullEng.db/wcpOnlyWord.db。默认关闭以保持语言资源隔离。");
+            _yieldToHost = Config.Bind("Legacy", "YieldToHost", true,
+                "宿主 WcpHost 接管本语言后, 旧词表插件自动让位(只保留语言资源)。设 false 强制以旧模式运行。");
+            if (HostTakesOver())
+            {
+                Log.LogWarning("JPWordList: WcpHost 已接管日语, 旧词表插件不再打补丁 (Legacy/YieldToHost=false 可强制旧模式)。");
+                return;
+            }
             PatchAll();
         }
 
         // ---------------- 打补丁 ----------------
 
+        // 语言资源隔离: 宿主 (WcpHost) 成功接管本语言后, 运行时补丁只能有一个所有者。
+        // 两个插件争抢同一批补丁时"后写者胜", 上一本书的词会串进新书 —— 这就是
+        // "俄语切日语后还出俄语"的成因。判定看宿主落盘的受管语言登记
+        // (<BepInEx>/config/WcpHost.managed.txt), 而不是"文件是否存在":
+        // 宿主没装或没接管本语言时, 本插件照旧按旧模式工作。
+        private static bool HostTakesOver()
+        {
+            try
+            {
+                if (_yieldToHost == null || !_yieldToHost.Value) return false;
+                string dir = Paths.ConfigPath;
+                if (string.IsNullOrEmpty(dir)) return false;
+                string marker = System.IO.Path.Combine(dir, "WcpHost.managed.txt");
+                if (!System.IO.File.Exists(marker)) return false;
+                string[] codes = System.IO.File.ReadAllLines(marker);
+                for (int i = 0; i < codes.Length; i++)
+                    if (string.Equals(codes[i].Trim(), PackLangCode, StringComparison.OrdinalIgnoreCase))
+                        return true;
+                return false;
+            }
+            catch (Exception e)
+            {
+                // 判定失败保持旧行为: 宿主不存在才是常态, 不能因为读不到文件就停摆。
+                Log.LogWarning("ja JPWordList: 宿主接管判定失败, 按旧模式继续打补丁: " + e.Message);
+                return false;
+            }
+        }
         private void PatchAll()
         {
             Harmony harmony = new Harmony("dev.hanserdesu.jpwordlist");
@@ -2265,6 +2300,9 @@ namespace JpWordList
 // 插件的工作不依赖 DB, 但「例句」只在 sentence2 里, 更新后会丢。启动后若发现探针词缺失,
 // 就从 LocalLow 的补丁包(jp_db_payload)重灌一次; 写前先备份 DB, 全程 try/catch。
 private const string DbPackDir = "jp_db_payload";
+
+        // 宿主资源包的语言代码: packs/<PackLangCode>/manifest.json
+        private const string PackLangCode = "ja";
 private static readonly string[] DbProbes = new string[] { "歯医者", "続ける", "工業" };
 private static bool _dbHealTried;
 private static float _dbHealAt = -1f;

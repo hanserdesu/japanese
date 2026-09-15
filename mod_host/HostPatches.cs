@@ -100,22 +100,40 @@ namespace WcpHost
                 AccessTools.Method(typeof(HostPatches), "EnforcePostfix"));
             PatchOne(harmony, "SwitchCurrentArrayS9", "SwitchThis", null,
                 AccessTools.Method(typeof(HostPatches), "EnforcePostfix"));
-            PatchOne(harmony, "ChooseWordManager", "AddWordsToSelfChosenList", null,
-                AccessTools.Method(typeof(HostPatches), "EnforcePostfix"));
+            // 补池入口: 受管词书下由宿主用本书词池接管，跳过全局已学词典与占位词。
+            PatchOne(harmony, "ChooseWordManager", "AddWordsToSelfChosenList",
+                AccessTools.Method(typeof(HostPatches), "PoolPrefix"), null);
             PatchOne(harmony, "SetInputFieldValueS8", "changeKnownFuzzUnknownTimes", null,
                 AccessTools.Method(typeof(HostPatches), "EnforcePostfix"));
+            // 战斗场景会从存档重新读一遍词表并缓存到 WithInfo; 读完之后再校正一次。
+            PatchOne(harmony, "WordListManagerS7", "Start", null,
+                AccessTools.Method(typeof(HostPatches), "FightListScenePostfix"));
         }
 
         private static void EnforcePrefix()
         {
             WcpHostPlugin plugin = WcpHostPlugin.Instance;
-            if (plugin != null && plugin.Runtime != null) plugin.Runtime.EnforceNow();
+            if (plugin != null) plugin.EnforceNowForScene();
         }
 
         private static void EnforcePostfix()
         {
             WcpHostPlugin plugin = WcpHostPlugin.Instance;
-            if (plugin != null && plugin.Runtime != null) plugin.Runtime.EnforceNow();
+            if (plugin != null) plugin.EnforceNowForScene();
+        }
+
+        private static bool PoolPrefix(ref List<string> S7TestWordList_Para, int num)
+        {
+            WcpHostPlugin plugin = WcpHostPlugin.Instance;
+            if (plugin == null || plugin.Runtime == null) return true;
+            return plugin.Runtime.PrefixPool(ref S7TestWordList_Para, num);
+        }
+
+        private static void FightListScenePostfix(object __instance)
+        {
+            WcpHostPlugin plugin = WcpHostPlugin.Instance;
+            if (plugin != null && plugin.Runtime != null)
+                plugin.Runtime.PostFightListScene(__instance);
         }
 
         private static void MultipleChoicePostfix(object __instance)

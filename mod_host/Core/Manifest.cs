@@ -58,6 +58,30 @@ namespace WcpHost
         internal string StrategyAssembly;
         internal string StrategyType;
 
+        // 「宿主真的能服务这门语言」的判据: 清单声明的资源必须实际存在。
+        // 只看 manifest.json 会让"半装"的语言包把旧词表插件挤走 —— 那门语言随后
+        // 既没有宿主的释义库, 也没有旧插件的兜底。接管的前提是接管方真的有资源。
+        internal bool ResourcesReady(out string missing)
+        {
+            missing = null;
+            string[] rel = new string[] { MeaningDb, SentenceTable, Repair };
+            for (int i = 0; i < rel.Length; i++)
+            {
+                if (string.IsNullOrEmpty(rel[i])) continue;
+                if (!File.Exists(LocalPath(rel[i]))) { missing = rel[i]; return false; }
+            }
+            for (int i = 0; i < Books.Count; i++)
+            {
+                if (!File.Exists(LocalPath(Books[i]))) { missing = Books[i]; return false; }
+            }
+            return true;
+        }
+
+        private string LocalPath(string rel)
+        {
+            return Path.Combine(PackRoot, rel.Replace('/', Path.DirectorySeparatorChar));
+        }
+
         internal static LanguageManifest Load(string manifestPath)
         {
             string json = File.ReadAllText(manifestPath, Encoding.UTF8);
@@ -174,9 +198,12 @@ namespace WcpHost
     {
         private readonly List<LanguageManifest> _manifests = new List<LanguageManifest>();
         private readonly List<string> _errors = new List<string>();
+        private readonly List<string> _warnings = new List<string>();
 
         internal IList<LanguageManifest> Manifests { get { return _manifests; } }
         internal IList<string> Errors { get { return _errors; } }
+        // 告警不丢包：注册表里"能装多少语言"不该受游戏 4 个原生槽限制。
+        internal IList<string> Warnings { get { return _warnings; } }
 
         // 扫描 <packsRoot>/<lang>/manifest.json。单个 pack 坏掉不影响其它 pack 加载
         // —— 这是宿主对语言包唯一的容错要求：一种语言的数据坏了，别的语言照常用。
@@ -210,7 +237,12 @@ namespace WcpHost
                             throw new FormatException("fingerprint 重复: " + m.Profile.Fingerprint);
                         if (m.Profile.ObservedSlot > 0 &&
                             old.ObservedSlot == m.Profile.ObservedSlot)
-                            throw new FormatException("observed_slot 重复: " + m.Profile.ObservedSlot);
+                            // observed_slot 只记录"在哪台机器的哪个原生槽里见过", 不是身份键。
+                            // 游戏只有 4 个原生槽, 装到第 5 种语言必然撞槽 —— 撞槽只登记告警,
+                            // 谁也不丢(身份判定始终只看指纹, 实际槽位由运行时决定)。
+                            r._warnings.Add("observed_slot 撞槽 " + m.Profile.ObservedSlot +
+                                            ": " + old.Language + " / " + m.Profile.Language +
+                                            "（不丢包, 槽位按指纹运行时判定）");
                         if (old.Es3Prefix == m.Profile.Es3Prefix)
                             throw new FormatException("es3_prefix 重复: " + m.Profile.Es3Prefix);
                     }

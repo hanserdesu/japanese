@@ -181,3 +181,29 @@ WcpHost: 已激活 · ja / catbar-jlpt-complete（7922 词，槽 1，策略已�
 - 未验证"补池偏置"在其它语言（西班牙语等与英语同形率高的语言）上的同形比例。
 - 20 槽位方案的可行性只做了源码侧确认（`SelfBookList1..4`、`_slotProfiles[4]`、
   `自定义词书一~四` 字面量统计），未做"导入第 5 本书"的实机验证。
+
+---
+
+## 5. 2026-09-15 续查：实机日志证据与两项遗留
+
+实机日志（`BepInEx/LogOutput.log`，09:12 启动的进程加载 08:49 部署的 `WcpHost.dll`）已证实接管链路按设计工作：
+
+- `WcpHost: 受管语言登记 = [ja,yue]`
+- `YueWordList: WcpHost 已接管粤语, 旧词表插件不再打补丁`（跨语言串词的根因修复在实机生效）
+- `WcpHost: 语言包资源未就绪, 本次不接管（旧插件继续兜底）: fr 缺 db/meaning.sqlite; ru 缺 db/meaning.sqlite`
+
+**遗留 1（法语的根因修复尚未生效）**：宿主只接管 `packs/<language>` 资源齐备的语言，本机
+`packs/fr`、`packs/ru` 只有 `manifest.json`，所以法语仍由旧插件兜底，战斗里仍可能出现英语。
+各语言安装器的落盘布局也不一致：日语安装器写 `packs/ja`，粤语安装器写 `packs/yue`，而
+`Install-WCP-French.ps1` / `Install-WCP-Russian.ps1` 完全不引用 `packs`（`rg -n packs` 无命中），
+因此产不出 `packs/<lang>/db/*`。修好法语需要：按同一 pack 布局落盘 fr（以及 ru/de）的
+`db/meaning.sqlite`、`db/sentences.json`、`db/repair.tsv` 与 `books/*`——日语 payload 直接内置
+预构建 db 文件，可作模板——再让各语言安装器写这个布局并重新登记受管语言。
+
+**遗留 2（编码类静默失效）**：无 BOM 的 UTF-8 `.ps1` 在 Windows PowerShell 5.1 下按 ANSI 解码。
+`mod_custom_slots/tests/test_custom_slots.ps1` 的中文注释因此吞掉了下一行调用，测试套件把
+“子进程根本没启动”当成结果。实测证据（5.1 下 `Parser::ParseFile`）：无 BOM 时 `errors=1`、
+中文串变成 `7039 590E E5CA` 之类乱码代码点；加 BOM 后 `errors=0`、首串代码点
+`5B89 88C5 6CA1 6709`（即“安装没有”）。已修复：该测试与日/粤 `run-installer.ps1`。
+防回归：`hub/tests/test_hub.ps1` 断言 hub 脚本“非 ASCII 必须带 BOM”、两个双击 `.cmd` 必须纯 ASCII；
+批处理还必须 CRLF（apply_patch 会写成 LF，cmd 会误读并报 `'Shell' 不是内部或外部命令`）。

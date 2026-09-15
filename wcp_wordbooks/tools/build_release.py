@@ -23,7 +23,9 @@ ROOT = Path(__file__).resolve().parent.parent
 OUT = ROOT / 'output'
 PKG = OUT / 'installer_pkg' / 'WCP日语词书安装包'
 RELEASE = OUT / 'release'
-MAIN_TAG = 'wcp-jp-v1.2.2'
+# 宿主升级（0.3.0：词池只从当前词书重建 + 旧词表插件让位）之后必须换新 tag，
+# 免得同一个 tag 下的 Release 资源被静默替换。可用环境变量覆盖。
+MAIN_TAG = os.environ.get('WCP_MAIN_TAG', 'wcp-jp-v1.2.3')
 RESOURCE_TAG = 'wcp-jp-resources-v1.1.0'
 GITEE_REPO = os.environ.get(
     'WCP_GITEE_REPO',
@@ -98,14 +100,22 @@ def split_file(source, target_dir):
 
 
 def add_gitee_part_urls(parts, kind):
-    """Attach the domestic Release URL for each generated split part."""
+    """Attach the domestic Release URL for each generated split part.
+
+    Gitee enforces a ~1 GB per-repository attachment quota, so the 32
+    sentence parts cannot live in one repository.  Actual placement
+    (verified 2026-09-15, 38/38 asset URLs reachable):
+      word parts 001-004            -> wcp-jp-audio-words
+      sentence parts 001-022        -> wcp-jp-audio-sentences
+      sentence parts 023-032        -> wcp-jp-audio-words (quota spill)
+    """
     for index, part in enumerate(parts, start=1):
         if kind == 'word_audio':
             repo = GITEE_WORDS_REPO
         elif index <= GITEE_PRIMARY_SENTENCE_PARTS:
-            repo = GITEE_REPO
-        else:
             repo = GITEE_SENTENCES_REPO
+        else:
+            repo = GITEE_WORDS_REPO
         part['url_template'] = (
             f'{repo}/releases/download/{RESOURCE_TAG}/{{name}}'
         )

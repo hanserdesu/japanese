@@ -8,7 +8,7 @@
 
 ## 普通用户怎么安装
 
-1. 下载 [WCP 日语词书一键安装包 v1.2.6](https://github.com/hanserdesu/japanese/releases/download/wcp-jp-v1.2.6/WCP-Japanese-OneClick-Installer-wcp-jp-v1.2.6.zip)（SHA-256 `189ef290c16aa3b12217cd163b50e19072b5ca6a415a16740656c10fbe76eabe`，发布页见 [wcp-jp-v1.2.6](https://github.com/hanserdesu/japanese/releases/tag/wcp-jp-v1.2.6)）。
+1. 下载 [WCP 日语词书一键安装包 v1.2.6](https://github.com/hanserdesu/japanese/releases/download/wcp-jp-v1.2.6/WCP-Japanese-OneClick-Installer-wcp-jp-v1.2.6.zip)（SHA-256 `6652af95a87493acd283ce008245fe788e369d99b3f77afa266d645acb5a019b`，发布页见 [wcp-jp-v1.2.6](https://github.com/hanserdesu/japanese/releases/tag/wcp-jp-v1.2.6)）。
 2. 解压安装包。
 3. 关闭万词破，双击解压后最外层的 `01_双击运行我.cmd`，不要进入 `support` 文件夹。
 4. 等待安装器完成，然后重新启动游戏。安装窗口会一直保留，请点击右上角 X 关闭；按 Enter 不会关闭窗口。

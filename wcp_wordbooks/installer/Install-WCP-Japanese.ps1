@@ -867,6 +867,79 @@ function Remove-TreeNet([string]$path) {
     }
 }
 
+function Backup-PackWithoutAudio([string]$sourceDir, [string]$targetDir) {
+    # 备份旧语言资源包时跳过 audio 子树：音频每次安装都会重新下载解压，
+    # 旧音频的备份只会让每次重装在磁盘上多堆 1~2 GB，回滚时也用不到。
+    New-Item -ItemType Directory -Force -Path $targetDir | Out-Null
+    foreach ($item in [IO.Directory]::EnumerateFileSystemEntries($sourceDir)) {
+        $name = [IO.Path]::GetFileName($item)
+        if ($name -ieq 'audio') { continue }
+        $target = Join-Path $targetDir $name
+        if ([IO.Directory]::Exists($item)) {
+            Copy-TreeNet $item $target ('备份 ' + $name)
+        } else {
+            [IO.File]::Copy($item, $target, $true)
+        }
+    }
+}
+
+function Remove-LegacyRedundancy {
+    # 新版安装器接管旧版本遗留：清理过期下载缓存与多余备份，避免每次
+    # 更新都在用户磁盘上堆积数 GB 冗余。所有删除都允许失败（被占用则跳过）。
+    param(
+        [string]$DataDir,
+        $WordAsset,
+        $SentenceAsset
+    )
+    $freed = [int64]0
+    # 1) 下载缓存：只保留与当前清单 SHA-256 一致的两个音频包，其余全删
+    #    （旧版本安装器留下的同名旧缓存、未完成的 .download 分卷都算冗余）。
+    $downloads = Join-Path $DataDir 'jpmod_downloads'
+    if (Test-Path -LiteralPath $downloads) {
+        $keep = @{}
+        foreach ($asset in @($WordAsset, $SentenceAsset)) {
+            if ($asset -and $asset.name) { $keep[[string]$asset.name] = [string]$asset.sha256.ToLowerInvariant() }
+        }
+        foreach ($file in @(Get-ChildItem -LiteralPath $downloads -File -ErrorAction SilentlyContinue)) {
+            $isCurrent = $false
+            if ($keep.ContainsKey($file.Name)) {
+                try { $isCurrent = ((Get-Sha256 $file.FullName) -eq $keep[$file.Name]) } catch { $isCurrent = $false }
+            }
+            if ($isCurrent) {
+                Write-Host ("保留当前版本缓存：" + $file.Name) -ForegroundColor DarkGray
+                continue
+            }
+            $freed += $file.Length
+            try {
+                Remove-Item -LiteralPath $file.FullName -Force -ErrorAction Stop
+            } catch {
+                $freed -= $file.Length
+            }
+        }
+    }
+    # 2) 旧备份目录：只保留最近 3 份（目录名以时间戳开头，按名称倒序即最新在前）。
+    $backupRoot = Join-Path $DataDir 'jpmod_backups'
+    $staleBackups = @()
+    if (Test-Path -LiteralPath $backupRoot) {
+        $staleBackups = @(Get-ChildItem -LiteralPath $backupRoot -Directory -ErrorAction SilentlyContinue |
+            Sort-Object Name -Descending | Select-Object -Skip 3)
+    }
+    foreach ($stale in $staleBackups) {
+        try {
+            $size = [int64]((Get-ChildItem -LiteralPath $stale.FullName -Recurse -File -ErrorAction SilentlyContinue |
+                Measure-Object Length -Sum).Sum)
+            Remove-TreeNet $stale.FullName
+            $freed += $size
+            Write-Host ("已清理过期备份：" + $stale.Name) -ForegroundColor DarkGray
+        } catch { }
+    }
+    if ($freed -gt 0) {
+        Write-Host ("冗余清理完成，释放约 {0:N2} GB。" -f ($freed / 1GB)) -ForegroundColor DarkGray
+    } else {
+        Write-Host '没有需要清理的冗余文件。' -ForegroundColor DarkGray
+    }
+}
+
 Write-Step '开始安装 WCP 日语词书。'
 
 function Add-Candidate([System.Collections.Generic.List[string]]$list, [string]$path) {
@@ -1295,6 +1368,10 @@ foreach ($asset in @($release.assets)) {
 }
 $safetyBytes = 1GB
 $requiredBytes = $compressedBytes + (2 * $expandedBytes) + $safetyBytes
+# 下载预检前先接管旧版本遗留的冗余（过期缓存/旧备份）：
+# 清理释放的空间能让磁盘检查更宽松，也让 v1.2.4 之前的用户腾出数 GB。
+Write-Step '正在清理旧版本遗留的冗余文件。'
+Remove-LegacyRedundancy -DataDir $data -WordAsset $wordAsset -SentenceAsset $sentenceAsset
 $downloadDriveName = [IO.Path]::GetPathRoot($data).TrimEnd('\').Substring(0, 1)
 $downloadDrive = Get-PSDrive -Name $downloadDriveName
 if ($downloadDrive.Free -lt $requiredBytes) {
@@ -1349,7 +1426,7 @@ if (-not (Test-Path -LiteralPath (Join-Path $jaPackPayload 'manifest.json'))) {
 $jaPackTarget = Join-Path $packsRoot 'ja'
 New-Item -ItemType Directory -Force -Path $packsRoot | Out-Null
 if (Test-Path -LiteralPath $jaPackTarget) {
-    Copy-TreeNet $jaPackTarget (Join-Path $backup 'packs\ja') '备份旧日语资源包'
+    Backup-PackWithoutAudio $jaPackTarget (Join-Path $backup 'packs\ja')
 }
 Copy-TreeNet $jaPackPayload $jaPackTarget '日语语言资源包'
 # 运行时补丁所有权登记：宿主（WcpHost）运行时也会写这份文件，安装阶段先写好，

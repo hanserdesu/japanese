@@ -193,20 +193,38 @@ def main():
         stream.write(json.dumps(release_manifest, ensure_ascii=False, indent=2) + '\n')
     shutil.copy2(manifest, PKG / 'support' / 'release-manifest.json')
 
+    # release-index：自更新检查的数据源（installer_version + 新包 SHA-256）。
+    # core_zip 的文件名在这里先定下来（SHA 待 zip 打包后回填）。
+    core_zip = RELEASE / f'WCP-Japanese-OneClick-Installer-{MAIN_TAG}.zip'
+    index = RELEASE / 'release-index.json'
+    with index.open('w', encoding='utf-8', newline='\n') as stream:
+        stream.write(json.dumps({
+            'main_release': MAIN_TAG,
+            'resource_release': RESOURCE_TAG,
+            # 安装器自更新比对用：老版本安装器读到与自身不同的值时提示升级。
+            'installer_version': MAIN_TAG,
+            'core_installer': {'name': core_zip.name},
+            'resource_manifest': manifest.name,
+        }, ensure_ascii=False, indent=2) + '\n')
+    # 把 index 同步进安装包 support/（自更新检查直接读资源 Release 上的这份），
+    # 并保留一份在 output/release/ 供上传脚本使用。
+    shutil.copy2(index, PKG / 'support' / 'release-index.json')
+
     # GitHub release uploads can mangle non-ASCII asset names. Keep the
     # downloadable filename ASCII; the archive itself remains Chinese-first.
-    core_zip = RELEASE / f'WCP-Japanese-OneClick-Installer-{MAIN_TAG}.zip'
+    # 注意：zip 必须在 index/manifest 都拷入 PKG 之后打包。
     if core_zip.exists():
         core_zip.unlink()
     with zipfile.ZipFile(core_zip, 'w', zipfile.ZIP_DEFLATED, allowZip64=True) as z:
         for p in PKG.rglob('*'):
             if p.is_file():
                 z.write(p, p.relative_to(PKG.parent).as_posix())
-    index = RELEASE / 'release-index.json'
+    # zip 打包完成后回填 size/sha256 —— 自更新必须校验完整包。
     with index.open('w', encoding='utf-8', newline='\n') as stream:
         stream.write(json.dumps({
             'main_release': MAIN_TAG,
             'resource_release': RESOURCE_TAG,
+            'installer_version': MAIN_TAG,
             'core_installer': {'name': core_zip.name, 'size': core_zip.stat().st_size,
                                'sha256': sha256(core_zip)},
             'resource_manifest': manifest.name,

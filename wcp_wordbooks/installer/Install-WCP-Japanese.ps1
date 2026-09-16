@@ -1559,8 +1559,13 @@ Copy-TreeNet (Join-Path $audioStage 'sentence_audio') $jaSentenceAudio '日语�
 # （首次读档中/未重启游戏/未激活）时发音会静默回退成游戏的英语 AI 语音。
 # 这里把单词音频补一份到游戏原生目录；只覆盖同名文件，不清理其它语言的历史
 # 文件（该目录为多语言共享）。宿主侧对已安装用户有同款运行时补缺。
+# 这是加分项而非必需步骤：任何失败（权限/占用）只提示，绝不中断主安装。
 $legacyVocabDir = Join-Path $wcpRoot 'vocabulary'
-Copy-TreeNet (Join-Path $audioStage 'vocabulary') $legacyVocabDir '日语单词音频(游戏原生目录)'
+try {
+    Copy-TreeNet (Join-Path $audioStage 'vocabulary') $legacyVocabDir '日语单词音频(游戏原生目录)'
+} catch {
+    Write-Host "单词音频镜像到游戏原生目录失败（不影响主安装；游戏内运行时会再次尝试补齐）：$($_.Exception.Message)" -ForegroundColor DarkYellow
+}
 try {
     Remove-TreeNet $audioStage
     Write-Host '音频临时目录已清理。' -ForegroundColor DarkGray

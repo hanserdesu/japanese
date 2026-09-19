@@ -12,7 +12,7 @@ import wcp_paths
 
 sys.stdout.reconfigure(encoding='utf-8')
 DB = wcp_paths.full_db()
-OUT = Path(r'D:\Japanese\wcp_wordbooks\logs\sentence_worklist.tsv')
+OUT = Path(r'D:\ATooManyLanguage\Japanese\wcp_wordbooks\logs\sentence_worklist.tsv')
 
 CJK_RE = re.compile(r'[\u4e00-\u9fff]')
 # 排除: 日文汉字句必然含 CJK; 英文翻译行不含 CJK(假名除外)

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 import json, random, sys
 from pathlib import Path
-ROOT = Path(r'D:/Japanese/wcp_wordbooks')
+ROOT = Path(r'D:/ATooManyLanguage/Japanese/wcp_wordbooks')
 data = json.loads((ROOT/'output/jlpt_books.json').read_text(encoding='utf-8'))
 random.seed(42)
 n = int(sys.argv[1]) if len(sys.argv) > 1 else 30

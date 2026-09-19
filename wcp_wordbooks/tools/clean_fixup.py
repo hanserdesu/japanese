@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """Remove no-op entries (key == value) from WORD_FIX in fixup_words.py"""
 import re
-p = 'D:/Japanese/wcp_wordbooks/tools/fixup_words.py'
+p = 'D:/ATooManyLanguage/Japanese/wcp_wordbooks/tools/fixup_words.py'
 src = open(p, encoding='utf-8').read()
 # remove lines like "    'X': 'X'," where key==value
 lines = src.split('\n')

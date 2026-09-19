@@ -70,18 +70,20 @@ WORD_SOURCES = [
     ("ru_word_audio", LOCALLOW / "wcp" / "ru_word_audio", False),
 ]
 
-INDEX_CACHE = pathlib.Path("D:/Japanese/work/privatize_index")
+ROOT = pathlib.Path(__file__).resolve().parents[1]
+INTEGRATION_ROOT = ROOT.parent
+INDEX_CACHE = ROOT / "work" / "privatize_index"
 
 # 各语言的例句主表与剥离函数。剥离函数必须是插件里 C# 版本的逐行翻译 ——
 # 差一个字符 md5 就对不上，文件会被误判成孤儿。
 LANG_SOURCES = {
-    "ja": dict(project=pathlib.Path("D:/Japanese/wcp_wordbooks"),
+    "ja": dict(project=ROOT / "wcp_wordbooks",
                master="data/translations/sentences_master.json",
                extractor="ja"),
-    "fr": dict(project=pathlib.Path("D:/French"),
+    "fr": dict(project=INTEGRATION_ROOT / "French",
                master="data/translations/sentences_master.json",
                extractor="fr"),
-    "ru": dict(project=pathlib.Path("D:/Russian"),
+    "ru": dict(project=INTEGRATION_ROOT / "Russian",
                master="data/translations/sentences_master.json",
                extractor="ru"),
 }
@@ -116,7 +118,7 @@ def extract_ja(raw):
 
 
 def extract_fr(raw):
-    """D:/French/mod_sentence_audio_fr/SentenceAudioFrMod.cs :: ExtractFr"""
+    """D:/ATooManyLanguage/French/mod_sentence_audio_fr/SentenceAudioFrMod.cs :: ExtractFr"""
     s = _common(raw)
     if not s:
         return None
@@ -140,7 +142,7 @@ def extract_fr(raw):
 
 
 def extract_ru(raw):
-    """D:/Russian/mod_sentence_audio_ru/SentenceAudioRuMod.cs :: ExtractRu
+    """D:/ATooManyLanguage/Russian/mod_sentence_audio_ru/SentenceAudioRuMod.cs :: ExtractRu
     注意与 ja/fr 的两处差异: 半角括号也算切尾符; 末尾要 TrimEnd('。',' ')。"""
     s = _common(raw)
     if not s:
@@ -176,7 +178,7 @@ def md5(s):
 # ─────────────────────── 词书 / 清单 ───────────────────────
 
 def load_manifest(lang):
-    p = pathlib.Path("D:/Japanese/packs") / lang / "manifest.json"
+    p = PACKS / lang / "manifest.json"
     if not p.exists():
         raise SystemExit(f"缺少清单: {p}")
     return json.loads(p.read_text(encoding="utf-8"))
@@ -184,8 +186,8 @@ def load_manifest(lang):
 
 def find_payload(name):
     """按 basename 在各项目的安装载荷目录里找词书 xlsx。"""
-    for proj in ("D:/Japanese/wcp_wordbooks", "D:/French", "D:/Russian"):
-        hits = glob.glob(f"{proj}/output/installer_pkg/*/support/payload/books/{name}")
+    for proj in (ROOT / "wcp_wordbooks", INTEGRATION_ROOT / "French", INTEGRATION_ROOT / "Russian"):
+        hits = glob.glob(str(proj / "output" / "installer_pkg" / "*" / "support" / "payload" / "books" / name))
         if hits:
             return pathlib.Path(hits[0])
     return None

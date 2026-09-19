@@ -1,6 +1,6 @@
 #!/bin/bash
 # Set B 夜间循环: 每5分钟一轮 setb_worker, 至 2026-09-07 09:00 为止。
-cd "D:/Japanese/wcp_wordbooks"
+cd "D:/ATooManyLanguage/Japanese/wcp_wordbooks"
 DEADLINE=$(date -d "2026-09-07 09:00" +%s 2>/dev/null)
 if [ -z "$DEADLINE" ]; then DEADLINE=$(date -v+1d +%s); fi
 echo "night loop start $(date), deadline $(date -d @$DEADLINE 2>/dev/null || date -r $DEADLINE)"

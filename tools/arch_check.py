@@ -22,16 +22,17 @@ import pathlib
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8")
 
-ROOT = pathlib.Path("D:/Japanese")
+ROOT = pathlib.Path(__file__).resolve().parents[1]
+INTEGRATION_ROOT = ROOT.parent
 PACKS = ROOT / "packs"
 HOST = ROOT / "mod_host"
 
 # 各语言项目的仓库根 + 注册表文件 + 词书载荷目录
 PROJECTS = {
-    "Japanese": pathlib.Path("D:/Japanese"),
-    "French": pathlib.Path("D:/French"),
-    "Russian": pathlib.Path("D:/Russian"),
-    "German": pathlib.Path("D:/German"),
+    "Japanese": INTEGRATION_ROOT / "Japanese",
+    "French": INTEGRATION_ROOT / "French",
+    "Russian": INTEGRATION_ROOT / "Russian",
+    "German": INTEGRATION_ROOT / "German",
 }
 REGISTRY_CANDIDATES = ["mod_book_name/BookProfiles.cs"]
 PAYLOAD_GLOBS = [
@@ -146,16 +147,16 @@ def check_identity_uniqueness(manifests):
             fail("2.x", f"{label} 重复: {dup}")
         else:
             ok(f"2.{field[:4]}", f"{label} 唯一（{len(vals)} 个）")
-    slots = [(m["language"], m.get("observed_slot")) for m in manifests]
-    used = [s for _, s in slots if s]
+    slots = [(m["language"], m.get("observed_slot", 0)) for m in manifests]
+    used = [s for _, s in slots if s > 0]
     if len(set(used)) != len(used):
         fail("2.5", f"observed_slot 重复: {slots}")
     else:
-        ok("2.5", f"observed_slot 不重复: {dict(slots)}")
-    if len(manifests) > 4:
-        fail("2.6", f"语言包 {len(manifests)} 个 > 游戏硬上限 4 槽")
+        ok("2.5", f"已分配 observed_slot 不重复，候选包=0: {dict(slots)}")
+    if len(used) > 4:
+        fail("2.6", f"预分配槽位 {len(used)} > 游戏硬上限 4 槽（候选包不占槽）")
     else:
-        ok("2.6", f"语言包 {len(manifests)} 个 ≤ 4 槽预算")
+        ok("2.6", f"预分配槽位 {len(used)} ≤ 4 槽预算，语言包目录 {len(manifests)} 个")
 
 
 def check_fingerprint_recompute(manifests):

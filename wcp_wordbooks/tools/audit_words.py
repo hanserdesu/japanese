@@ -3,7 +3,7 @@
 import csv, json, re
 from pathlib import Path
 
-ROOT = Path(r'D:/Japanese/wcp_wordbooks')
+ROOT = Path(r'D:/ATooManyLanguage/Japanese/wcp_wordbooks')
 data = json.loads((ROOT/'output/jlpt_books.json').read_text(encoding='utf-8'))
 
 all_words = {}
@@ -23,7 +23,7 @@ for w in sorted(junk)[:40]:
 # 2) elzup 差集
 elz = {}
 for n in [5,4,3,2,1]:
-    with open(f'D:/Japanese/data/jlpt_n{n}.csv', encoding='utf-8') as f:
+    with open(f'D:/ATooManyLanguage/Japanese/data/jlpt_n{n}.csv', encoding='utf-8') as f:
         for row in csv.DictReader(f):
             e = row['expression'].strip()
             if e and e not in elz:

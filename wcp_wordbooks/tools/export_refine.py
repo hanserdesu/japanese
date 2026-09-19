@@ -5,7 +5,7 @@
 import json
 from pathlib import Path
 
-ROOT = Path(r'D:/Japanese/wcp_wordbooks')
+ROOT = Path(r'D:/ATooManyLanguage/Japanese/wcp_wordbooks')
 data = json.loads((ROOT / 'output/jlpt_books.json').read_text(encoding='utf-8'))
 
 items = []

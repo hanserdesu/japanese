@@ -1,11 +1,11 @@
 {
-  "main_release": "wcp-jp-v1.2.9.1",
+  "main_release": "wcp-jp-v1.2.9.2",
   "resource_release": "wcp-jp-resources-v1.1.0",
-  "installer_version": "wcp-jp-v1.2.9.1",
+  "installer_version": "wcp-jp-v1.2.9.2",
   "core_installer": {
-    "name": "WCP-Japanese-OneClick-Installer-wcp-jp-v1.2.9.1.zip",
-    "size": 16169585,
-    "sha256": "b8cd38fd2c64a35c7469da8c8ca5347a1b77112ed9661120b1ff3d718956c9a5"
+    "name": "WCP-Japanese-OneClick-Installer-wcp-jp-v1.2.9.2.zip",
+    "size": 16145443,
+    "sha256": "326c593a30d93bc798dc3e45289e1cf0cc3b00e843057f2c56e8a900b05bfd0e"
   },
   "resource_manifest": "release-manifest.json"
 }

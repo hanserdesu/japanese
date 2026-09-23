@@ -177,6 +177,96 @@ namespace WcpHost
             return false;
         }
 
+        // 许多小游戏把单词发音按钮直接接到 UnityText2Speech.USgs，绕过
+        // VocabularyAudioPlayer。只接管当前词书中的词，句子、角色语音和其它
+        // 未知文本仍走游戏原逻辑；已确认是本书词条但 pack 缺音频时阻止英语回退。
+        internal bool PrefixManagedWordTts(string text)
+        {
+            if (!IsActive || ActiveStrategy == null) return true;
+            string displayed = (text ?? string.Empty).Trim();
+            if (displayed.Length == 0) return true;
+
+            string canonical = FindActiveWord(displayed);
+            if (canonical == null) canonical = FindCurrentGameWord(displayed);
+            if (canonical == null) return true;
+
+            string lookup;
+            try
+            {
+                lookup = ActiveStrategy.AudioLookupForm(displayed, canonical);
+            }
+            catch (Exception e)
+            {
+                Warn("小游戏单词 TTS 词形解析失败，已阻止英语回退: " + e.Message);
+                return false;
+            }
+            if (string.IsNullOrEmpty(lookup)) lookup = canonical;
+
+            string path;
+            try { path = ResolveWordAudio(lookup); }
+            catch (Exception e)
+            {
+                Warn("小游戏单词音频查找失败，已阻止英语回退: " + e.Message);
+                return false;
+            }
+            if (string.IsNullOrEmpty(path))
+            {
+                ReportAudioMiss(displayed, lookup, canonical, true);
+                return false;
+            }
+
+            EnsureServices();
+            if (_audio == null)
+            {
+                Warn("小游戏单词音频播放器不可用，已阻止英语回退: " + canonical);
+                return false;
+            }
+            _audio.Play(path);
+            return false;
+        }
+
+        private string FindActiveWord(string value)
+        {
+            if (string.IsNullOrEmpty(value) || _activeWords == null) return null;
+            for (int i = 0; i < _activeWords.Count; i++)
+                if (string.Equals(_activeWords[i], value, StringComparison.Ordinal))
+                    return _activeWords[i];
+            for (int i = 0; i < _activeWords.Count; i++)
+                if (string.Equals(_activeWords[i], value, StringComparison.OrdinalIgnoreCase))
+                    return _activeWords[i];
+            return null;
+        }
+
+        private string FindCurrentGameWord(string displayed)
+        {
+            string[] candidates = new string[] {
+                StaticString("S3RightOption_Para"),
+                StaticString("S15RightOption_Para"),
+                StaticString("S17RightOption_Para"),
+                CurrentFightWord(), CurrentTestWord() };
+            for (int i = 0; i < candidates.Length; i++)
+            {
+                string canonical = FindActiveWord(candidates[i]);
+                if (canonical == null) continue;
+                if (string.Equals(canonical, displayed, StringComparison.Ordinal) ||
+                    string.Equals(canonical, displayed, StringComparison.OrdinalIgnoreCase))
+                    return canonical;
+
+                try
+                {
+                    string stem = ActiveStrategy.StemDisplay(canonical, null);
+                    if (string.Equals((stem ?? string.Empty).Trim(), displayed,
+                                      StringComparison.Ordinal))
+                        return canonical;
+                }
+                catch (Exception e)
+                {
+                    Warn("小游戏当前词显示形解析失败: " + e.Message);
+                }
+            }
+            return null;
+        }
+
         // 精确词形优先；未命中再按写法差异候选重试（全角/半角、大小写、
         // 空格与下划线、尾部句点）。命中候选只记一次日志，便于线上定位。
         private string ResolveWordAudio(string key)
@@ -201,7 +291,8 @@ namespace WcpHost
             return null;
         }
 
-        private void ReportAudioMiss(string displayed, string lookup, string canonical)
+        private void ReportAudioMiss(string displayed, string lookup, string canonical,
+                                     bool englishTtsBlocked = false)
         {
             _audioMissTotal++;
             string shown = lookup;
@@ -209,7 +300,9 @@ namespace WcpHost
             if (string.IsNullOrEmpty(shown)) shown = "<空>";
             if (_audioMissReported.Count < 20 && _audioMissReported.Add(shown))
             {
-                Warn("单词音频未命中 pack（放行游戏原生目录）: 显示=" + displayed +
+                Warn("单词音频未命中 pack（" +
+                     (englishTtsBlocked ? "已阻止英语 TTS 回退" : "放行游戏原生目录") +
+                     "）: 显示=" + displayed +
                      " 查词=" + shown + " 词表=" + (canonical == null ? "<无>" : canonical));
             }
             else if (_audioMissTotal == 50 || _audioMissTotal == 500 ||

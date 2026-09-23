@@ -88,6 +88,10 @@ namespace WcpHost
         {
             PatchOne(harmony, "VocabularyAudioPlayer", "PlayWordAudio",
                 AccessTools.Method(typeof(HostPatches), "WordAudioPrefix"), null);
+            // 小游戏的发音按钮常通过序列化 UnityEvent 直接调用通用 TTS，
+            // 不经过 VocabularyAudioPlayer；在共享入口按当前词书拦截单词语音。
+            PatchOne(harmony, "UnityText2Speech.USgs", "ReceiveTextToSpeech",
+                AccessTools.Method(typeof(HostPatches), "WordTtsPrefix"), null);
             PatchOne(harmony, "SoundTheWordS8", "OnButton1Click",
                 AccessTools.Method(typeof(HostPatches), "SentenceTtsPrefix"), null);
         }
@@ -176,6 +180,13 @@ namespace WcpHost
             WcpHostPlugin plugin = WcpHostPlugin.Instance;
             return plugin == null || plugin.Runtime == null ||
                    plugin.Runtime.PrefixWordAudio(__instance);
+        }
+
+        private static bool WordTtsPrefix(string text)
+        {
+            WcpHostPlugin plugin = WcpHostPlugin.Instance;
+            return plugin == null || plugin.Runtime == null ||
+                   plugin.Runtime.PrefixManagedWordTts(text);
         }
 
         private static bool SentenceTtsPrefix(object __instance)

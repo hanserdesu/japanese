@@ -4,7 +4,7 @@
 
 它把日语词书、中文释义、读音、例句和音频接入游戏，让万词破也可以用来学习日语。
 
-> **统一安装器已发布：** 多语言一键安装器 [v0.1.10](https://github.com/hanserdesu/WCP-MultiLanguage/releases/tag/wcp-installer-v0.1.10) 已支持安装和更新日语词书（`ja`），并包含共享宿主的战斗旧队列与空选项修复。安装时下载和解压会显示百分比及已处理 / 总字节数。日语核心资源仍由本仓库发布，当前版本为 [wcp-jp-resources-v1.1.1](https://github.com/hanserdesu/japanese/releases/tag/wcp-jp-resources-v1.1.1)。版本变化见[更新日志](CHANGELOG.md)。
+> **统一安装器已发布：** 多语言一键安装器 [v0.1.11](https://github.com/hanserdesu/WCP-MultiLanguage/releases/tag/wcp-installer-v0.1.11) 已支持安装和更新日语词书（`ja`），并包含共享宿主的战斗旧队列与空选项修复。安装时下载和解压会显示百分比及已处理 / 总字节数。日语核心资源仍由本仓库发布，当前版本为 [wcp-jp-resources-v1.1.1](https://github.com/hanserdesu/japanese/releases/tag/wcp-jp-resources-v1.1.1)。版本变化见[更新日志](CHANGELOG.md)。
 
 > 多语言安装器和统一宿主由 [hanserdesu/WCP-MultiLanguage](https://github.com/hanserdesu/WCP-MultiLanguage) 发布；本仓库继续托管日语词书与资源。首次安装时如果游戏尚未安装 BepInEx，请使用下方的日语独立安装包；已有可用 BepInEx 的用户可以直接使用统一安装器。
 
@@ -12,18 +12,18 @@
 
 ### 已安装 BepInEx：使用统一安装器
 
-1. 下载 [WCP 多语言一键安装器 v0.1.10](https://github.com/hanserdesu/WCP-MultiLanguage/releases/download/wcp-installer-v0.1.10/WCP-Wordbooks-OneClick-Installer-wcp-installer-v0.1.10.zip)，也可先查看[发布说明](https://github.com/hanserdesu/WCP-MultiLanguage/releases/tag/wcp-installer-v0.1.10)。
+1. 下载 [WCP 多语言一键安装器 v0.1.11](https://github.com/hanserdesu/WCP-MultiLanguage/releases/download/wcp-installer-v0.1.11/WCP-Wordbooks-OneClick-Installer-wcp-installer-v0.1.11.zip)，也可先查看[发布说明](https://github.com/hanserdesu/WCP-MultiLanguage/releases/tag/wcp-installer-v0.1.11)。
 2. 解压后，在游戏已安装的前提下运行 `一键安装词书.cmd`。
 3. 从列表选择 `日语词库(猫条版)`（`ja`），确认安装；更新时运行同目录的 `更新词书资源.cmd`。
 4. 等待安装完成后重启游戏。下载和 ZIP 解压期间会持续显示百分比与已处理 / 总字节数，阶段完成时显示 `100%`。
 
-统一安装器会把通用插件安装到游戏的 `BepInEx` 目录，但不负责首次安装 BepInEx 框架。
+统一安装器会把通用插件安装到游戏的 `BepInEx` 目录，但不负责首次安装 BepInEx 框架。要移除由统一安装器安装的日语资源，关闭游戏后双击包内的 `卸载词书.cmd` 并选择 `ja`；原生存档、第三方词书及共用插件会保留。
 
 ### 尚未安装 BepInEx：使用日语独立安装包
 
 1. 下载 [WCP 日语词书一键安装包 v1.2.9.3](https://github.com/hanserdesu/japanese/releases/download/wcp-jp-v1.2.9.3/WCP-Japanese-OneClick-Installer-wcp-jp-v1.2.9.3.zip)（SHA-256 `e29717d7405dd8d4a4891c7d6555a54803a8f6d4cc2ae622957a2143080ad1ea`，发布页见 [wcp-jp-v1.2.9.3](https://github.com/hanserdesu/japanese/releases/tag/wcp-jp-v1.2.9.3)）。
 2. 解压安装包，关闭游戏，双击最外层的 `01_双击运行我.cmd`，不要进入 `support` 文件夹。
-3. 等待安装器完成，然后重启游戏。该独立安装包附带 BepInEx 5.4.23.5 和 Doorstop；它与统一安装器 v0.1.10 属于不同发布线。
+3. 等待安装器完成，然后重启游戏。该独立安装包附带 BepInEx 5.4.23.5 和 Doorstop；它与统一安装器 v0.1.11 属于不同发布线。
 
 日语独立安装包 v1.2.9.3 相比 v1.2.1 的改进（含 v1.2.5 至 v1.2.9 的更新与性能优化）：
 
@@ -38,7 +38,7 @@
 - 自动清理旧版本遗留的过期下载缓存与旧备份目录；备份词书时不再复制音频，重装不再反复占用 1～2 GB 磁盘。
 - **自更新**：启动时自动检查新版本并提示一键升级（下载带 SHA-256 校验，失败自动回退，不影响安装）。
 
-日语独立安装器会保留 CMD 窗口，显示下载和解压进度、容量与速度，并使用多线程处理；它会检查磁盘空间、搜索 Steam 游戏库，并在条件不满足时显示原因。以上特性描述的是 v1.2.9.3 独立安装包；统一安装器 v0.1.10 的进度功能与发布测试结果见[其发布说明](https://github.com/hanserdesu/WCP-MultiLanguage/releases/tag/wcp-installer-v0.1.10)。
+日语独立安装器会保留 CMD 窗口，显示下载和解压进度、容量与速度，并使用多线程处理；它会检查磁盘空间、搜索 Steam 游戏库，并在条件不满足时显示原因。以上特性描述的是 v1.2.9.3 独立安装包；统一安装器 v0.1.11 的进度功能与发布测试结果见[其发布说明](https://github.com/hanserdesu/WCP-MultiLanguage/releases/tag/wcp-installer-v0.1.11)。
 
 ## 日语词库包含什么
 

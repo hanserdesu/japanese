@@ -54,10 +54,10 @@ namespace WcpHost
             }
         }
 
-        // 兼容层开关：把 pack 单词音频补进游戏原生目录（配置缺失时视为开启）。
+        // 旧版兼容开关：只有显式开启才复制音频到游戏共用目录。
         internal bool MirrorWordAudio
         {
-            get { return _mirrorWordAudio == null || _mirrorWordAudio.Value; }
+            get { return _mirrorWordAudio != null && _mirrorWordAudio.Value; }
         }
 
         private void Awake()
@@ -70,10 +70,9 @@ namespace WcpHost
             _packsRootOverride = Config.Bind("General", "PacksRoot", "",
                 "语言包根目录。留空 = <persistentDataPath 的父目录>/packs，" +
                 "即 %USERPROFILE%\\AppData\\LocalLow\\WCP\\packs");
-            _mirrorWordAudio = Config.Bind("Compatibility", "MirrorWordAudio", true,
-                "把当前语言包的单词音频补进游戏原生目录（…\\LocalLow\\WCP\\vocabulary）。" +
-                "游戏的播放器只认那个目录：宿主未接管（读档中/未激活）时，若该目录为空，" +
-                "发音会静默回退成游戏的英语 AI 语音。只补缺、分批复制、可在装好后关闭。");
+            _mirrorWordAudio = Config.Bind("Compatibility", "MirrorWordAudio", false,
+                "旧版兼容开关：复制语言包音频到游戏共用 vocabulary 目录。默认关闭；" +
+                "仅确需旧版播放器兼容时手动开启。");
 
             try
             {

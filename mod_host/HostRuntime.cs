@@ -31,6 +31,7 @@ namespace WcpHost
         private SentenceAudioService _sentenceAudio;
         private HostAudioPlayer _audio;
         private IList<string> _activeWords;
+        private HashSet<string> _activeWordSet;
         private string _activeProfileId;
         private bool _leftOnce;
         private bool _staleRecoveryAttempted;
@@ -73,6 +74,8 @@ namespace WcpHost
             if (string.Equals(_activeProfileId, next, StringComparison.Ordinal))
             {
                 _activeWords = words;
+                if (_activeWordSet == null && words != null)
+                    _activeWordSet = BookPool.ToSet(words);
                 if (IsActive && ActiveStrategy != null) _scope.Enforce();
                 return;
             }
@@ -80,6 +83,7 @@ namespace WcpHost
             LeaveCurrent();
             _activeProfileId = next;
             _activeWords = words == null ? null : new List<string>(words);
+            _activeWordSet = words == null ? null : BookPool.ToSet(words);
             _mirrorAttempted = false;
             if (manifest == null || words == null || words.Count == 0)
             {
@@ -116,6 +120,7 @@ namespace WcpHost
             LeaveCurrent();
             _activeProfileId = null;
             _activeWords = null;
+            _activeWordSet = null;
             _router.SetActive(null);
             _staleRecoveryAttempted = true;
         }
@@ -153,28 +158,7 @@ namespace WcpHost
             if (!IsActive || ActiveStrategy == null || instance == null) return true;
             TMP_Text text = GameAdapter.InstanceField(instance, "text1") as TMP_Text;
             if (text == null || string.IsNullOrEmpty(text.text)) return true;
-            string displayed = text.text.Trim();
-            string canonical = CurrentWord(displayed);
-            string lookup;
-            try { lookup = ActiveStrategy.AudioLookupForm(displayed, canonical); }
-            catch (Exception e)
-            {
-                Warn("策略音频词形失败: " + e.Message);
-                return true;
-            }
-            if (string.IsNullOrEmpty(lookup)) lookup = canonical;
-            string path = ResolveWordAudio(lookup);
-            if (string.IsNullOrEmpty(path))
-            {
-                // 不接住这次播放：放行给游戏自己的 VocabularyAudioPlayer。
-                // 兼容层（TryBeginWordAudioMirror）已把 pack 音频补进游戏原生
-                // 目录，因此放行后通常仍能听到本地发音而不是英语 AI 语音。
-                ReportAudioMiss(displayed, lookup, canonical);
-                return true;
-            }
-            EnsureServices();
-            _audio.Play(path);
-            return false;
+            return PrefixManagedWordTts(text.text);
         }
 
         // 许多小游戏把单词发音按钮直接接到 UnityText2Speech.USgs，绕过
@@ -228,6 +212,7 @@ namespace WcpHost
         private string FindActiveWord(string value)
         {
             if (string.IsNullOrEmpty(value) || _activeWords == null) return null;
+            if (_activeWordSet != null && _activeWordSet.Contains(value)) return value;
             for (int i = 0; i < _activeWords.Count; i++)
                 if (string.Equals(_activeWords[i], value, StringComparison.Ordinal))
                     return _activeWords[i];
@@ -550,7 +535,15 @@ namespace WcpHost
                 if (pool == null || pool.Count == 0) return;
                 IList<string> withInfo = GameAdapter.ToWordList(
                     GameAdapter.StaticField("MyParameters", "S7TestWordList_WithInfo"));
-                if (withInfo != null && withInfo.Count == pool.Count) return;
+                if (withInfo != null && withInfo.Count == pool.Count)
+                {
+                    bool current = true;
+                    for (int i = 0; i < pool.Count; i++)
+                        if (withInfo[i] == null ||
+                            !withInfo[i].StartsWith(pool[i] + "##", StringComparison.Ordinal))
+                        { current = false; break; }
+                    if (current) return;
+                }
 
                 List<string> rebuilt = new List<string>(pool.Count);
                 for (int i = 0; i < pool.Count; i++) rebuilt.Add(pool[i] + "##0");
@@ -566,6 +559,8 @@ namespace WcpHost
 
         internal string CurrentWord(string displayed)
         {
+            if (!string.IsNullOrEmpty(displayed) && _activeWordSet != null &&
+                _activeWordSet.Contains(displayed)) return displayed;
             string value = CurrentTestWord();
             if (string.Equals(value, displayed, StringComparison.Ordinal)) return value;
             value = CurrentFightWord();

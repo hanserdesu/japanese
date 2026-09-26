@@ -460,8 +460,10 @@ namespace WcpHost
             if (!IsActive || ActiveStrategy == null || instance == null) return;
             try
             {
-                string word = StaticString("checkWordInDictionary");
+                TMP_Text target = FieldText(instance, "targetText");
+                string word = target == null ? StaticString("checkWordInDictionary") : target.text;
                 if (string.IsNullOrEmpty(word)) return;
+                if (_activeWordSet == null || !_activeWordSet.Contains(word)) return;
                 string meaning, phonic;
                 if (!ActiveStrategy.ProvideMeaning(word, out meaning, out phonic)) return;
                 TMP_Text meaningText = GameAdapter.InstanceField(instance, "meaningText") as TMP_Text;
@@ -473,6 +475,25 @@ namespace WcpHost
                 if (uk != null && !string.IsNullOrEmpty(phonic)) uk.text = string.Empty;
             }
             catch (Exception e) { Warn("查词面板改写失败: " + e.Message); }
+        }
+
+        // 小游戏的 GetNewWord 直接查询共享 wcpOnlyWord.db。按当前受管
+        // 词书的题词改写结果，不按拼写猜测语言，也不影响原生或第三方词书。
+        internal void PostMiniGameMeaning(object instance, string questionKey)
+        {
+            if (!IsActive || ActiveStrategy == null || instance == null) return;
+            string word = StaticString(questionKey);
+            if (string.IsNullOrEmpty(word) || _activeWordSet == null ||
+                !_activeWordSet.Contains(word)) return;
+            try
+            {
+                string meaning, phonic;
+                if (!ActiveStrategy.ProvideMeaning(word, out meaning, out phonic) ||
+                    string.IsNullOrEmpty(meaning)) return;
+                TMP_Text label = FieldText(instance, "meaningText");
+                if (label != null) label.text = meaning;
+            }
+            catch (Exception e) { Warn("小游戏释义改写失败: " + e.Message); }
         }
 
         internal void PostAnswer(object instance)

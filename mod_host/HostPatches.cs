@@ -112,6 +112,12 @@ namespace WcpHost
             // 战斗场景会从存档重新读一遍词表并缓存到 WithInfo; 读完之后再校正一次。
             PatchOne(harmony, "WordListManagerS7", "Start", null,
                 AccessTools.Method(typeof(HostPatches), "FightListScenePostfix"));
+            PatchOne(harmony, "S3ScoreShow", "GetNewWord", null,
+                AccessTools.Method(typeof(HostPatches), "S3MeaningPostfix"));
+            PatchOne(harmony, "RandomButtonInvoker", "GetNewWord", null,
+                AccessTools.Method(typeof(HostPatches), "S15MeaningPostfix"));
+            PatchOne(harmony, "showWordS17", "GetNewWord", null,
+                AccessTools.Method(typeof(HostPatches), "S17MeaningPostfix"));
         }
 
         private static void EnforcePrefix()
@@ -145,6 +151,27 @@ namespace WcpHost
             WcpHostPlugin plugin = WcpHostPlugin.Instance;
             if (plugin != null && plugin.Runtime != null)
                 plugin.Runtime.PostMultipleChoice(__instance);
+        }
+
+        private static void S3MeaningPostfix(object __instance)
+        {
+            WcpHostPlugin plugin = WcpHostPlugin.Instance;
+            if (plugin != null && plugin.Runtime != null)
+                plugin.Runtime.PostMiniGameMeaning(__instance, "S3RightOption_Para");
+        }
+
+        private static void S15MeaningPostfix(object __instance)
+        {
+            WcpHostPlugin plugin = WcpHostPlugin.Instance;
+            if (plugin != null && plugin.Runtime != null)
+                plugin.Runtime.PostMiniGameMeaning(__instance, "S15RightOption_Para");
+        }
+
+        private static void S17MeaningPostfix(object __instance)
+        {
+            WcpHostPlugin plugin = WcpHostPlugin.Instance;
+            if (plugin != null && plugin.Runtime != null)
+                plugin.Runtime.PostMiniGameMeaning(__instance, "S17RightOption_Para");
         }
 
         private static void MultipleChoiceS9Postfix(object __instance)

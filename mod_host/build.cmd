@@ -41,6 +41,7 @@ set REFS=/r:"%GAME%\BepInEx\core\BepInEx.dll" ^
  "%HERE%Core\Json.cs" ^
  "%HERE%Core\Manifest.cs" ^
  "%HERE%Core\ResourceRouter.cs" ^
+ "%HERE%Core\SentenceTable.cs" ^
  "%HERE%Core\ILanguageStrategy.cs" ^
  "%HERE%Core\StrategyContext.cs" ^
  "%HERE%Core\BookPool.cs" ^

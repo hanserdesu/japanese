@@ -72,6 +72,17 @@ internal static class RegistryTest
               "已装载 " + strategies.LoadedCount + "，告警 " + strategies.Errors.Count);
 
         LanguageManifest jaManifest = reg.ByLanguage("ja");
+        if (jaManifest != null)
+        {
+            SentenceTable table = new SentenceTable(jaManifest.Resolve(jaManifest.SentenceTable));
+            List<string> rows;
+            bool foundSentences = table.TryGet("指揮", out rows);
+            Check(foundSentences && rows != null && rows.Count >= 3 &&
+                  rows[0].StartsWith("例句：", StringComparison.Ordinal),
+                  "日语背词页从独立例句表读取指揮", table.LastError ?? "");
+            Check(!table.TryGet("__not_a_managed_japanese_word__", out rows),
+                  "例句表不回退到其他词书", "");
+        }
         ILanguageStrategy ja = jaManifest == null ? null :
             strategies.ForProfile(jaManifest.Profile.Id);
         Check(ja != null, "日语策略从 pack 程序集实际装载", "");

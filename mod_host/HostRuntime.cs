@@ -8,6 +8,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
+using System.Text;
 using BepInEx.Logging;
 using HarmonyLib;
 using TMPro;
@@ -29,6 +30,9 @@ namespace WcpHost
         private readonly Dictionary<TMP_Text, string> _labelWritten =
             new Dictionary<TMP_Text, string>();
         private SentenceAudioService _sentenceAudio;
+        private SentenceTable _sentenceTable;
+        private LanguageManifest _sentenceTableManifest;
+        private bool _sentenceTableReported;
         private HostAudioPlayer _audio;
         private IList<string> _activeWords;
         private HashSet<string> _activeWordSet;
@@ -460,19 +464,31 @@ namespace WcpHost
             if (!IsActive || ActiveStrategy == null || instance == null) return;
             try
             {
-                TMP_Text target = FieldText(instance, "targetText");
-                string word = target == null ? StaticString("checkWordInDictionary") : target.text;
+                string panel = instance.GetType().Name;
+                string word;
+                if (panel == "DatabaseManagerS8")
+                    word = StaticString("checkWordInDictionary");
+                else if (panel == "S8checkWordMeaning")
+                    word = GameAdapter.InstanceField(instance, "originalWord") as string;
+                else
+                {
+                    TMP_Text target = FieldText(instance, "targetText");
+                    word = target == null ? null : target.text;
+                }
                 if (string.IsNullOrEmpty(word)) return;
                 if (_activeWordSet == null || !_activeWordSet.Contains(word)) return;
                 string meaning, phonic;
-                if (!ActiveStrategy.ProvideMeaning(word, out meaning, out phonic)) return;
-                TMP_Text meaningText = GameAdapter.InstanceField(instance, "meaningText") as TMP_Text;
-                TMP_Text us = GameAdapter.InstanceField(instance, "usPhoneticText") as TMP_Text;
-                TMP_Text uk = GameAdapter.InstanceField(instance, "ukPhoneticText") as TMP_Text;
-                if (meaningText != null && !string.IsNullOrEmpty(meaning))
-                    meaningText.text = meaning + Environment.NewLine;
-                if (us != null && !string.IsNullOrEmpty(phonic)) us.text = phonic;
-                if (uk != null && !string.IsNullOrEmpty(phonic)) uk.text = string.Empty;
+                if (ActiveStrategy.ProvideMeaning(word, out meaning, out phonic))
+                {
+                    TMP_Text meaningText = GameAdapter.InstanceField(instance, "meaningText") as TMP_Text;
+                    TMP_Text us = GameAdapter.InstanceField(instance, "usPhoneticText") as TMP_Text;
+                    TMP_Text uk = GameAdapter.InstanceField(instance, "ukPhoneticText") as TMP_Text;
+                    if (meaningText != null && !string.IsNullOrEmpty(meaning))
+                        meaningText.text = meaning + Environment.NewLine;
+                    if (us != null && !string.IsNullOrEmpty(phonic)) us.text = phonic;
+                    if (uk != null && !string.IsNullOrEmpty(phonic)) uk.text = string.Empty;
+                }
+                ApplySentenceTable(instance, word);
             }
             catch (Exception e) { Warn("查词面板改写失败: " + e.Message); }
         }
@@ -494,6 +510,88 @@ namespace WcpHost
                 if (label != null) label.text = meaning;
             }
             catch (Exception e) { Warn("小游戏释义改写失败: " + e.Message); }
+        }
+
+        // 游戏只从共享英语 sentence2 表读取例句；受管词书改读当前语言包。
+        private void ApplySentenceTable(object instance, string word)
+        {
+            TMP_Text output = GameAdapter.InstanceField(instance, "outputText") as TMP_Text;
+            if (output == null) return;
+
+            SentenceTable table = SentenceTableFor(ActiveManifest);
+            if (table == null) return;
+            List<string> raw;
+            if (!table.TryGet(word, out raw) || raw.Count == 0)
+            {
+                ReportSentenceTable(table, 0);
+                return;
+            }
+
+            int cap = raw.Count;
+            object configured = GameAdapter.InstanceField(instance, "outputCount");
+            if (configured is int && (int)configured > 0 && (int)configured < cap)
+                cap = (int)configured;
+            Array slots = GameAdapter.InstanceField(instance, "exmplesentences") as Array;
+            if (slots != null && slots.Length > 0 && slots.Length < cap)
+                cap = slots.Length;
+
+            StringBuilder text = new StringBuilder();
+            List<string> filled = new List<string>(cap);
+            for (int i = 0; i < cap; i++)
+            {
+                string s = raw[i];
+                if (string.IsNullOrEmpty(s)) continue;
+                s = s.Replace("例句：", "<color=#FFBE31>例句" + (i + 1) + "：</color>");
+                s = s.Replace("（", "\n\n释义：").Replace("）", "");
+                text.Append(s).Append("\n\n");
+                filled.Add(s);
+            }
+            if (filled.Count == 0) return;
+            output.text = text.ToString();
+            ReportSentenceTable(table, filled.Count);
+
+            // 游戏的例句播放按钮仍读自己的槽位；填充失败不影响文字。
+            MethodInfo reserve = instance.GetType().GetMethod("ReserveExampleSentences",
+                BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+            if (reserve == null) return;
+            try
+            {
+                IList<string> shared = GameAdapter.StaticField("MyParameters", "exaple_sentences")
+                    as IList<string>;
+                if (shared != null) shared.Clear();
+                for (int i = 0; i < filled.Count; i++)
+                    reserve.Invoke(instance, new object[] { filled[i] });
+            }
+            catch (Exception e) { Warn("例句播放槽填充失败: " + e.Message); }
+        }
+
+        private SentenceTable SentenceTableFor(LanguageManifest manifest)
+        {
+            if (manifest == null) return null;
+            if (_sentenceTable != null && ReferenceEquals(_sentenceTableManifest, manifest))
+                return _sentenceTable;
+            string path = null;
+            try { path = _router.Resolve(ResourceKind.SentenceTable, null); }
+            catch (Exception) { path = null; }
+            _sentenceTable = new SentenceTable(path);
+            _sentenceTableManifest = manifest;
+            _sentenceTableReported = false;
+            return _sentenceTable;
+        }
+
+        private void ReportSentenceTable(SentenceTable table, int used)
+        {
+            if (_sentenceTableReported) return;
+            _sentenceTableReported = true;
+            if (table.LastError != null)
+            {
+                Warn("例句表不可用: " + table.LastError);
+                return;
+            }
+            if (WcpHostPlugin.Log != null)
+                WcpHostPlugin.Log.LogInfo("WcpHost: 例句表已装载: " + table.RowCount +
+                    " 词 / " + table.LoadMs.ToString("F0") + " ms → " + table.Path +
+                    "（本次注入 " + used + " 句）");
         }
 
         internal void PostAnswer(object instance)

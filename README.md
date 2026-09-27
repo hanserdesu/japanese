@@ -1,12 +1,12 @@
 # WCP《万词破-单词女友》日语词书
 
-独立日语宿主已补入包内例句读取；“指揮”例句离线检查通过。修复尚未随下方 v1.2.9.3 安装包发布，游戏内显示和播放待重启验证。统一安装器使用独立维护的共享宿主。
+独立日语宿主已补入包内例句读取；“指揮”例句离线检查通过。修复已随下方 v1.2.9.4 安装包发布，游戏内显示和播放待重启验证。统一安装器使用独立维护的共享宿主。
 
 这是一个给 Steam 游戏《万词破-单词女友》（WCP-WordGirlfriend）增加日语学习功能的 mod 项目。
 
 它把日语词书、中文释义、读音、例句和音频接入游戏，让万词破也可以用来学习日语。
 
-> **统一安装器已发布：** 多语言一键安装器 [v0.1.12](https://github.com/hanserdesu/WCP-MultiLanguage/releases/tag/wcp-installer-v0.1.12) 已支持安装和更新日语词书（`ja`），并包含共享宿主的战斗旧队列与空选项修复。安装时下载和解压会显示百分比及已处理 / 总字节数。日语核心资源仍由本仓库发布，当前版本为 [wcp-jp-resources-v1.1.1](https://github.com/hanserdesu/japanese/releases/tag/wcp-jp-resources-v1.1.1)。版本变化见[更新日志](CHANGELOG.md)。
+> **统一安装器已发布：** 多语言一键安装器 [v0.1.13](https://github.com/hanserdesu/WCP-MultiLanguage/releases/tag/wcp-installer-v0.1.13) 已支持安装和更新日语词书（`ja`），并包含共享宿主的战斗旧队列与空选项修复。安装时下载和解压会显示百分比及已处理 / 总字节数。日语核心资源仍由本仓库发布，当前版本为 [wcp-jp-resources-v1.1.1](https://github.com/hanserdesu/japanese/releases/tag/wcp-jp-resources-v1.1.1)。版本变化见[更新日志](CHANGELOG.md)。
 
 > 多语言安装器和统一宿主由 [hanserdesu/WCP-MultiLanguage](https://github.com/hanserdesu/WCP-MultiLanguage) 发布；本仓库继续托管日语词书与资源。首次安装时如果游戏尚未安装 BepInEx，请使用下方的日语独立安装包；已有可用 BepInEx 的用户可以直接使用统一安装器。
 
@@ -14,7 +14,7 @@
 
 ### 已安装 BepInEx：使用统一安装器
 
-1. 下载 [WCP 多语言一键安装器 v0.1.12](https://github.com/hanserdesu/WCP-MultiLanguage/releases/download/wcp-installer-v0.1.12/WCP-Wordbooks-OneClick-Installer-wcp-installer-v0.1.12.zip)，也可先查看[发布说明](https://github.com/hanserdesu/WCP-MultiLanguage/releases/tag/wcp-installer-v0.1.12)。
+1. 下载 [WCP 多语言一键安装器 v0.1.13](https://github.com/hanserdesu/WCP-MultiLanguage/releases/download/wcp-installer-v0.1.13/WCP-Wordbooks-OneClick-Installer-wcp-installer-v0.1.13.zip)，也可先查看[发布说明](https://github.com/hanserdesu/WCP-MultiLanguage/releases/tag/wcp-installer-v0.1.13)。
 2. 解压后，在游戏已安装的前提下运行 `一键安装词书.cmd`。
 3. 从列表选择 `日语词库(猫条版)`（`ja`），确认安装；更新时运行同目录的 `更新词书资源.cmd`。
 4. 等待安装完成后重启游戏。下载和 ZIP 解压期间会持续显示百分比与已处理 / 总字节数，阶段完成时显示 `100%`。
@@ -23,11 +23,11 @@
 
 ### 尚未安装 BepInEx：使用日语独立安装包
 
-1. 下载 [WCP 日语词书一键安装包 v1.2.9.3](https://github.com/hanserdesu/japanese/releases/download/wcp-jp-v1.2.9.3/WCP-Japanese-OneClick-Installer-wcp-jp-v1.2.9.3.zip)（SHA-256 `e29717d7405dd8d4a4891c7d6555a54803a8f6d4cc2ae622957a2143080ad1ea`，发布页见 [wcp-jp-v1.2.9.3](https://github.com/hanserdesu/japanese/releases/tag/wcp-jp-v1.2.9.3)）。
+1. 下载 [WCP 日语词书一键安装包 v1.2.9.4](https://github.com/hanserdesu/japanese/releases/download/wcp-jp-v1.2.9.4/WCP-Japanese-OneClick-Installer-wcp-jp-v1.2.9.4.zip)（SHA-256 `7e0a8a6b6e813d45d1a90f979cc244f320caa15602e508e1446da78ba5ff3848`，发布页见 [wcp-jp-v1.2.9.4](https://github.com/hanserdesu/japanese/releases/tag/wcp-jp-v1.2.9.4)）。
 2. 解压安装包，关闭游戏，双击最外层的 `01_双击运行我.cmd`，不要进入 `support` 文件夹。
-3. 等待安装器完成，然后重启游戏。该独立安装包附带 BepInEx 5.4.23.5 和 Doorstop；它与统一安装器 v0.1.12 属于不同发布线。
+3. 等待安装器完成，然后重启游戏。该独立安装包附带 BepInEx 5.4.23.5 和 Doorstop；它与统一安装器 v0.1.13 属于不同发布线。
 
-日语独立安装包 v1.2.9.3 相比 v1.2.1 的改进（含 v1.2.5 至 v1.2.9 的更新与性能优化）：
+日语独立安装包 v1.2.9.4 相比 v1.2.1 的改进（含 v1.2.5 至 v1.2.9 的更新与性能优化）：
 
 - v1.2.9.2 更新日语独立宿主的单词发音接管，以及日语策略对包内读音、释义和词形的解析；沿用已发布的日语音频资源。此版本与多语言统一安装器的共享宿主属于两条安装线。
 - **修复「部分机器上单词发音变成英语 AI 语音」**：受管日语词优先从语言包私有目录播放；缺音频时阻止英语回退。向原生共用目录镜像是旧版兼容选项，新安装默认关闭；既有配置如曾开启该选项，设置会保留。
@@ -40,7 +40,7 @@
 - 自动清理旧版本遗留的过期下载缓存与旧备份目录；备份词书时不再复制音频，重装不再反复占用 1～2 GB 磁盘。
 - **自更新**：启动时自动检查新版本并提示一键升级（下载带 SHA-256 校验，失败自动回退，不影响安装）。
 
-日语独立安装器会保留 CMD 窗口，显示下载和解压进度、容量与速度，并使用多线程处理；它会检查磁盘空间、搜索 Steam 游戏库，并在条件不满足时显示原因。以上特性描述的是 v1.2.9.3 独立安装包；统一安装器 v0.1.12 的进度功能与发布测试结果见[其发布说明](https://github.com/hanserdesu/WCP-MultiLanguage/releases/tag/wcp-installer-v0.1.12)。
+日语独立安装器会保留 CMD 窗口，显示下载和解压进度、容量与速度，并使用多线程处理；它会检查磁盘空间、搜索 Steam 游戏库，并在条件不满足时显示原因。以上特性描述的是 v1.2.9.4 独立安装包；统一安装器 v0.1.13 的进度功能与发布测试结果见[其发布说明](https://github.com/hanserdesu/WCP-MultiLanguage/releases/tag/wcp-installer-v0.1.13)。
 
 ## 日语词库包含什么
 
@@ -50,7 +50,7 @@
 - IT 用语、商务日语、常用汉字、惯用句、拟声拟态、四字熟语等扩展词书。
 - 日语词书、数据库修复和例句播放插件。
 
-日语资源由本仓库发布。统一安装器按目录中的资源地址下载并校验 SHA-256；当前日语核心包为 [wcp-jp-resources-v1.1.1](https://github.com/hanserdesu/japanese/releases/tag/wcp-jp-resources-v1.1.1)，词音和例句音频沿用 [wcp-jp-resources-v1.0.0](https://github.com/hanserdesu/japanese/releases/tag/wcp-jp-resources-v1.0.0)。日语独立安装包 v1.2.9.3 也可通过 Gitee 分片路由获取音频，失败时切换到 GitHub；使用统一安装器的用户只需下载多语言安装器主 Release。
+日语资源由本仓库发布。统一安装器按目录中的资源地址下载并校验 SHA-256；当前日语核心包为 [wcp-jp-resources-v1.1.1](https://github.com/hanserdesu/japanese/releases/tag/wcp-jp-resources-v1.1.1)，词音和例句音频沿用 [wcp-jp-resources-v1.0.0](https://github.com/hanserdesu/japanese/releases/tag/wcp-jp-resources-v1.0.0)。日语独立安装包 v1.2.9.4 也可通过 Gitee 分片路由获取音频，失败时切换到 GitHub；使用统一安装器的用户只需下载多语言安装器主 Release。
 
 ## 遇到安装失败
 
@@ -72,7 +72,7 @@
 
 - 已安装 Steam 版《万词破-单词女友》游戏本体。
 - Windows 系统。
-- 安装时保持网络畅通。日语音频约 2.4 GB；统一安装器会在开始前计算并显示所需峰值空间，日语独立安装包 v1.2.9.3 建议在用户数据盘预留至少 10 GiB。
+- 安装时保持网络畅通。日语音频约 2.4 GB；统一安装器会在开始前计算并显示所需峰值空间，日语独立安装包 v1.2.9.4 建议在用户数据盘预留至少 10 GiB。
 - 安装前完全退出游戏。
 - **建议**：把游戏目录和 `%USERPROFILE%\AppData\LocalLow\WCP` 加入杀毒/安全软件白名单（或安装时暂时退出杀软），可避免实时扫描锁定上万个小音频文件导致安装失败。
 
